@@ -1,0 +1,286 @@
+/**index.wxss**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #121212;
+}
+
+.scrollarea {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 120rpx;
+}
+
+.container {
+  padding: 32rpx;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  padding-left: 32rpx;
+}
+
+.logo-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 16rpx;
+}
+
+.logo-text {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #FFD100;
+}
+
+.help-btn {
+  padding: 16rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 设备状态卡片 */
+.status-card {
+  margin-bottom: 32rpx;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.status-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: #9E9E9E;
+  margin-right: 12rpx;
+}
+
+.status-dot.connected {
+  background-color: #4CAF50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-size: 28rpx;
+  color: #E0E0E0;
+  font-weight: 500;
+}
+
+.status-info {
+  margin-top: 8rpx;
+}
+
+.mode-text {
+  font-size: 24rpx;
+  color: #9E9E9E;
+}
+
+.status-action {
+  padding: 8rpx 16rpx;
+  background-color: #333333;
+  border-radius: 8rpx;
+}
+
+.action-text {
+  font-size: 24rpx;
+  color: #FFD100;
+}
+
+.current-device-name {
+  font-size: 22rpx;
+  color: #9E9E9E;
+  margin-top: 8rpx;
+  display: block;
+}
+
+/* 设备列表弹窗 */
+.device-list-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.device-list-modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.device-list-content {
+  width: 80%;
+  max-width: 600rpx;
+  max-height: 80vh;
+  background-color: #1E1E1E;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.device-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #333333;
+}
+
+.device-list-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #E0E0E0;
+}
+
+.close-btn {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  color: #9E9E9E;
+  line-height: 1;
+}
+
+.device-list-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16rpx;
+}
+
+.device-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background-color: #2A2A2A;
+  border-radius: 16rpx;
+  border: 2rpx solid transparent;
+  transition: border-color 0.3s;
+}
+
+.device-item:active {
+  border-color: #FFD100;
+}
+
+.device-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.device-item-name {
+  font-size: 28rpx;
+  color: #E0E0E0;
+  margin-bottom: 8rpx;
+}
+
+.device-id {
+  font-size: 22rpx;
+  color: #9E9E9E;
+}
+
+.device-rssi {
+  margin-left: 16rpx;
+}
+
+.rssi-text {
+  font-size: 22rpx;
+  color: #9E9E9E;
+}
+
+.device-list-empty,
+.device-list-scanning {
+  padding: 64rpx 32rpx;
+  text-align: center;
+}
+
+.empty-text,
+.scanning-text {
+  font-size: 28rpx;
+  color: #9E9E9E;
+}
+
+.empty-tip {
+  display: block;
+  font-size: 24rpx;
+  color: #9E9E9E;
+  margin-top: 16rpx;
+  line-height: 1.6;
+}
+
+.device-match {
+  font-size: 20rpx;
+  color: #4CAF50;
+  margin-top: 8rpx;
+}
+
+/* 功能入口区 */
+.function-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24rpx;
+}
+
+.function-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 32rpx;
+  transition: transform 0.3s;
+}
+
+.function-card:active {
+  transform: scale(0.95);
+}
+
+.function-icon {
+  width: 160rpx;
+  height: 160rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24rpx;
+}
+
+.function-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #E0E0E0;
+  margin-bottom: 8rpx;
+}
+
+.function-desc {
+  font-size: 24rpx;
+  color: #9E9E9E;
+}

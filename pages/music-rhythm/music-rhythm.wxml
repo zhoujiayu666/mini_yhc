@@ -1,0 +1,88 @@
+<!--pages/music-rhythm/music-rhythm.wxml-->
+<navigation-bar title="" back="{{true}}" color="#E0E0E0" background="#121212">
+  <view slot="left" class="logo-container">
+    <view class="logo-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" fill="#FFD100"/>
+        <path d="M12 2V6M12 18V22M2 12H6M18 12H22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="#FFD100" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </view>
+    <text class="logo-text">音乐律动</text>
+  </view>
+  <view slot="right" class="help-btn" bindtap="showHelp">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#9E9E9E" stroke-width="2"/>
+      <path d="M9 9C9 7.34315 10.3431 6 12 6C13.6569 6 15 7.34315 15 9C15 10.6569 13.6569 12 12 12V14" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="18" r="1" fill="#9E9E9E"/>
+    </svg>
+  </view>
+</navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y>
+  <view class="container">
+    <!-- 麦克风图标区域 -->
+    <view class="microphone-section">
+      <view class="microphone-icon {{isListening ? 'listening' : ''}}" bindtap="{{isListening ? 'stopRecording' : 'startRecording'}}">
+        <svg width="200" height="200" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1C10.34 1 9 2.34 9 4V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V4C15 2.34 13.66 1 12 1Z" fill="#FFD100" fill-opacity="0.2" stroke="#FFD100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 10V12C19 15.87 15.87 19 12 19C8.13 19 5 15.87 5 12V10" stroke="#FFD100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 19V23M8 23H16" stroke="#FFD100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <!-- 音频波纹效果 -->
+        <view class="audio-waves" wx:if="{{isListening}}">
+          <view class="wave wave1"></view>
+          <view class="wave wave2"></view>
+          <view class="wave wave3"></view>
+        </view>
+      </view>
+      <view class="control-hint">
+        <text class="hint-text">{{isListening ? '点击停止' : '点击开始'}}</text>
+      </view>
+    </view>
+
+    <!-- 灵敏度调节区 -->
+    <view class="sensitivity-section card">
+      <view class="section-title">灵敏度调节</view>
+      <view class="slider-container">
+        <view class="slider-btn" bindtap="decreaseSensitivity">-</view>
+        <view class="slider-wrapper">
+          <slider 
+            value="{{sensitivity}}"
+            min="0"
+            max="100"
+            step="1"
+            activeColor="#FFD100"
+            backgroundColor="#333333"
+            block-color="#FFD100"
+            block-size="24"
+            bindchange="onSensitivityChange"
+          />
+        </view>
+        <view class="slider-btn" bindtap="increaseSensitivity">+</view>
+      </view>
+      <view class="sensitivity-value">灵敏度 {{sensitivity}}%</view>
+      <view class="sensitivity-tips">
+        <text class="tip-text">低</text>
+        <text class="tip-text">高</text>
+      </view>
+    </view>
+
+    <!-- 状态提示 -->
+    <view class="status-section card">
+      <view class="status-item">
+        <text class="status-label">当前状态</text>
+        <text class="status-value {{isListening ? 'active' : ''}}">
+          {{isListening ? '正在监听' : '待机中'}}
+        </text>
+      </view>
+      <view class="status-item">
+        <text class="status-label">音频强度</text>
+        <view class="audio-level-bar">
+          <view class="audio-level-fill" style="width: {{audioLevel}}%"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<bottom-nav current="music"></bottom-nav>

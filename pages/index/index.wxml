@@ -1,0 +1,105 @@
+<!--pages/index/index.wxml-->
+<navigation-bar title="" back="{{false}}" color="#E0E0E0" background="#121212">
+  <view slot="left" class="logo-container">
+    <view class="logo-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" fill="#FFD100"/>
+        <path d="M12 2V6M12 18V22M2 12H6M18 12H22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="#FFD100" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </view>
+    <text class="logo-text">MetaLumic</text>
+  </view>
+  <view slot="right" class="help-btn" bindtap="showHelp">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#9E9E9E" stroke-width="2"/>
+      <path d="M9 9C9 7.34315 10.3431 6 12 6C13.6569 6 15 7.34315 15 9C15 10.6569 13.6569 12 12 12V14" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="18" r="1" fill="#9E9E9E"/>
+    </svg>
+  </view>
+</navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y>
+  <view class="container">
+    <!-- 设备状态卡片 -->
+    <view class="status-card card" bindtap="{{isConnected ? 'disconnectDevice' : 'searchDevices'}}">
+      <view class="status-header">
+        <view class="status-indicator">
+          <view class="status-dot {{isConnected ? 'connected' : ''}}"></view>
+          <text class="status-text">{{deviceStatus}}</text>
+        </view>
+        <view class="status-action">
+          <text class="action-text">{{isConnected ? '断开' : '搜索设备'}}</text>
+        </view>
+      </view>
+      <view class="status-info">
+        <text class="mode-text">{{controlMode}}</text>
+        <text class="current-device-name" wx:if="{{currentDevice}}">{{currentDevice.name || currentDevice.deviceId}}</text>
+      </view>
+    </view>
+
+    <!-- 功能入口区 -->
+    <view class="function-grid">
+      <!-- 智能调光卡片 -->
+      <view class="function-card card" bindtap="navigateToColorControl">
+        <view class="function-icon">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#FFD100" stroke-width="2" fill="#FFD100" fill-opacity="0.2"/>
+            <circle cx="12" cy="12" r="6" fill="#FFD100"/>
+            <path d="M12 2V6M12 18V22M2 12H6M18 12H22" stroke="#FFD100" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </view>
+        <text class="function-title">智能调光</text>
+        <text class="function-desc">亮度 {{brightness}}%</text>
+      </view>
+
+      <!-- 音乐律动卡片 -->
+      <view class="function-card card" bindtap="navigateToMusicRhythm">
+        <view class="function-icon">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18V5L21 3V16" stroke="#FFD100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#FFD100" fill-opacity="0.2"/>
+            <circle cx="6" cy="18" r="3" stroke="#FFD100" stroke-width="2" fill="#FFD100" fill-opacity="0.2"/>
+            <circle cx="18" cy="16" r="3" stroke="#FFD100" stroke-width="2" fill="#FFD100" fill-opacity="0.2"/>
+            <path d="M9 18V5L21 3V16" stroke="#FFD100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="6" cy="18" r="3" stroke="#FFD100" stroke-width="2"/>
+            <circle cx="18" cy="16" r="3" stroke="#FFD100" stroke-width="2"/>
+          </svg>
+        </view>
+        <text class="function-title">音乐律动</text>
+        <text class="function-desc">{{musicRhythmEnabled ? '已开启' : '未开启'}}</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 设备列表弹窗 -->
+<view class="device-list-modal {{showDeviceList ? 'show' : ''}}" bindtap="closeDeviceList">
+  <view class="device-list-content" catchtap="stopPropagation">
+    <view class="device-list-header">
+      <text class="device-list-title">选择设备</text>
+      <view class="close-btn" bindtap="closeDeviceList">×</view>
+    </view>
+    <view class="device-list-body">
+      <view class="device-item" wx:for="{{deviceList}}" wx:key="deviceId" data-deviceid="{{item.deviceId}}" bindtap="connectDevice">
+        <view class="device-info">
+          <text class="device-item-name">{{item.name || item.deviceId || '未知设备'}}</text>
+          <text class="device-id">{{item.deviceId}}</text>
+        </view>
+        <view class="device-rssi">
+          <text class="rssi-text">信号: {{item.RSSI || '未知'}}</text>
+        </view>
+      </view>
+      <view class="device-list-empty" wx:if="{{deviceList.length === 0 && !isScanning}}">
+        <text class="empty-text">未发现设备</text>
+        <text class="empty-tip">请确保：</text>
+        <text class="empty-tip">1. 手机蓝牙已开启</text>
+        <text class="empty-tip">2. 设备已开启并处于配对模式</text>
+        <text class="empty-tip">3. 设备距离手机较近</text>
+      </view>
+      <view class="device-list-scanning" wx:if="{{isScanning}}">
+        <text class="scanning-text">正在搜索设备...</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<bottom-nav current="index"></bottom-nav>

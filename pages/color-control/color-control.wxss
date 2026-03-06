@@ -1,0 +1,156 @@
+/**color-control.wxss**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #121212;
+}
+
+.scrollarea {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 120rpx;
+}
+
+.container {
+  padding: 32rpx;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  padding-left: 32rpx;
+}
+
+.logo-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 16rpx;
+}
+
+.logo-text {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #FFD100;
+}
+
+.help-btn {
+  padding: 16rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 色轮区域 */
+.color-wheel-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 32rpx;
+  padding: 0 32rpx;
+  box-sizing: border-box;
+}
+
+/* 亮度调节区 */
+.brightness-section {
+  margin-bottom: 32rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #E0E0E0;
+  margin-bottom: 24rpx;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.slider-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background-color: #1E1E1E;
+  border: 2rpx solid #333333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E0E0E0;
+  font-size: 40rpx;
+  font-weight: bold;
+}
+
+.slider-btn:active {
+  background-color: #333333;
+}
+
+.slider-wrapper {
+  flex: 1;
+  margin: 0 24rpx;
+}
+
+.brightness-value {
+  text-align: center;
+  font-size: 24rpx;
+  color: #9E9E9E;
+}
+
+/* 预设效果区 */
+.preset-section {
+  margin-top: 32rpx;
+}
+
+.preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 24rpx;
+  margin-left: -12rpx;
+  margin-right: -12rpx;
+}
+
+.preset-item {
+  width: calc(33.333% - 24rpx);
+  margin: 0 12rpx 24rpx 12rpx;
+  background-color: #1E1E1E;
+  border: 2rpx solid #333333;
+  border-radius: 24rpx;
+  padding: 32rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.preset-item:active {
+  transform: scale(0.95);
+}
+
+.preset-item.active {
+  background-color: #1E1E1E;  /* 保持背景色不变 */
+  border: 2rpx solid #FFD100;  /* 黄色边框 */
+}
+
+.preset-icon {
+  font-size: 64rpx;
+  margin-bottom: 16rpx;
+  filter: brightness(1);  /* 默认状态 */
+}
+
+.preset-item.active .preset-icon {
+  filter: brightness(1.2) saturate(1.2);  /* 选中时图标更亮 */
+}
+
+.preset-name {
+  font-size: 24rpx;
+  color: #9E9E9E;  /* 默认灰色 */
+}
+
+.preset-item.active .preset-name {
+  color: #FFD100;  /* 选中时文字黄色 */
+  font-weight: 500;
+}

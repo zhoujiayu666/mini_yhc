@@ -1,0 +1,21 @@
+<!--components/color-wheel/color-wheel.wxml-->
+<view class="color-wheel-wrapper">
+  <view class="color-wheel-inner">
+    <view 
+      class="color-wheel-container"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtap="onTap"
+    >
+      <view class="color-wheel-ring"></view>
+      <view class="color-wheel-center"></view>
+      <view 
+        class="color-selector"
+        style="left: {{selectorX}}rpx; top: {{selectorY}}rpx;"
+      >
+        <view class="selector-dot"></view>
+      </view>
+    </view>
+  </view>
+  <view class="color-preview" style="background-color: {{previewColor}};"></view>
+</view>

@@ -1,0 +1,46 @@
+<!--components/bottom-nav/bottom-nav.wxml-->
+<view class="bottom-nav">
+  <view 
+    class="nav-item {{current === 'settings' ? 'active' : ''}}"
+    data-page="settings"
+    bindtap="navigateTo"
+  >
+    <view class="nav-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="{{current === 'settings' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" fill="{{current === 'settings' ? '#FFD100' : 'none'}}" fill-opacity="0.2"/>
+        <circle cx="12" cy="12" r="6" fill="{{current === 'settings' ? '#FFD100' : '#9E9E9E'}}" fill-opacity="{{current === 'settings' ? '1' : '0.3'}}"/>
+        <path d="M12 2V6M12 18V22M2 12H6M18 12H22" stroke="{{current === 'settings' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </view>
+    <text class="nav-text">调光</text>
+  </view>
+  
+  <view 
+    class="nav-item {{current === 'index' ? 'active' : ''}}"
+    data-page="index"
+    bindtap="navigateTo"
+  >
+    <view class="nav-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="{{current === 'index' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 22V12H15V22" stroke="{{current === 'index' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </view>
+    <text class="nav-text">首页</text>
+  </view>
+  
+  <view 
+    class="nav-item {{current === 'music' ? 'active' : ''}}"
+    data-page="music"
+    bindtap="navigateTo"
+  >
+    <view class="nav-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 18V5L21 3V16" stroke="{{current === 'music' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="6" cy="18" r="3" stroke="{{current === 'music' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="18" cy="16" r="3" stroke="{{current === 'music' ? '#FFD100' : '#9E9E9E'}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </view>
+    <text class="nav-text">律动</text>
+  </view>
+</view>
