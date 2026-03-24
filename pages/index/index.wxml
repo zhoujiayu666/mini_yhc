@@ -20,15 +20,15 @@
 
 <scroll-view class="scrollarea" scroll-y>
   <view class="container">
-    <!-- 设备状态卡片 -->
-    <view class="status-card card" bindtap="{{isConnected ? 'disconnectDevice' : 'searchDevices'}}">
+    <!-- 设备状态卡片（始终用于选择/搜索设备，不再提供“断开”按钮） -->
+    <view class="status-card card" bindtap="searchDevices">
       <view class="status-header">
         <view class="status-indicator">
           <view class="status-dot {{isConnected ? 'connected' : ''}}"></view>
           <text class="status-text">{{deviceStatus}}</text>
         </view>
         <view class="status-action">
-          <text class="action-text">{{isConnected ? '断开' : '搜索设备'}}</text>
+          <text class="action-text">{{isConnected ? '选择设备' : '搜索设备'}}</text>
         </view>
       </view>
       <view class="status-info">
