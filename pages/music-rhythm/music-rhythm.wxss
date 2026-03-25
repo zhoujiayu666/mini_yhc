@@ -13,7 +13,7 @@ page {
 }
 
 .container {
-  padding: 32rpx;
+  padding: 32rpx 20rpx;
 }
 
 .logo-container {
@@ -128,6 +128,11 @@ page {
   margin-bottom: 32rpx;
 }
 
+.sensitivity-section.card {
+  margin-left: 24rpx;
+  margin-right: 24rpx;
+}
+
 .section-title {
   font-size: 28rpx;
   font-weight: 500;
@@ -141,27 +146,55 @@ page {
   margin-bottom: 16rpx;
 }
 
+.sensitivity-section .slider-container {
+  margin-left: -32rpx;
+  margin-right: -32rpx;
+  padding-left: 16rpx;
+  padding-right: 16rpx;
+  box-sizing: border-box;
+}
+
 .slider-btn {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  background-color: #1E1E1E;
-  border: 2rpx solid #333333;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  border-radius: 14rpx;
+  background-color: #2A2A2A;
+  border: 2rpx solid #3D3D3D;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #E0E0E0;
-  font-size: 40rpx;
-  font-weight: bold;
+  color: #FFD100;
+  font-size: 34rpx;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .slider-btn:active {
-  background-color: #333333;
+  background-color: #353535;
 }
 
 .slider-wrapper {
   flex: 1;
-  margin: 0 24rpx;
+  min-width: 0;
+  margin: 0 10rpx;
+  display: flex;
+  align-items: center;
+}
+
+.slider-track-shell {
+  width: 100%;
+  height: 64rpx;
+  border-radius: 32rpx;
+  background-color: #2C2C2C;
+  padding: 0 6rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.track-slider {
+  width: 100%;
 }
 
 .sensitivity-value {

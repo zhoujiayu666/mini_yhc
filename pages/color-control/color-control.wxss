@@ -13,7 +13,7 @@ page {
 }
 
 .container {
-  padding: 32rpx;
+  padding: 32rpx 20rpx;
 }
 
 .logo-container {
@@ -57,6 +57,12 @@ page {
   margin-bottom: 32rpx;
 }
 
+/* 卡片略贴屏，进度条在屏宽中占比更大（与 app.wxss .card 的 32rpx 左右边距配合） */
+.brightness-section.card {
+  margin-left: 24rpx;
+  margin-right: 24rpx;
+}
+
 .section-title {
   font-size: 28rpx;
   font-weight: 500;
@@ -70,27 +76,58 @@ page {
   margin-bottom: 16rpx;
 }
 
+/* 进度条行拉满卡片内容区（抵消 .card 的 padding:32rpx），轨道显著变长 */
+.brightness-section .slider-container {
+  margin-left: -32rpx;
+  margin-right: -32rpx;
+  padding-left: 16rpx;
+  padding-right: 16rpx;
+  box-sizing: border-box;
+}
+
+/* 参考设计：圆角方按钮 + 黄图标（略缩小，把宽度让给轨道） */
 .slider-btn {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  background-color: #1E1E1E;
-  border: 2rpx solid #333333;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  border-radius: 14rpx;
+  background-color: #2A2A2A;
+  border: 2rpx solid #3D3D3D;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #E0E0E0;
-  font-size: 40rpx;
-  font-weight: bold;
+  color: #FFD100;
+  font-size: 34rpx;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .slider-btn:active {
-  background-color: #333333;
+  background-color: #353535;
 }
 
 .slider-wrapper {
   flex: 1;
-  margin: 0 24rpx;
+  min-width: 0;
+  margin: 0 10rpx;
+  display: flex;
+  align-items: center;
+}
+
+/* 胶囊形轨道底槽（与原生 slider 叠放） */
+.slider-track-shell {
+  width: 100%;
+  height: 64rpx;
+  border-radius: 32rpx;
+  background-color: #2C2C2C;
+  padding: 0 6rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.track-slider {
+  width: 100%;
 }
 
 .brightness-value {

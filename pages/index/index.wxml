@@ -81,7 +81,10 @@
     <view class="device-list-body">
       <view class="device-item" wx:for="{{deviceList}}" wx:key="deviceId" data-deviceid="{{item.deviceId}}" bindtap="connectDevice">
         <view class="device-info">
-          <text class="device-item-name">{{item.name || item.deviceId || '未知设备'}}</text>
+          <view class="device-name-row">
+            <text class="device-item-name">{{item.name || item.deviceId || '未知设备'}}</text>
+            <text class="device-connected-tag" wx:if="{{item.isConnectedDevice}}">已连接</text>
+          </view>
           <text class="device-id">{{item.deviceId}}</text>
         </view>
         <view class="device-rssi">

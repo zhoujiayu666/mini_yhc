@@ -110,11 +110,38 @@ Page({
    */
   updateConnectionStatus() {
     const isConnected = app.globalData.isConnected || bleController.isConnected;
-    this.setData({
+    const patch = {
       isConnected: isConnected,
       deviceStatus: isConnected ? '已连接' : '未连接',
       currentDevice: app.globalData.currentDevice
-    });
+    };
+    if (this.data.deviceList && this.data.deviceList.length > 0) {
+      patch.deviceList = this.annotateDeviceConnection(this.data.deviceList);
+    }
+    this.setData(patch);
+  },
+
+  /**
+   * 为列表项标记是否与当前已连接设备为同一台（用于展示「已连接」）
+   */
+  annotateDeviceConnection(devices) {
+    if (!devices || !devices.length) {
+      return devices || [];
+    }
+    const isLinked = app.globalData.isConnected || bleController.isConnected;
+    const connectedId = (
+      bleController.deviceId ||
+      (app.globalData.currentDevice && app.globalData.currentDevice.deviceId) ||
+      ''
+    ).toUpperCase();
+    return devices.map((d) => ({
+      ...d,
+      isConnectedDevice: !!(
+        isLinked &&
+        connectedId &&
+        (d.deviceId || '').toUpperCase() === connectedId
+      )
+    }));
   },
 
   /**
@@ -164,7 +191,7 @@ Page({
             });
           });
           // 添加到列表显示
-          this.setData({ deviceList: existingDevices });
+          this.setData({ deviceList: this.annotateDeviceConnection(existingDevices) });
         } else {
           console.log('暂无已缓存的设备');
         }
@@ -235,7 +262,7 @@ Page({
           return rssiA - rssiB; // RSSI值越小（绝对值越大），信号越强，排前面
         });
 
-        this.setData({ deviceList: newList });
+        this.setData({ deviceList: this.annotateDeviceConnection(newList) });
       });
 
       // 延长搜索时间到10秒

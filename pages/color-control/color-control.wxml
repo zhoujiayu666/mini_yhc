@@ -34,19 +34,22 @@
     <view class="brightness-section card">
       <view class="section-title">亮度调节</view>
       <view class="slider-container">
-        <view class="slider-btn" bindtap="decreaseBrightness">-</view>
+        <view class="slider-btn" bindtap="decreaseBrightness">−</view>
         <view class="slider-wrapper">
-          <slider  
-            value="{{brightness}}"
-            min="0"
-            max="100"
-            step="1"
-            activeColor="#FFD100"
-            backgroundColor="#333333"
-            block-color="#FFD100"
-            block-size="24"
-            bindchange="onBrightnessChange"
-          />
+          <view class="slider-track-shell">
+            <slider
+              class="track-slider"
+              value="{{brightness}}"
+              min="0"
+              max="100"
+              step="1"
+              activeColor="#FFD100"
+              backgroundColor="#3D3D3D"
+              block-color="#FFD100"
+              block-size="28"
+              bindchange="onBrightnessChange"
+            />
+          </view>
         </view>
         <view class="slider-btn" bindtap="increaseBrightness">+</view>
       </view>

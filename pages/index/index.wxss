@@ -199,10 +199,23 @@ page {
   flex-direction: column;
 }
 
+.device-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
 .device-item-name {
   font-size: 28rpx;
   color: #E0E0E0;
-  margin-bottom: 8rpx;
+}
+
+.device-connected-tag {
+  font-size: 22rpx;
+  color: #FFD100;
+  flex-shrink: 0;
 }
 
 .device-id {
