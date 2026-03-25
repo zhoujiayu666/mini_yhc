@@ -23,7 +23,10 @@ Page({
     currentMode: 'normal', // 当前模式：silent, normal, beat, climax
     beatCooldown: 0, // 鼓点冷却时间（避免频繁触发）
     bpm: 0, // 当前BPM
-    volumeHistory: [] // 音量历史（用于平滑处理）
+    volumeHistory: [], // 音量历史（用于平滑处理）
+    startWatchdogTimer: null, // 录音启动看门狗（用于定位start后无回调）
+    audioStartTime: 0, // 本次监听开始时间（用于开场稳定期）
+    recordingPending: false // 已调用 start、尚未收到 onStart（用于避免未录音时 stop 报错）
   },
 
   /**
@@ -39,7 +42,7 @@ Page({
     bleController.onConnectionStateChange = (connected) => {
       this.setData({ isConnected: connected });
       app.globalData.isConnected = connected;
-      if (!connected && this.data.isListening) {
+      if (!connected && (this.data.isListening || this.data.recordingPending)) {
         this.stopAudioListener();
       }
     };
@@ -95,14 +98,20 @@ Page({
     // 监听录音开始
     recorderManager.onStart(() => {
       console.log('✅ 录音开始回调触发');
+      if (this.data.startWatchdogTimer) {
+        clearTimeout(this.data.startWatchdogTimer);
+      }
       this.setData({ 
         isListening: true,
+        recordingPending: false,
         audioHistory: [],
         volumeHistory: [],
         lastBeatTime: 0,
         currentMode: 'normal',
         beatCooldown: 0,
-        bpm: 0
+        bpm: 0,
+        startWatchdogTimer: null,
+        audioStartTime: Date.now()
       });
       console.log('✅ isListening 已设置为 true');
       this.startAudioAnalysis();
@@ -126,21 +135,49 @@ Page({
     
     // 监听录音错误
     recorderManager.onError((err) => {
-      console.error('❌ 录音错误', err);
+      console.error('❌ 录音错误', {
+        err,
+        isListening: this.data.isListening,
+        isConnected: this.data.isConnected
+      });
       const errorMsg = err.errMsg || err.message || JSON.stringify(err);
+      if (this.data.startWatchdogTimer) {
+        clearTimeout(this.data.startWatchdogTimer);
+      }
+      this.setData({
+        isListening: false,
+        recordingPending: false,
+        startWatchdogTimer: null
+      });
+      // 未在录音时误调 stop 会报 stop record fail，静默处理不弹窗
+      const msg = String(errorMsg || '');
+      if (msg.includes('stop record fail') || msg.includes('stopRecord')) {
+        console.warn('⚠️ 录音器 stop 失败（通常可忽略）', errorMsg);
+        return;
+      }
       wx.showModal({
         title: '录音失败',
         content: `错误信息：${errorMsg}\n\n可能的原因：\n1. 录音权限未授权\n2. 设备不支持录音\n3. 麦克风被其他应用占用\n4. 录音参数不支持`,
         showCancel: false,
         confirmText: '知道了'
       });
-      this.setData({ isListening: false });
     });
     
     // 监听录音停止
     recorderManager.onStop((res) => {
-      console.log('🛑 录音停止', res);
-      this.setData({ isListening: false });
+      if (this.data.startWatchdogTimer) {
+        clearTimeout(this.data.startWatchdogTimer);
+      }
+      console.log('🛑 录音停止', {
+        res,
+        isListening: this.data.isListening,
+        isConnected: this.data.isConnected
+      });
+      this.setData({ 
+        isListening: false,
+        recordingPending: false,
+        startWatchdogTimer: null
+      });
     });
   },
 
@@ -293,6 +330,7 @@ Page({
     
     try {
       // 使用PCM格式，支持实时音频数据
+      this.setData({ recordingPending: true });
       recorderManager.start({
         duration: 60000, // 最长录音时间60秒
         sampleRate: 16000, // 采样率16kHz
@@ -302,7 +340,17 @@ Page({
         frameSize: 50 // 每50ms返回一次数据
       });
       console.log('📢 recorderManager.start() 已调用，等待 onStart 回调');
+      const watchdogTimer = setTimeout(() => {
+        if (!this.data.isListening) {
+          console.error('⏱️ 录音启动超时：start已调用，但未收到onStart', {
+            isConnected: this.data.isConnected,
+            hasRecorderManager: !!this.data.recorderManager
+          });
+        }
+      }, 2500);
+      this.setData({ startWatchdogTimer: watchdogTimer });
     } catch (error) {
+      this.setData({ recordingPending: false });
       console.error('❌ recorderManager.start() 调用失败', error);
       const errorMsg = error.errMsg || error.message || JSON.stringify(error);
       
@@ -350,11 +398,15 @@ Page({
       clearInterval(this.data.audioTimer);
       this.setData({ audioTimer: null });
     }
+    if (this.data.startWatchdogTimer) {
+      clearTimeout(this.data.startWatchdogTimer);
+      this.setData({ startWatchdogTimer: null });
+    }
     
-    // 停止录音器
-    if (this.data.recorderManager) {
+    // 停止录音器：未开始录音时不要 stop，否则会 onError: operateRecorder:fail:stop record fail
+    const needStopRecorder = this.data.isListening || this.data.recordingPending;
+    if (this.data.recorderManager && needStopRecorder) {
       try {
-        // 无论isListening状态如何，都尝试停止录音（防止状态不同步）
         this.data.recorderManager.stop();
         console.log('🛑 已调用录音器停止方法');
       } catch (error) {
@@ -363,7 +415,7 @@ Page({
     }
     
     // 更新状态
-    this.setData({ isListening: false });
+    this.setData({ isListening: false, recordingPending: false });
     
     // 重置亮度和音频强度
     this.setData({ 
@@ -372,7 +424,8 @@ Page({
       audioHistory: [],
       volumeHistory: [],
       currentMode: 'normal',
-      bpm: 0
+      bpm: 0,
+      audioStartTime: 0
     });
     
     // 发送一次常亮数据，恢复默认状态
@@ -418,8 +471,8 @@ Page({
       const normalizedRms = rms / maxValue;
       // 使用对数缩放：log10(x * 9 + 1) * 100，让低音量也能有响应
       const logVolume = Math.log10(normalizedRms * 9 + 1) * 100;
-      // 结合灵敏度设置
-      const volumeLevel = Math.min(100, logVolume * (this.data.sensitivity / 100) * 1.5); // 增加1.5倍放大
+      // 结合灵敏度设置（0-200）
+      const volumeLevel = Math.min(100, logVolume * (this.data.sensitivity / 200) * 2.0); // 增加2.0倍放大
       
       // 保存到历史记录
       const history = this.data.volumeHistory || [];
@@ -525,10 +578,13 @@ Page({
   /**
    * 根据音频特征选择灯光模式
    * 彩虹色渐变：音量 0-100 映射到色相 0°（红）→ 270°（紫）
-   * 最弱熄灭：音量 < 10% 时亮度为 0
-   * 亮度线性增加：10-100% 映射到 0-100% 亮度
+   * 低音保底：音量很低时保持最低亮度，避免频繁灭灯
+   * 亮度线性增加：10-100% 映射到 8-100% 亮度
    */
   selectLightMode(volumeLevel, hasBeat) {
+    // 开场稳定期（前2秒）：禁用闪烁，避免“开场闪几下”
+    const inStartupWindow = this.data.audioStartTime > 0 && (Date.now() - this.data.audioStartTime) < 2000;
+
     // 将音量级别（0-100）映射到彩虹色（红0° -> 紫270°）和亮度（0-100）
     // 最弱时熄灭（亮度0），最强时亮到紫色（270°）
     
@@ -536,14 +592,15 @@ Page({
     // 彩虹色顺序：红(0°) -> 橙(30°) -> 黄(60°) -> 绿(120°) -> 青(180°) -> 蓝(240°) -> 紫(270°)
     const hue = Math.round((volumeLevel / 100) * 270);
     
-    // 音量级别映射到亮度：0-100 -> 0(熄灭) -> 100(最亮)
-    // 最弱时（<10%）完全熄灭，之后线性增加
-    let brightness = 0;
+    // 音量级别映射到亮度：0-100 -> 8(保底) -> 100(最亮)
+    // 低音量时保留最低亮度，避免“闪几下就灭”
+    const minBrightness = 8;
+    let brightness = minBrightness;
     if (volumeLevel < 10) {
-      brightness = 0; // 最弱时熄灭
+      brightness = minBrightness;
     } else {
-      // 10-100% 映射到 0-100% 亮度
-      brightness = Math.round(((volumeLevel - 10) / 90) * 100);
+      // 10-100% 映射到 8-100% 亮度
+      brightness = Math.round(((volumeLevel - 10) / 90) * (100 - minBrightness) + minBrightness);
       brightness = Math.min(100, Math.max(0, brightness));
     }
     
@@ -552,23 +609,23 @@ Page({
     let speed = 'medium';
     
     if (volumeLevel < 10) {
-      // 最弱：熄灭
+      // 最弱：保持微亮呼吸，避免完全熄灭
       return {
         mode: 'silent',
-        brightness: 0,
-        lightMode: 'constant',
-        color: { hue: 0, saturation: 0 },
+        brightness: minBrightness,
+        lightMode: 'breath',
+        color: { hue: 0, saturation: 100 },
         speed: 'slow'
       };
     } else if (volumeLevel < 30) {
       // 弱音：呼吸模式
       lightMode = 'breath';
       speed = 'slow';
-    } else if (hasBeat) {
+    } else if (!inStartupWindow && hasBeat) {
       // 检测到鼓点：闪烁模式
       lightMode = 'flash';
       speed = 'fast';
-    } else if (volumeLevel > 70) {
+    } else if (!inStartupWindow && volumeLevel > 70) {
       // 强音：快闪模式
       lightMode = 'quickFlash';
       speed = 'bpm';
@@ -735,7 +792,7 @@ Page({
    * 灵敏度增加
    */
   increaseSensitivity() {
-    const sensitivity = Math.min(100, this.data.sensitivity + 5);
+    const sensitivity = Math.min(200, this.data.sensitivity + 5);
     this.setData({ sensitivity });
     this.sendSensitivityToDevice();
   },
