@@ -8,7 +8,7 @@ Page({
    * 页面的初始数据
    */
   data: {
-    sensitivity: 69,
+    sensitivity: 150,
     isListening: false,
     audioLevel: 0,
     isConnected: false,
@@ -35,6 +35,8 @@ Page({
   onLoad(options) {
     /** 用户点击停止时为 true；时长到点自动停时为 false，用于区分是否自动续录 */
     this._userRequestedStop = false;
+    /** 防回黑保持窗口：颜色亮起后短时间内不回最低亮度 */
+    this._darkHoldUntil = 0;
 
     // 检查连接状态
     this.setData({
@@ -101,6 +103,7 @@ Page({
     // 监听录音开始
     recorderManager.onStart(() => {
       console.log('✅ 录音开始回调触发');
+      this._darkHoldUntil = 0;
       if (this.data.startWatchdogTimer) {
         clearTimeout(this.data.startWatchdogTimer);
       }
@@ -430,6 +433,7 @@ Page({
    */
   stopAudioListener() {
     this._userRequestedStop = true;
+    this._darkHoldUntil = 0;
 
     // 先停止定时器
     if (this.data.audioTimer) {
@@ -615,30 +619,65 @@ Page({
 
   /**
    * 根据音频特征选择灯光模式
-   * 彩虹色渐变：音量 0-100 映射到色相 0°（红）→ 270°（紫）
+   * 彩虹色映射（按文案）：
+   * - 低能量：冷色（蓝/青）
+   * - 中能量：青绿黄过渡
+   * - 高能量：暖色爆发（红/橙/粉/紫）
    * 低音保底：音量很低时保持最低亮度，避免频繁灭灯
-   * 亮度线性增加：10-100% 映射到 8-100% 亮度
+   * 亮度线性增加：5-100% 映射到 15-100% 亮度
    */
   selectLightMode(volumeLevel, hasBeat) {
+    const now = Date.now();
+    const silentThreshold = 5;
+    const minBrightness = 15;
+    const darkHoldMs = 200;
+
+    // 有效音量达到静音阈值时，刷新防回黑保持窗口
+    if (volumeLevel >= silentThreshold) {
+      this._darkHoldUntil = now + darkHoldMs;
+    }
+
+    // 低于阈值但仍在保持窗口内：按阈值计算，避免颜色刚亮就回黑
+    const effectiveVolume =
+      volumeLevel < silentThreshold &&
+      this._darkHoldUntil > 0 &&
+      now < this._darkHoldUntil
+        ? silentThreshold
+        : volumeLevel;
+
     // 开场稳定期（前2秒）：禁用闪烁，避免“开场闪几下”
-    const inStartupWindow = this.data.audioStartTime > 0 && (Date.now() - this.data.audioStartTime) < 2000;
+    const inStartupWindow =
+      this.data.audioStartTime > 0 &&
+      (now - this.data.audioStartTime) < 2000;
 
     // 将音量级别（0-100）映射到彩虹色（红0° -> 紫270°）和亮度（0-100）
     // 最弱时熄灭（亮度0），最强时亮到紫色（270°）
     
-    // 音量级别映射到色相：0-100 -> 0°(红) -> 270°(紫)
-    // 彩虹色顺序：红(0°) -> 橙(30°) -> 黄(60°) -> 绿(120°) -> 青(180°) -> 蓝(240°) -> 紫(270°)
-    const hue = Math.round((volumeLevel / 100) * 270);
+    // 按文案映射：
+    // 0~30   -> 冷色：220(蓝) -> 180(青)
+    // 30~70  -> 过渡：180(青) -> 60(黄)
+    // 70~100 -> 暖色爆发：40(橙红) -> 330(粉紫)
+    let hue = 180;
+    if (effectiveVolume < 30) {
+      hue = Math.round(220 - (effectiveVolume / 30) * 40);
+    } else if (effectiveVolume < 70) {
+      hue = Math.round(180 - ((effectiveVolume - 30) / 40) * 120);
+    } else {
+      hue = Math.round(40 + ((effectiveVolume - 70) / 30) * 290) % 360;
+    }
     
-    // 音量级别映射到亮度：0-100 -> 8(保底) -> 100(最亮)
+    // 音量级别映射到亮度：0-100 -> 15(保底) -> 100(最亮)
     // 低音量时保留最低亮度，避免“闪几下就灭”
-    const minBrightness = 8;
     let brightness = minBrightness;
-    if (volumeLevel < 10) {
+    if (effectiveVolume < silentThreshold) {
       brightness = minBrightness;
     } else {
-      // 10-100% 映射到 8-100% 亮度
-      brightness = Math.round(((volumeLevel - 10) / 90) * (100 - minBrightness) + minBrightness);
+      // 5-100% 映射到 15-100% 亮度
+      brightness = Math.round(
+        ((effectiveVolume - silentThreshold) / (100 - silentThreshold)) *
+          (100 - minBrightness) +
+          minBrightness
+      );
       brightness = Math.min(100, Math.max(0, brightness));
     }
     
@@ -646,24 +685,24 @@ Page({
     let lightMode = 'constant'; // 默认常亮
     let speed = 'medium';
     
-    if (volumeLevel < 10) {
-      // 最弱：保持微亮呼吸，避免完全熄灭
+    if (effectiveVolume < silentThreshold) {
+      // 最弱：保持微亮常亮，避免明显呼吸感
       return {
         mode: 'silent',
         brightness: minBrightness,
-        lightMode: 'breath',
+        lightMode: 'constant',
         color: { hue: 0, saturation: 100 },
         speed: 'slow'
       };
-    } else if (volumeLevel < 30) {
-      // 弱音：呼吸模式
-      lightMode = 'breath';
-      speed = 'slow';
+    } else if (effectiveVolume < 30) {
+      // 弱音：快闪模式（更接近参考小程序的打点感）
+      lightMode = 'flash';
+      speed = 'fast';
     } else if (!inStartupWindow && hasBeat) {
       // 检测到鼓点：闪烁模式
       lightMode = 'flash';
       speed = 'fast';
-    } else if (!inStartupWindow && volumeLevel > 70) {
+    } else if (!inStartupWindow && effectiveVolume > 70) {
       // 强音：快闪模式
       lightMode = 'quickFlash';
       speed = 'bpm';
@@ -674,14 +713,14 @@ Page({
     }
     
     return {
-      mode: volumeLevel < 30 ? 'silent' : 
+      mode: effectiveVolume < 30 ? 'silent' : 
             hasBeat ? 'beat' : 
-            volumeLevel > 70 ? 'climax' : 'normal',
+            effectiveVolume > 70 ? 'climax' : 'normal',
       brightness: brightness,
       lightMode: lightMode,
       color: { 
         hue: hue, 
-        saturation: 100 // 饱和度始终100%，保证颜色鲜艳
+        saturation: effectiveVolume > 70 ? 100 : 90 // 强节奏更艳，低中能量稍柔和
       },
       speed: speed
     };
