@@ -33,6 +33,9 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    /** 用户点击停止时为 true；时长到点自动停时为 false，用于区分是否自动续录 */
+    this._userRequestedStop = false;
+
     // 检查连接状态
     this.setData({
       isConnected: app.globalData.isConnected
@@ -168,15 +171,45 @@ Page({
       if (this.data.startWatchdogTimer) {
         clearTimeout(this.data.startWatchdogTimer);
       }
+      this.setData({ startWatchdogTimer: null });
+
+      const userStop = this._userRequestedStop;
+      this._userRequestedStop = false;
+
       console.log('🛑 录音停止', {
         res,
+        userStop,
         isListening: this.data.isListening,
         isConnected: this.data.isConnected
       });
-      this.setData({ 
+
+      if (userStop) {
+        this.setData({
+          isListening: false,
+          recordingPending: false
+        });
+        return;
+      }
+
+      // 时长到点等系统结束：仍连接则自动续录（微信单次最长 600000ms）
+      if (this.data.isConnected) {
+        this.setData({
+          isListening: false,
+          recordingPending: false
+        });
+        setTimeout(() => {
+          if (!this.data.isConnected || this._userRequestedStop) {
+            return;
+          }
+          console.log('🔄 录音分段结束，自动续录');
+          this.actuallyStartRecording();
+        }, 200);
+        return;
+      }
+
+      this.setData({
         isListening: false,
-        recordingPending: false,
-        startWatchdogTimer: null
+        recordingPending: false
       });
     });
   },
@@ -185,6 +218,8 @@ Page({
    * 开始录音
    */
   startRecording() {
+    this._userRequestedStop = false;
+
     console.log('🎤 点击开始录音', {
       isConnected: this.data.isConnected,
       isListening: this.data.isListening,
@@ -332,7 +367,8 @@ Page({
       // 使用PCM格式，支持实时音频数据
       this.setData({ recordingPending: true });
       recorderManager.start({
-        duration: 60000, // 最长录音时间60秒
+        // 微信单次最长 600000ms（10 分钟），到点会 onStop，由 onStop 内自动续录实现长时间监听
+        duration: 600000,
         sampleRate: 16000, // 采样率16kHz
         numberOfChannels: 1, // 单声道
         encodeBitRate: 96000, // 编码比特率
@@ -393,6 +429,8 @@ Page({
    * 停止音频监听
    */
   stopAudioListener() {
+    this._userRequestedStop = true;
+
     // 先停止定时器
     if (this.data.audioTimer) {
       clearInterval(this.data.audioTimer);
