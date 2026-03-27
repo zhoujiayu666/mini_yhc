@@ -23,39 +23,96 @@ Page({
       { id: 'star', name: '星空', icon: '⭐' }
     ],
     selectedEffect: null,
+    /** 随机模式：固定色相，仅调亮度时不再重抽 */
+    randomHue: null,
     isConnected: false,
     sendTimer: null // 防抖定时器
+  },
+
+  /**
+   * 将当前调光 UI 状态写入全局，便于 redirect 切页后恢复
+   */
+  syncColorControlStateToGlobal() {
+    app.globalData.colorControlState = {
+      brightness: this.data.brightness,
+      selectedEffect: this.data.selectedEffect,
+      hue: this.data.hue,
+      saturation: this.data.saturation,
+      randomHue: this.data.randomHue
+    };
   },
 
   /**
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
-    // 从首页获取亮度值
-    const pages = getCurrentPages();
-    const prevPage = pages[pages.length - 2];
-    if (prevPage && prevPage.data.brightness) {
-      this.setData({
-        brightness: prevPage.data.brightness
-      });
-    }
-    
-    // 检查连接状态
-    this.setData({
+    const saved = app.globalData.colorControlState;
+    const patch = {
       isConnected: app.globalData.isConnected
+    };
+    if (saved && typeof saved.brightness === 'number') {
+      patch.brightness = saved.brightness;
+      patch.selectedEffect = saved.selectedEffect;
+      patch.hue = typeof saved.hue === 'number' ? saved.hue : this.data.hue;
+      patch.saturation =
+        typeof saved.saturation === 'number' ? saved.saturation : this.data.saturation;
+      if (typeof saved.randomHue === 'number') {
+        patch.randomHue = saved.randomHue;
+      } else if (saved.selectedEffect === 'random') {
+        const rh = Math.floor(Math.random() * 360);
+        patch.randomHue = rh;
+        patch.hue = rh;
+      } else {
+        patch.randomHue = null;
+      }
+    } else {
+      const pages = getCurrentPages();
+      const prevPage = pages[pages.length - 2];
+      if (prevPage && prevPage.data.brightness) {
+        patch.brightness = prevPage.data.brightness;
+      }
+    }
+
+    this.setData(patch, () => {
+      if (this.data.isConnected && this.data.selectedEffect) {
+        this.sendEffectToDevice(this.data.selectedEffect);
+      }
     });
-    
+
     // 监听连接状态变化
     bleController.onConnectionStateChange = (connected) => {
       this.setData({ isConnected: connected });
       app.globalData.isConnected = connected;
     };
   },
+
+  onShow() {
+    this.setData({
+      isConnected: app.globalData.isConnected || bleController.isConnected
+    });
+  },
+
+  /**
+   * 未连接时跳转连接引导页，已连接返回 true
+   */
+  ensureConnectedOrGoGuide() {
+    const isConnected = app.globalData.isConnected || bleController.isConnected;
+    if (isConnected) {
+      this.setData({ isConnected: true });
+      return true;
+    }
+    this.setData({ isConnected: false });
+    wx.navigateTo({
+      url: '/pages/connect-guide/connect-guide'
+    });
+    return false;
+  },
   
   /**
    * 生命周期函数--监听页面隐藏
    */
   onHide() {
+    this.syncColorControlStateToGlobal();
     // 清除所有定时器（进入后台时停止所有定时任务）
     if (this.data.sendTimer) {
       clearTimeout(this.data.sendTimer);
@@ -75,6 +132,7 @@ Page({
    * 生命周期函数--监听页面卸载
    */
   onUnload() {
+    this.syncColorControlStateToGlobal();
     // 清除所有定时器
     if (this.data.sendTimer) {
       clearTimeout(this.data.sendTimer);
@@ -98,65 +156,86 @@ Page({
 
     // 如果没有选中任何模式，只更新显示，不发送命令
     if (!this.data.selectedEffect) {
-      this.setData({
-        hue,
-        saturation,
-        brightness: brightness || this.data.brightness
-      });
+      this.setData(
+        {
+          hue,
+          saturation,
+          brightness: brightness || this.data.brightness
+        },
+        () => this.syncColorControlStateToGlobal()
+      );
       return;
     }
 
     // 已选中某个模式时：更新颜色，并按照当前模式重新发送效果数据（保持模式不变，例如常亮）
-    this.setData({
-      hue,
-      saturation,
-      brightness: brightness || this.data.brightness
-    });
-    this.sendEffectToDevice(this.data.selectedEffect);
+    this.setData(
+      {
+        hue,
+        saturation,
+        brightness: brightness || this.data.brightness
+      },
+      () => {
+        this.syncColorControlStateToGlobal();
+        this.sendEffectToDevice(this.data.selectedEffect);
+      }
+    );
   },
 
   /**
    * 亮度改变
    */
   onBrightnessChange(e) {
-    const brightness = e.detail.value;
-    this.setData({
-      brightness
-    });
-    // 只有在选中模式时才根据当前模式发送效果数据
-    if (this.data.selectedEffect) {
-      this.sendEffectToDevice(this.data.selectedEffect);
+    if (!this.ensureConnectedOrGoGuide()) {
+      return;
     }
+    const brightness = e.detail.value;
+    this.setData({ brightness }, () => {
+      this.syncColorControlStateToGlobal();
+      if (this.data.selectedEffect) {
+        this.sendEffectToDevice(this.data.selectedEffect);
+      }
+    });
   },
 
   /**
    * 亮度减少
    */
   decreaseBrightness() {
-    const brightness = Math.max(0, this.data.brightness - 5);
-    this.setData({ brightness });
-    // 只有在选中模式时才根据当前模式发送效果数据
-    if (this.data.selectedEffect) {
-      this.sendEffectToDevice(this.data.selectedEffect);
+    if (!this.ensureConnectedOrGoGuide()) {
+      return;
     }
+    const brightness = Math.max(0, this.data.brightness - 5);
+    this.setData({ brightness }, () => {
+      this.syncColorControlStateToGlobal();
+      if (this.data.selectedEffect) {
+        this.sendEffectToDevice(this.data.selectedEffect);
+      }
+    });
   },
 
   /**
    * 亮度增加
    */
   increaseBrightness() {
-    const brightness = Math.min(100, this.data.brightness + 5);
-    this.setData({ brightness });
-    // 只有在选中模式时才根据当前模式发送效果数据
-    if (this.data.selectedEffect) {
-      this.sendEffectToDevice(this.data.selectedEffect);
+    if (!this.ensureConnectedOrGoGuide()) {
+      return;
     }
+    const brightness = Math.min(100, this.data.brightness + 5);
+    this.setData({ brightness }, () => {
+      this.syncColorControlStateToGlobal();
+      if (this.data.selectedEffect) {
+        this.sendEffectToDevice(this.data.selectedEffect);
+      }
+    });
   },
 
   /**
    * 选择预设效果
    */
   selectEffect(e) {
+    if (!this.ensureConnectedOrGoGuide()) {
+      return;
+    }
     const { effect } = e.currentTarget.dataset;
     
     // 如果选择的是同一个效果，不重复发送（随机模式除外，随机每次点击都要换颜色）
@@ -174,9 +253,19 @@ Page({
       this.starTimer = null;
     }
     
-    this.setData({ selectedEffect: effect.id });
-    // 发送效果数据到设备
-    this.sendEffectToDevice(effect.id);
+    const patch = { selectedEffect: effect.id };
+    if (effect.id === 'random') {
+      const newHue = Math.floor(Math.random() * 360);
+      patch.randomHue = newHue;
+      patch.hue = newHue;
+    } else {
+      patch.randomHue = null;
+    }
+
+    this.setData(patch, () => {
+      this.syncColorControlStateToGlobal();
+      this.sendEffectToDevice(effect.id);
+    });
   },
 
   /**
@@ -247,10 +336,15 @@ Page({
           );
           break;
           
-        case 'random':
-          // 随机颜色
-          frame = protocol.buildRandomColorFrame(frameSeq);
+        case 'random': {
+          // 随机色相仅在点选「随机」时重抽；调亮度只改亮度，不重抽
+          const rh =
+            typeof this.data.randomHue === 'number'
+              ? this.data.randomHue
+              : Math.floor(Math.random() * 360);
+          frame = protocol.buildConstantFrame(frameSeq, rh, 100, this.data.brightness);
           break;
+        }
           
         case 'flash':
           // 快闪

@@ -2,6 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/color-control/color-control",
+    "pages/connect-guide/connect-guide",
     "pages/music-rhythm/music-rhythm",
     "pages/settings/settings"
   ],

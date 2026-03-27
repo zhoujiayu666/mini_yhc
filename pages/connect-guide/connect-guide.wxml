@@ -1,0 +1,54 @@
+<!--pages/connect-guide/connect-guide.wxml-->
+<navigation-bar title="" back="{{true}}" color="#E0E0E0" background="#121212">
+  <view slot="left" class="logo-container">
+    <view class="logo-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" fill="#FFD100"/>
+        <path d="M12 2V6M12 18V22M2 12H6M18 12H22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="#FFD100" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </view>
+    <text class="logo-text">连接设备</text>
+  </view>
+</navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y>
+  <view class="container">
+    <view class="step-row">
+      <text class="step-num">01</text>
+      <view class="step-body">
+        <text class="step-desc">确保荧光棒/发光手环已安装电池或已充好电</text>
+      </view>
+    </view>
+
+    <view class="step-row">
+      <text class="step-num">02</text>
+      <view class="step-body">
+        <text class="step-desc">开启电源</text>
+      </view>
+    </view>
+
+    <view class="step-row">
+      <text class="step-num">03</text>
+      <view class="step-body step-body--with-connect">
+        <text class="step-desc">连接设备测试</text>
+        <view class="connect-btn" hover-class="connect-btn-hover" bindtap="goConnect">连接</view>
+        <text class="step-sub">按下连接按钮，设备会响应显示一段专属灯光</text>
+      </view>
+    </view>
+
+    <view class="step-row">
+      <text class="step-num">04</text>
+      <view class="step-body">
+        <text class="step-desc">进入演唱会模式或手机控制模式</text>
+      </view>
+    </view>
+
+    <view class="step-row step-row--notes">
+      <text class="step-num">05</text>
+      <view class="step-body">
+        <text class="notes-title">注意事项：</text>
+        <text class="notes-text">同一场地中，只需开启一部手机即可使用小程序控制多个荧光棒或发光手环。如有多台手机打开应用，可能出现灯光信号控制干扰</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>

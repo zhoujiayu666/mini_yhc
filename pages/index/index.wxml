@@ -21,7 +21,7 @@
 <scroll-view class="scrollarea" scroll-y>
   <view class="container">
     <!-- 设备状态卡片（始终用于选择/搜索设备，不再提供“断开”按钮） -->
-    <view class="status-card card" bindtap="searchDevices">
+    <view class="status-card card" bindtap="openConnectGuide">
       <view class="status-header">
         <view class="status-indicator">
           <view class="status-dot {{isConnected ? 'connected' : ''}}"></view>

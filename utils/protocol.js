@@ -296,7 +296,7 @@ function buildConstantFrame(frameSeq, hue, saturation, brightness) {
 }
 
 /**
- * 构建随机颜色数据帧
+ * 构建随机颜色数据帧（每次调用都会重新随机色相；若需固定色相仅调亮度，请用 buildConstantFrame）
  */
 function buildRandomColorFrame(frameSeq) {
   const hue = Math.floor(Math.random() * 360);

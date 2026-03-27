@@ -48,6 +48,13 @@ Page({
   onShow() {
     // 更新连接状态
     this.updateConnectionStatus();
+    // 从连接引导页「连接」进入：等同点击「搜索设备」
+    if (app.globalData.openDeviceSearchOnIndexShow) {
+      app.globalData.openDeviceSearchOnIndexShow = false;
+      setTimeout(() => {
+        this.searchDevices();
+      }, 0);
+    }
   },
 
   /**
@@ -115,6 +122,10 @@ Page({
       deviceStatus: isConnected ? '已连接' : '未连接',
       currentDevice: app.globalData.currentDevice
     };
+    const cc = app.globalData.colorControlState;
+    if (cc && typeof cc.brightness === 'number') {
+      patch.brightness = cc.brightness;
+    }
     if (this.data.deviceList && this.data.deviceList.length > 0) {
       patch.deviceList = this.annotateDeviceConnection(this.data.deviceList);
     }
@@ -145,7 +156,16 @@ Page({
   },
 
   /**
-   * 搜索设备
+   * 点击搜索/选择设备：先进入连接设备引导页
+   */
+  openConnectGuide() {
+    wx.navigateTo({
+      url: '/pages/connect-guide/connect-guide'
+    });
+  },
+
+  /**
+   * 搜索设备（由引导页「连接」回首页后触发，或内部调用）
    */
   async searchDevices() {
     if (this.data.isScanning) {

@@ -6,7 +6,11 @@ App({
     bleController: bleController,
     currentDevice: null,
     isConnected: false,
-    deviceHistory: [] // 连接历史记录
+    deviceHistory: [], // 连接历史记录
+    /** 从连接引导页进入首页时自动打开搜索设备 */
+    openDeviceSearchOnIndexShow: false,
+    /** 调光页：切到首页/律动后保留亮度、预设、色轮 */
+    colorControlState: null
   },
 
   onLaunch() {
