@@ -37,6 +37,8 @@ Page({
     this._userRequestedStop = false;
     /** 防回黑保持窗口：颜色亮起后短时间内不回最低亮度 */
     this._darkHoldUntil = 0;
+    /** 彩虹 7 色轮换索引（每次闪烁切换一次颜色） */
+    this._rainbowIndex = 0;
 
     // 检查连接状态
     this.setData({
@@ -104,6 +106,7 @@ Page({
     recorderManager.onStart(() => {
       console.log('✅ 录音开始回调触发');
       this._darkHoldUntil = 0;
+      this._rainbowIndex = 0;
       if (this.data.startWatchdogTimer) {
         clearTimeout(this.data.startWatchdogTimer);
       }
@@ -229,14 +232,16 @@ Page({
       hasRecorderManager: !!this.data.recorderManager
     });
     
-    if (!this.data.isConnected) {
-      console.warn('⚠️ 设备未连接，无法开始录音');
-      wx.showToast({
-        title: '设备未连接',
-        icon: 'none',
-        duration: 2000
+    const connected = app.globalData.isConnected || bleController.isConnected;
+    if (!connected) {
+      console.warn('⚠️ 设备未连接，跳转连接引导页');
+      wx.navigateTo({
+        url: '/pages/connect-guide/connect-guide'
       });
       return;
+    }
+    if (this.data.isConnected !== connected) {
+      this.setData({ isConnected: connected });
     }
     
     if (this.data.isListening) {
@@ -434,6 +439,7 @@ Page({
   stopAudioListener() {
     this._userRequestedStop = true;
     this._darkHoldUntil = 0;
+    this._rainbowIndex = 0;
 
     // 先停止定时器
     if (this.data.audioTimer) {
@@ -650,21 +656,12 @@ Page({
       this.data.audioStartTime > 0 &&
       (now - this.data.audioStartTime) < 2000;
 
-    // 将音量级别（0-100）映射到彩虹色（红0° -> 紫270°）和亮度（0-100）
-    // 最弱时熄灭（亮度0），最强时亮到紫色（270°）
-    
-    // 按文案映射：
-    // 0~30   -> 冷色：220(蓝) -> 180(青)
-    // 30~70  -> 过渡：180(青) -> 60(黄)
-    // 70~100 -> 暖色爆发：40(橙红) -> 330(粉紫)
-    let hue = 180;
-    if (effectiveVolume < 30) {
-      hue = Math.round(220 - (effectiveVolume / 30) * 40);
-    } else if (effectiveVolume < 70) {
-      hue = Math.round(180 - ((effectiveVolume - 30) / 40) * 120);
-    } else {
-      hue = Math.round(40 + ((effectiveVolume - 70) / 30) * 290) % 360;
+    // 彩虹 7 色轮换（每次闪烁切换到下一色）
+    const rainbowHues = [0, 30, 60, 120, 180, 240, 285]; // 红橙黄绿青蓝紫
+    if (typeof this._rainbowIndex !== 'number') {
+      this._rainbowIndex = 0;
     }
+    let hue = rainbowHues[this._rainbowIndex % rainbowHues.length];
     
     // 音量级别映射到亮度：0-100 -> 15(保底) -> 100(最亮)
     // 低音量时保留最低亮度，避免“闪几下就灭”
@@ -681,21 +678,23 @@ Page({
       brightness = Math.min(100, Math.max(0, brightness));
     }
     
-    // 根据音量级别选择模式
-    let lightMode = 'constant'; // 默认常亮
+    // 根据音量级别选择模式（避免真常亮：平缓用呼吸/慢闪，始终有亮暗变化）
+    let lightMode = 'slowFlash';
     let speed = 'medium';
     
     if (effectiveVolume < silentThreshold) {
-      // 最弱：保持微亮常亮，避免明显呼吸感
+      // 最弱：极慢呼吸，整体偏暗、仅有微弱起伏
       return {
         mode: 'silent',
         brightness: minBrightness,
-        lightMode: 'constant',
-        color: { hue: 0, saturation: 100 },
+        lightMode: 'breath',
+        breathPeriod: 4800,
+        breathDuty: 320,
+        color: { hue: hue, saturation: 100 },
         speed: 'slow'
       };
     } else if (effectiveVolume < 30) {
-      // 弱音：快闪模式（更接近参考小程序的打点感）
+      // 低中音：普通闪
       lightMode = 'flash';
       speed = 'fast';
     } else if (!inStartupWindow && hasBeat) {
@@ -703,24 +702,30 @@ Page({
       lightMode = 'flash';
       speed = 'fast';
     } else if (!inStartupWindow && effectiveVolume > 70) {
-      // 强音：快闪模式
+      // 强音：爆闪（前2秒禁 quickFlash）
       lightMode = 'quickFlash';
       speed = 'bpm';
     } else {
-      // 中等音量：常亮模式
-      lightMode = 'constant';
-      speed = 'medium';
+      // 中等音量：短亮长熄慢闪（开场稳定期同样保持，不用常亮）
+      lightMode = 'slowFlash';
+      speed = 'slow';
     }
     
+    // 闪一次换一个颜色：仅在闪烁模式推进彩虹索引
+    if (lightMode === 'flash' || lightMode === 'quickFlash') {
+      this._rainbowIndex = (this._rainbowIndex + 1) % rainbowHues.length;
+      hue = rainbowHues[this._rainbowIndex];
+    }
+
     return {
       mode: effectiveVolume < 30 ? 'silent' : 
             hasBeat ? 'beat' : 
             effectiveVolume > 70 ? 'climax' : 'normal',
       brightness: brightness,
       lightMode: lightMode,
-      color: { 
-        hue: hue, 
-        saturation: effectiveVolume > 70 ? 100 : 90 // 强节奏更艳，低中能量稍柔和
+      color: {
+        hue: hue,
+        saturation: 100
       },
       speed: speed
     };
@@ -887,6 +892,22 @@ Page({
       const frameSeq = 0;
       const { lightMode, brightness, color } = lightConfig;
       
+      // 呼吸/慢闪由设备自循环；50ms 重复下发会重置相位，仅在参数实质变化时发送
+      if (lightMode === 'breath' || lightMode === 'slowFlash') {
+        const bq = Math.round(brightness / 12) * 12;
+        const hq = Math.round(color.hue / 15) * 15;
+        const ambientSig =
+          lightMode === 'breath'
+            ? `breath|${hq}|${bq}|${lightConfig.breathPeriod}|${lightConfig.breathDuty}`
+            : `slowFlash|${hq}|${bq}|2,5,28,48`;
+        if (ambientSig === this._lastAmbientLightSig) {
+          return;
+        }
+        this._lastAmbientLightSig = ambientSig;
+      } else {
+        this._lastAmbientLightSig = '';
+      }
+      
       // 将亮度百分比转换为0-255
       const brightnessValue = Math.round((brightness / 100) * 255);
       
@@ -906,16 +927,16 @@ Page({
       
       // 根据模式选择不同的数据帧
       switch (lightMode) {
-        case 'breath':
-          // 呼吸模式：慢速（period: 3000ms, duty: 500ms）
-          frame = protocol.buildBreathFrame(
-            frameSeq,
-            r,
-            g,
-            b,
-            3000, // 慢速周期
-            500
-          );
+        case 'breath': {
+          const period = lightConfig.breathPeriod != null ? lightConfig.breathPeriod : 3000;
+          const duty = lightConfig.breathDuty != null ? lightConfig.breathDuty : 500;
+          frame = protocol.buildBreathFrame(frameSeq, r, g, b, period, duty);
+          break;
+        }
+        
+        case 'slowFlash':
+          // 短亮长熄（单位 5ms）：节拍感弱时保持亮暗交替，避免长亮
+          frame = protocol.buildFlashFrame(frameSeq, r, g, b, 2, 5, 28, 48);
           break;
           
         case 'constant':
@@ -953,13 +974,7 @@ Page({
           break;
           
         default:
-          // 默认使用常亮模式
-          frame = protocol.buildConstantFrame(
-            frameSeq,
-            color.hue,
-            color.saturation,
-            brightness
-          );
+          frame = protocol.buildFlashFrame(frameSeq, r, g, b, 2, 5, 28, 48);
       }
       
       // 高频刷新使用WriteNoResponse
