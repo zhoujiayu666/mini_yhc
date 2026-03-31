@@ -26,6 +26,15 @@ page {
   width: 48rpx;
   height: 48rpx;
   margin-right: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon-text {
+  font-size: 40rpx;
+  color: #FFD100;
+  line-height: 1;
 }
 
 .logo-text {
@@ -41,9 +50,22 @@ page {
   justify-content: center;
 }
 
+.help-badge {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 22rpx;
+  border: 2rpx solid #9E9E9E;
+  color: #9E9E9E;
+  font-size: 30rpx;
+  line-height: 40rpx;
+  text-align: center;
+  font-weight: 500;
+}
+
 /* 麦克风图标区域 */
 .microphone-section {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 64rpx 0;
@@ -57,10 +79,77 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 200rpx;
+  border: 3rpx solid rgba(255, 209, 0, 0.35);
+  background: radial-gradient(circle, rgba(255, 209, 0, 0.14) 0%, rgba(255, 209, 0, 0.03) 58%, rgba(255, 209, 0, 0) 100%);
 }
 
 .microphone-icon.listening {
   animation: pulse 2s infinite;
+  border-color: transparent;
+  background: transparent;
+}
+
+.microphone-icon.listening .mic-visual {
+  display: none;
+}
+
+.mic-visual {
+  width: 180rpx;
+  height: 220rpx;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.mic-head {
+  width: 80rpx;
+  height: 120rpx;
+  border-radius: 44rpx;
+  border: 4rpx solid #FFD100;
+  background-color: rgba(255, 209, 0, 0.16);
+  box-sizing: border-box;
+}
+
+.mic-stem {
+  width: 8rpx;
+  height: 44rpx;
+  margin-top: 10rpx;
+  border-radius: 6rpx;
+  background: #FFD100;
+}
+
+.mic-base {
+  width: 90rpx;
+  height: 8rpx;
+  margin-top: 10rpx;
+  border-radius: 8rpx;
+  background: #FFD100;
+}
+
+.stop-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx;
+  z-index: 2;
+}
+
+.stop-dot {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 12rpx;
+  background: #ff4d4f;
+  box-shadow: 0 0 24rpx rgba(255, 77, 79, 0.6);
+}
+
+.stop-text {
+  color: #FFD100;
+  font-size: 28rpx;
+  font-weight: 500;
 }
 
 @keyframes pulse {
