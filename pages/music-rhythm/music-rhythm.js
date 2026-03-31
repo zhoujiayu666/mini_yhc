@@ -629,13 +629,14 @@ Page({
    * - 低能量：冷色（蓝/青）
    * - 中能量：青绿黄过渡
    * - 高能量：暖色爆发（红/橙/粉/紫）
-   * 低音保底：音量很低时保持最低亮度，避免频繁灭灯
-   * 亮度线性增加：5-100% 映射到 15-100% 亮度
+   * 低音保底：音量很低时保持全黑
+   * 亮度线性增加：5-100% 映射到 0-100% 亮度
    */
   selectLightMode(volumeLevel, hasBeat) {
     const now = Date.now();
     const silentThreshold = 5;
-    const minBrightness = 15;
+    const minBrightness = 0;
+    const activeMinBrightness = 16; // 闪烁时最低亮度抬到视频体感区间（约14~18）
     const darkHoldMs = 200;
 
     // 有效音量达到静音阈值时，刷新防回黑保持窗口
@@ -663,13 +664,13 @@ Page({
     }
     let hue = rainbowHues[this._rainbowIndex % rainbowHues.length];
     
-    // 音量级别映射到亮度：0-100 -> 15(保底) -> 100(最亮)
-    // 低音量时保留最低亮度，避免“闪几下就灭”
+    // 音量级别映射到亮度：0-100 -> 0(全黑) -> 100(最亮)
+    // 低音量时保持全黑
     let brightness = minBrightness;
     if (effectiveVolume < silentThreshold) {
       brightness = minBrightness;
     } else {
-      // 5-100% 映射到 15-100% 亮度
+      // 5-100% 映射到 0-100% 亮度
       brightness = Math.round(
         ((effectiveVolume - silentThreshold) / (100 - silentThreshold)) *
           (100 - minBrightness) +
@@ -678,50 +679,48 @@ Page({
       brightness = Math.min(100, Math.max(0, brightness));
     }
     
-    // 根据音量级别选择模式（避免真常亮：平缓用呼吸/慢闪，始终有亮暗变化）
-    let lightMode = 'slowFlash';
-    let speed = 'medium';
+    // 按用户目标：静音全黑；普通段无鼓点按 BPM 慢闪；有鼓点即闪；强音快闪
+    let lightMode = 'constant';
+    let speed = 'slow';
+    let outBrightness = minBrightness;
     
     if (effectiveVolume < silentThreshold) {
-      // 最弱：极慢呼吸，整体偏暗、仅有微弱起伏
+      // 最弱：全黑常亮，不闪烁
       return {
         mode: 'silent',
         brightness: minBrightness,
-        lightMode: 'breath',
-        breathPeriod: 4800,
-        breathDuty: 320,
+        lightMode: 'constant',
         color: { hue: hue, saturation: 100 },
         speed: 'slow'
       };
-    } else if (effectiveVolume < 30) {
-      // 低中音：普通闪
-      lightMode = 'flash';
-      speed = 'fast';
-    } else if (!inStartupWindow && hasBeat) {
-      // 检测到鼓点：闪烁模式
-      lightMode = 'flash';
-      speed = 'fast';
     } else if (!inStartupWindow && effectiveVolume > 70) {
       // 强音：爆闪（前2秒禁 quickFlash）
       lightMode = 'quickFlash';
       speed = 'bpm';
+      outBrightness = Math.max(activeMinBrightness, brightness);
+    } else if (!inStartupWindow && hasBeat) {
+      // 正常段：只有判到鼓点时才闪一下（一拍一闪）
+      lightMode = 'flash';
+      speed = 'beat';
+      outBrightness = Math.max(activeMinBrightness, brightness);
     } else {
-      // 中等音量：短亮长熄慢闪（开场稳定期同样保持，不用常亮）
-      lightMode = 'slowFlash';
-      speed = 'slow';
+      // 无鼓点：按 BPM 慢闪（1拍1闪）
+      lightMode = 'bpmFlash';
+      speed = 'bpm';
+      outBrightness = Math.max(activeMinBrightness, brightness);
     }
     
     // 闪一次换一个颜色：仅在闪烁模式推进彩虹索引
-    if (lightMode === 'flash' || lightMode === 'quickFlash') {
+    if (lightMode === 'flash' || lightMode === 'quickFlash' || lightMode === 'bpmFlash') {
       this._rainbowIndex = (this._rainbowIndex + 1) % rainbowHues.length;
       hue = rainbowHues[this._rainbowIndex];
     }
 
     return {
-      mode: effectiveVolume < 30 ? 'silent' : 
-            hasBeat ? 'beat' : 
-            effectiveVolume > 70 ? 'climax' : 'normal',
-      brightness: brightness,
+      mode: effectiveVolume < silentThreshold ? 'silent' : 
+            lightMode === 'quickFlash' ? 'climax' :
+            lightMode === 'flash' ? 'beat' : 'normal',
+      brightness: outBrightness,
       lightMode: lightMode,
       color: {
         hue: hue,
@@ -892,14 +891,11 @@ Page({
       const frameSeq = 0;
       const { lightMode, brightness, color } = lightConfig;
       
-      // 呼吸/慢闪由设备自循环；50ms 重复下发会重置相位，仅在参数实质变化时发送
-      if (lightMode === 'breath' || lightMode === 'slowFlash') {
+      // 慢闪由设备自循环；50ms 重复下发会重置相位，仅在参数实质变化时发送
+      if (lightMode === 'slowFlash') {
         const bq = Math.round(brightness / 12) * 12;
         const hq = Math.round(color.hue / 15) * 15;
-        const ambientSig =
-          lightMode === 'breath'
-            ? `breath|${hq}|${bq}|${lightConfig.breathPeriod}|${lightConfig.breathDuty}`
-            : `slowFlash|${hq}|${bq}|2,5,28,48`;
+        const ambientSig = `slowFlash|${hq}|${bq}|2,5,28,48`;
         if (ambientSig === this._lastAmbientLightSig) {
           return;
         }
@@ -927,13 +923,6 @@ Page({
       
       // 根据模式选择不同的数据帧
       switch (lightMode) {
-        case 'breath': {
-          const period = lightConfig.breathPeriod != null ? lightConfig.breathPeriod : 3000;
-          const duty = lightConfig.breathDuty != null ? lightConfig.breathDuty : 500;
-          frame = protocol.buildBreathFrame(frameSeq, r, g, b, period, duty);
-          break;
-        }
-        
         case 'slowFlash':
           // 短亮长熄（单位 5ms）：节拍感弱时保持亮暗交替，避免长亮
           frame = protocol.buildFlashFrame(frameSeq, r, g, b, 2, 5, 28, 48);
@@ -959,6 +948,12 @@ Page({
             1, 2, 1, 2 // 非常短的闪烁周期
           );
           break;
+        
+        case 'bpmFlash': {
+          // 视频体感慢闪：亮得更久、灭得更稳（单位 5ms）
+          frame = protocol.buildFlashFrame(frameSeq, r, g, b, 12, 25, 60, 85);
+          break;
+        }
           
         case 'quickFlash':
           // 快闪模式：根据BPM调整速度
