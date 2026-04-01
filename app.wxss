@@ -16,10 +16,10 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 通用容器 */
+/* 通用容器：不设 min-height，避免内容不足一屏时仍可拉出大片空白；
+   底部留白与 bottom-nav（88rpx + 安全区）对齐，避免最后一项被挡住 */
 .container {
-  min-height: 100vh;
-  padding-bottom: 120rpx;
+  padding-bottom: calc(88rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 

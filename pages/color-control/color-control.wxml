@@ -32,7 +32,6 @@
 
     <!-- 亮度调节区 -->
     <view class="brightness-section card">
-      <view class="section-title">亮度调节</view>
       <view class="slider-container">
         <view class="slider-btn" bindtap="decreaseBrightness">−</view>
         <view class="slider-wrapper">
@@ -53,12 +52,10 @@
         </view>
         <view class="slider-btn" bindtap="increaseBrightness">+</view>
       </view>
-      <view class="brightness-value">亮度 {{brightness}}%</view>
     </view>
 
     <!-- 预设效果区 -->
     <view class="preset-section">
-      <view class="section-title">预设效果</view>
       <view class="preset-grid">
         <view 
           class="preset-item {{selectedEffect === item.id ? 'active' : ''}}"

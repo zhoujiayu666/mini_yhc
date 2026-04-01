@@ -9,7 +9,7 @@ page {
 .scrollarea {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 120rpx;
+  padding-bottom: 0;
 }
 
 .container {
@@ -347,4 +347,67 @@ page {
   background-color: #FFD100;
   border-radius: 4rpx;
   transition: width 0.1s;
+}
+
+.help-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 40rpx;
+  box-sizing: border-box;
+}
+
+.help-modal {
+  width: 100%;
+  max-width: 680rpx;
+  background: #1b1f2a;
+  border-radius: 20rpx;
+  padding: 36rpx;
+  box-sizing: border-box;
+}
+
+.help-title {
+  font-size: 40rpx;
+  color: #e8ebf2;
+  font-weight: 600;
+  margin-bottom: 28rpx;
+  text-align: left;
+}
+
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  text-align: left;
+}
+
+.help-content text {
+  font-size: 34rpx;
+  line-height: 1.65;
+  color: #9aa2b2;
+  text-align: left;
+}
+
+.help-version {
+  color: #b8becb;
+}
+
+.help-confirm {
+  margin-top: 36rpx;
+  height: 84rpx;
+  border-radius: 14rpx;
+  background: #ffd100;
+  color: #1a1a1a;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

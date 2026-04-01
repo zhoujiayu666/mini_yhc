@@ -9,8 +9,8 @@ Page({
    */
   data: {
     hue: 0,
-    saturation: 100,
-    brightness: 100,
+    saturation: 95,
+    brightness: 50,
     presetEffects: [
       { id: 'black', name: '黑场', icon: '⚫' },
       { id: 'white', name: '常亮', icon: '⚪' },

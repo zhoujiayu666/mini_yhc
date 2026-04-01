@@ -26,7 +26,8 @@ Page({
     volumeHistory: [], // 音量历史（用于平滑处理）
     startWatchdogTimer: null, // 录音启动看门狗（用于定位start后无回调）
     audioStartTime: 0, // 本次监听开始时间（用于开场稳定期）
-    recordingPending: false // 已调用 start、尚未收到 onStart（用于避免未录音时 stop 报错）
+    recordingPending: false, // 已调用 start、尚未收到 onStart（用于避免未录音时 stop 报错）
+    showHelpPopup: false
   },
 
   /**
@@ -1006,11 +1007,13 @@ Page({
    * 显示帮助信息
    */
   showHelp() {
-    wx.showModal({
-      title: '音乐律动',
-      content: '• 调节灵敏度滑块控制麦克风对环境声音的捕捉灵敏度\n• 灵敏度越高，灯光对声音的反应越敏感\n• 建议在安静环境中降低灵敏度，在音乐环境中提高灵敏度',
-      showCancel: false,
-      confirmText: '知道了'
-    });
-  }
+    this.setData({ showHelpPopup: true });
+  },
+
+  closeHelp() {
+    this.setData({ showHelpPopup: false });
+  },
+
+  stopPropagation() {}
+
 })

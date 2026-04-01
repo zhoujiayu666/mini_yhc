@@ -63,4 +63,18 @@
   </view>
 </scroll-view>
 
+<view class="help-modal-mask" wx:if="{{showHelpPopup}}" bindtap="closeHelp">
+  <view class="help-modal" catchtap="stopPropagation">
+    <view class="help-title">使用说明</view>
+    <view class="help-content">
+      <text>(1)小程序通过蓝牙连接和控制您的荧光棒或发光手环，请在使用过程中确保蓝牙保持打开状态；</text>
+      <text>(2)出现设备无法控制状态时，请重新启动小程序或者设备；</text>
+      <text>(3)设备低电状态可能出现颜色显示不准，请保持设备电量充足。</text>
+      <text class="help-version">小程序版本</text>
+      <text class="help-version">V1.1.0</text>
+    </view>
+    <view class="help-confirm" bindtap="closeHelp">知道了</view>
+  </view>
+</view>
+
 <bottom-nav current="music"></bottom-nav>

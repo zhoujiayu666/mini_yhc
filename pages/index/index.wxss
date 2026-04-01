@@ -9,7 +9,7 @@ page {
 .scrollarea {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 120rpx;
+  padding-bottom: 0;
 }
 
 .container {
