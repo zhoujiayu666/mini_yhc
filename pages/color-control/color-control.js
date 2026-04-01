@@ -26,7 +26,9 @@ Page({
     /** 随机模式：固定色相，仅调亮度时不再重抽 */
     randomHue: null,
     isConnected: false,
-    sendTimer: null // 防抖定时器
+    sendTimer: null, // 防抖定时器
+    /** 与 bindscroll 配合，setData 后保持列表滚动位置（避免 iOS 滚回顶部） */
+    scrollTop: 0
   },
 
   /**
@@ -46,6 +48,7 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    this._mainScrollTop = 0;
     const saved = app.globalData.colorControlState;
     const patch = {
       isConnected: app.globalData.isConnected
@@ -73,7 +76,7 @@ Page({
       }
     }
 
-    this.setData(patch, () => {
+    this.setData(this.mergeScrollTop(patch), () => {
       if (this.data.isConnected && this.data.selectedEffect) {
         this.sendEffectToDevice(this.data.selectedEffect);
       }
@@ -81,15 +84,26 @@ Page({
 
     // 监听连接状态变化
     bleController.onConnectionStateChange = (connected) => {
-      this.setData({ isConnected: connected });
+      this.setData(this.mergeScrollTop({ isConnected: connected }));
       app.globalData.isConnected = connected;
     };
   },
 
   onShow() {
-    this.setData({
-      isConnected: app.globalData.isConnected || bleController.isConnected
-    });
+    this.setData(
+      this.mergeScrollTop({
+        isConnected: app.globalData.isConnected || bleController.isConnected
+      })
+    );
+  },
+
+  mergeScrollTop(patch) {
+    const top = typeof this._mainScrollTop === 'number' ? this._mainScrollTop : 0;
+    return { ...patch, scrollTop: top };
+  },
+
+  onMainScroll(e) {
+    this._mainScrollTop = e.detail.scrollTop;
   },
 
   /**
@@ -98,12 +112,27 @@ Page({
   ensureConnectedOrGoGuide() {
     const isConnected = app.globalData.isConnected || bleController.isConnected;
     if (isConnected) {
-      this.setData({ isConnected: true });
+      this.setData(this.mergeScrollTop({ isConnected: true }));
       return true;
     }
-    this.setData({ isConnected: false });
+    this.setData(this.mergeScrollTop({ isConnected: false }));
     wx.navigateTo({
       url: '/pages/connect-guide/connect-guide'
+    });
+    return false;
+  },
+
+  ensureConnectedOrToast() {
+    const isConnected = app.globalData.isConnected || bleController.isConnected;
+    if (isConnected) {
+      this.setData(this.mergeScrollTop({ isConnected: true }));
+      return true;
+    }
+    this.setData(this.mergeScrollTop({ isConnected: false }));
+    wx.showToast({
+      title: '未连接设备',
+      icon: 'none',
+      duration: 1500
     });
     return false;
   },
@@ -157,11 +186,11 @@ Page({
     // 如果没有选中任何模式，只更新显示，不发送命令
     if (!this.data.selectedEffect) {
       this.setData(
-        {
+        this.mergeScrollTop({
           hue,
           saturation,
           brightness: brightness || this.data.brightness
-        },
+        }),
         () => this.syncColorControlStateToGlobal()
       );
       return;
@@ -169,11 +198,11 @@ Page({
 
     // 已选中某个模式时：更新颜色，并按照当前模式重新发送效果数据（保持模式不变，例如常亮）
     this.setData(
-      {
+      this.mergeScrollTop({
         hue,
         saturation,
         brightness: brightness || this.data.brightness
-      },
+      }),
       () => {
         this.syncColorControlStateToGlobal();
         this.sendEffectToDevice(this.data.selectedEffect);
@@ -185,11 +214,11 @@ Page({
    * 亮度改变
    */
   onBrightnessChange(e) {
-    if (!this.ensureConnectedOrGoGuide()) {
+    if (!this.ensureConnectedOrToast()) {
       return;
     }
     const brightness = e.detail.value;
-    this.setData({ brightness }, () => {
+    this.setData(this.mergeScrollTop({ brightness }), () => {
       this.syncColorControlStateToGlobal();
       if (this.data.selectedEffect) {
         this.sendEffectToDevice(this.data.selectedEffect);
@@ -201,11 +230,11 @@ Page({
    * 亮度减少
    */
   decreaseBrightness() {
-    if (!this.ensureConnectedOrGoGuide()) {
+    if (!this.ensureConnectedOrToast()) {
       return;
     }
     const brightness = Math.max(0, this.data.brightness - 5);
-    this.setData({ brightness }, () => {
+    this.setData(this.mergeScrollTop({ brightness }), () => {
       this.syncColorControlStateToGlobal();
       if (this.data.selectedEffect) {
         this.sendEffectToDevice(this.data.selectedEffect);
@@ -217,11 +246,11 @@ Page({
    * 亮度增加
    */
   increaseBrightness() {
-    if (!this.ensureConnectedOrGoGuide()) {
+    if (!this.ensureConnectedOrToast()) {
       return;
     }
     const brightness = Math.min(100, this.data.brightness + 5);
-    this.setData({ brightness }, () => {
+    this.setData(this.mergeScrollTop({ brightness }), () => {
       this.syncColorControlStateToGlobal();
       if (this.data.selectedEffect) {
         this.sendEffectToDevice(this.data.selectedEffect);
@@ -262,7 +291,7 @@ Page({
       patch.randomHue = null;
     }
 
-    this.setData(patch, () => {
+    this.setData(this.mergeScrollTop(patch), () => {
       this.syncColorControlStateToGlobal();
       this.sendEffectToDevice(effect.id);
     });

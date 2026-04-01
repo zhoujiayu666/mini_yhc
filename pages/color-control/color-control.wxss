@@ -6,14 +6,17 @@ page {
   background-color: #121212;
 }
 
+/* scroll-view 需有确定高度才能滚动 */
 .scrollarea {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  height: 0;
   padding-bottom: 0;
 }
 
 .container {
-  padding: 32rpx 20rpx;
+  /* 预留底部导航（88rpx）+ 安全区，避免最后一排预设被遮挡 */
+  padding: 32rpx 20rpx calc(88rpx + env(safe-area-inset-bottom) + 24rpx);
 }
 
 .logo-container {

@@ -18,7 +18,13 @@
   </view>
 </navigation-bar>
 
-<scroll-view class="scrollarea" scroll-y>
+<scroll-view
+  class="scrollarea"
+  scroll-y
+  scroll-top="{{scrollTop}}"
+  scroll-with-animation="{{false}}"
+  bindscroll="onMainScroll"
+>
   <view class="container">
     <!-- 色轮区域 -->
     <view class="color-wheel-section">
