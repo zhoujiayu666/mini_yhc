@@ -16,7 +16,7 @@
     <view class="step-row">
       <text class="step-num">01</text>
       <view class="step-body">
-        <text class="step-desc">确保荧光棒/发光手环已安装电池或已充好电</text>
+        <text class="step-desc">确保荧光棒已安装电池或已充好电</text>
       </view>
     </view>
 
@@ -47,7 +47,7 @@
       <text class="step-num">05</text>
       <view class="step-body">
         <text class="notes-title">注意事项：</text>
-        <text class="notes-text">同一场地中，只需开启一部手机即可使用小程序控制多个荧光棒或发光手环。如有多台手机打开应用，可能出现灯光信号控制干扰</text>
+        <text class="notes-text">同一场地中，只需开启一部手机即可使用小程序控制多个荧光棒。如有多台手机打开应用，可能出现灯光信号控制干扰</text>
       </view>
     </view>
   </view>

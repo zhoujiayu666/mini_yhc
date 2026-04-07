@@ -164,7 +164,6 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: all 0.3s;
   box-sizing: border-box;
 }
 
