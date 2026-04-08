@@ -15,6 +15,7 @@ App({
 
   onLaunch() {
     console.log('小程序启动');
+    this.initCloud();
     // 初始化蓝牙适配器
     this.initBluetooth();
   },
@@ -31,6 +32,22 @@ App({
 
   onShow() {
     console.log('小程序进入前台');
+  },
+
+  initCloud() {
+    if (!wx.cloud) {
+      console.warn('当前基础库不支持云开发');
+      return;
+    }
+    try {
+      wx.cloud.init({
+        env: 'cloud1-3g4lff0x2b1fbba7',
+        traceUser: true
+      });
+      console.log('云开发初始化完成');
+    } catch (error) {
+      console.error('云开发初始化失败', error);
+    }
   },
 
   /**

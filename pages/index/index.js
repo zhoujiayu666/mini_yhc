@@ -15,7 +15,26 @@ Page({
     isScanning: false,
     deviceList: [],
     showDeviceList: false,
-    currentDevice: null
+    currentDevice: null,
+    groups: [],
+    activeGroup: null,
+    activeUserRole: '',
+    activeUserNickname: '',
+    showCreateGroupModal: false,
+    showJoinGroupModal: false,
+    groupServiceFunctionName: 'group-service',
+    createGroupForm: {
+      name: '',
+      id: '',
+      password: ''
+    },
+    joinGroupForm: {
+      id: '',
+      nickname: '',
+      password: ''
+    },
+    groupControlEffect: '常亮',
+    groupControlBrightness: 80
   },
 
   /**
@@ -33,6 +52,7 @@ Page({
     
     // 加载设备连接历史
     this.loadDeviceHistory();
+    this.loadGroups();
   },
 
   /**
@@ -55,6 +75,7 @@ Page({
         this.searchDevices();
       }, 0);
     }
+    this.loadGroups();
   },
 
   /**
@@ -474,5 +495,216 @@ Page({
       showCancel: false,
       confirmText: '知道了'
     });
+  },
+
+  async callGroupService(payload) {
+    const functionName = this.data.groupServiceFunctionName;
+    const res = await wx.cloud.callFunction({
+      name: functionName,
+      data: payload
+    });
+    return res.result || {};
+  },
+
+  async loadGroups() {
+    if (!wx.cloud) {
+      return;
+    }
+    try {
+      const localActiveGroupId = wx.getStorageSync('activeGroupId') || '';
+      const result = await this.callGroupService({ action: 'listGroups' });
+      if (!result.success) {
+        wx.showToast({ title: result.message || '加载群组失败', icon: 'none' });
+        return;
+      }
+      const groups = result.groups || [];
+      const activeGroup =
+        groups.find((g) => g.id === localActiveGroupId) ||
+        groups.find((g) => g.id === result.activeGroupId) ||
+        groups[0] ||
+        null;
+      if (activeGroup) {
+        wx.setStorageSync('activeGroupId', activeGroup.id);
+      }
+      this.setData({
+        groups,
+        activeGroup,
+        activeUserRole: activeGroup ? activeGroup.activeUserRole : '',
+        activeUserNickname: activeGroup ? activeGroup.activeUserNickname : '',
+        groupControlEffect: activeGroup && activeGroup.controlState ? activeGroup.controlState.effect : '常亮',
+        groupControlBrightness: activeGroup && activeGroup.controlState ? activeGroup.controlState.brightness : 80
+      });
+    } catch (error) {
+      console.error('加载群组失败', error);
+    }
+  },
+
+  openCreateGroupModal() {
+    this.setData({
+      showCreateGroupModal: true,
+      createGroupForm: { name: '', id: '', password: '' }
+    });
+  },
+
+  openJoinGroupModal() {
+    this.setData({
+      showJoinGroupModal: true,
+      joinGroupForm: { id: '', nickname: '', password: '' }
+    });
+  },
+
+  closeCreateGroupModal() {
+    this.setData({ showCreateGroupModal: false });
+  },
+
+  closeJoinGroupModal() {
+    this.setData({ showJoinGroupModal: false });
+  },
+
+  onCreateGroupInput(e) {
+    const field = e.currentTarget.dataset.field;
+    const value = (e.detail.value || '').trim();
+    this.setData({
+      [`createGroupForm.${field}`]: value
+    });
+  },
+
+  onJoinGroupInput(e) {
+    const field = e.currentTarget.dataset.field;
+    const value = (e.detail.value || '').trim();
+    this.setData({
+      [`joinGroupForm.${field}`]: value
+    });
+  },
+
+  async createGroup() {
+    const form = this.data.createGroupForm;
+    if (!form.name || !form.id || !form.password) {
+      wx.showToast({ title: '请完整填写信息', icon: 'none' });
+      return;
+    }
+    if (!/^\d{4}$/.test(form.password)) {
+      wx.showToast({ title: '密码需为4位数字', icon: 'none' });
+      return;
+    }
+
+    try {
+      wx.showLoading({ title: '创建中...', mask: true });
+      const result = await this.callGroupService({
+        action: 'createGroup',
+        name: form.name,
+        groupId: form.id,
+        password: form.password
+      });
+      wx.hideLoading();
+      if (!result.success) {
+        wx.showToast({ title: result.message || '创建失败', icon: 'none' });
+        return;
+      }
+      this.setData({ showCreateGroupModal: false });
+      await this.loadGroups();
+      wx.showToast({ title: '群组创建成功', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: '创建失败', icon: 'none' });
+      console.error('创建群组失败', error);
+    }
+  },
+
+  async joinGroup() {
+    const form = this.data.joinGroupForm;
+    if (!form.id || !form.nickname || !form.password) {
+      wx.showToast({ title: '请完整填写信息', icon: 'none' });
+      return;
+    }
+    if (!/^\d{4}$/.test(form.password)) {
+      wx.showToast({ title: '密码需为4位数字', icon: 'none' });
+      return;
+    }
+
+    try {
+      wx.showLoading({ title: '加入中...', mask: true });
+      const result = await this.callGroupService({
+        action: 'joinGroup',
+        groupId: form.id,
+        nickname: form.nickname,
+        password: form.password
+      });
+      wx.hideLoading();
+      if (!result.success) {
+        wx.showToast({ title: result.message || '加入失败', icon: 'none' });
+        return;
+      }
+      this.setData({ showJoinGroupModal: false });
+      wx.setStorageSync('activeGroupId', form.id);
+      await this.loadGroups();
+      wx.showToast({ title: '已加入群组', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: '加入失败', icon: 'none' });
+      console.error('加入群组失败', error);
+    }
+  },
+
+  selectGroup(e) {
+    const id = e.currentTarget.dataset.id;
+    const group = this.data.groups.find((item) => item.id === id);
+    if (!group) {
+      return;
+    }
+    wx.setStorageSync('activeGroupId', id);
+    this.setData({
+      activeGroup: group,
+      activeUserRole: group.activeUserRole || '',
+      activeUserNickname: group.activeUserNickname || '',
+      groupControlEffect: group.controlState ? group.controlState.effect : '常亮',
+      groupControlBrightness: group.controlState ? group.controlState.brightness : 80
+    });
+  },
+
+  onControlEffectChange(e) {
+    this.setData({
+      groupControlEffect: e.currentTarget.dataset.effect
+    });
+  },
+
+  onControlBrightnessChange(e) {
+    this.setData({
+      groupControlBrightness: Number(e.detail.value || 0)
+    });
+  },
+
+  async applyGroupControl() {
+    const active = this.data.activeGroup;
+    if (!active) {
+      wx.showToast({ title: '请先创建或加入群组', icon: 'none' });
+      return;
+    }
+
+    if (this.data.activeUserRole !== 'admin') {
+      wx.showToast({ title: '当前用户不是管理员', icon: 'none' });
+      return;
+    }
+
+    try {
+      wx.showLoading({ title: '下发中...', mask: true });
+      const result = await this.callGroupService({
+        action: 'applyControl',
+        groupId: active.id,
+        effect: this.data.groupControlEffect,
+        brightness: this.data.groupControlBrightness
+      });
+      wx.hideLoading();
+      if (!result.success) {
+        wx.showToast({ title: result.message || '下发失败', icon: 'none' });
+        return;
+      }
+      await this.loadGroups();
+      wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: '下发失败', icon: 'none' });
+      console.error('统一下发失败', error);
+    }
   }
 })

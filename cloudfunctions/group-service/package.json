@@ -1,0 +1,9 @@
+{
+  "name": "group-service",
+  "version": "1.0.0",
+  "description": "Group service cloud function",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
