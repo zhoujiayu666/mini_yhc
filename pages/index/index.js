@@ -1,5 +1,6 @@
 // pages/index/index.js
 const bleController = require('../../utils/ble.js');
+const protocol = require('../../utils/protocol.js');
 const app = getApp();
 
 Page({
@@ -156,6 +157,33 @@ Page({
   },
 
   /**
+   * 统一UUID格式用于比较
+   */
+  normalizeUuid(uuid) {
+    return String(uuid || '').replace(/-/g, '').toUpperCase();
+  },
+
+  /**
+   * 是否为目标设备：优先按服务UUID过滤，兼容旧设备MAC前缀兜底
+   */
+  isTargetBleDevice(device) {
+    const targetService = this.normalizeUuid(protocol.BLE_SERVICE_ID);
+    const serviceUuids = device.advertisServiceUUIDs || device.serviceUUIDs || [];
+    const hasServiceMatch = serviceUuids.some((u) => {
+      const nu = this.normalizeUuid(u);
+      return nu === targetService || nu.includes('FFE0');
+    });
+
+    if (hasServiceMatch) {
+      return true;
+    }
+
+    // 兼容兜底：历史安卓机型可能仅给出MAC样式deviceId
+    const deviceId = (device.deviceId || '').toUpperCase();
+    return deviceId.startsWith('84:AA:A4');
+  },
+
+  /**
    * 点击搜索/选择设备：先进入连接设备引导页
    */
   openConnectGuide() {
@@ -212,11 +240,13 @@ Page({
 
       this.setData({ isScanning: true, showDeviceList: true, deviceList: [] });
 
-      // 先获取已发现的设备列表（过滤MAC前缀）
+      // 先获取已发现的设备列表（iOS 设备ID非MAC，不做MAC前缀过滤）
       try {
         console.log('========== 开始搜索设备 ==========');
-        const existingDevices = await bleController.getBluetoothDevices(true);
-        console.log('已缓存的设备（已过滤MAC前缀）:', existingDevices.length, '个');
+        const existingDevices = (await bleController.getBluetoothDevices()).filter((d) =>
+          this.isTargetBleDevice(d)
+        );
+        console.log('已缓存的设备:', existingDevices.length, '个');
         
         if (existingDevices.length > 0) {
           console.log('已缓存的设备列表:');
@@ -250,19 +280,10 @@ Page({
           RSSI: d.RSSI
         })));
 
-        // 过滤MAC地址前缀为84:AA:A4的设备
-        const filteredDevices = devices.filter(device => {
-          const deviceId = (device.deviceId || '').toUpperCase();
-          const matches = deviceId.startsWith('84:AA:A4');
-          if (!matches && deviceId) {
-            console.log('❌ 设备不符合MAC前缀:', deviceId, '设备名称:', device.name || '未知');
-          }
-          return matches;
-        });
-
-        if (filteredDevices.length > 0) {
-          console.log('✅ 符合MAC前缀的设备:', filteredDevices.length, '个');
-          filteredDevices.forEach((device, index) => {
+        const foundDevices = devices.filter((d) => this.isTargetBleDevice(d));
+        if (foundDevices.length > 0) {
+          console.log('✅ 本次发现设备:', foundDevices.length, '个');
+          foundDevices.forEach((device, index) => {
             console.log(`设备 ${index + 1}:`, {
               name: device.name || '未知',
               deviceId: device.deviceId,
@@ -270,17 +291,16 @@ Page({
               '信号强度': device.RSSI ? `${device.RSSI} dBm` : '未知'
             });
           });
-        } else {
-          console.log('⚠️ 本次未发现符合MAC前缀(84:AA:A4)的设备');
+        } else if (devices.length > 0) {
+          console.log('⚠️ 本次发现设备均非目标设备（按FFE0服务UUID过滤）');
         }
         console.log('============================');
 
-        // 更新设备列表（只显示符合MAC前缀的设备）
+        // 更新设备列表
         const currentList = this.data.deviceList;
         const newList = [...currentList];
 
-        // 只添加符合MAC前缀的设备
-        filteredDevices.forEach(device => {
+        foundDevices.forEach(device => {
           const index = newList.findIndex(d => d.deviceId === device.deviceId);
           if (index >= 0) {
             // 更新现有设备信息
@@ -314,8 +334,6 @@ Page({
               信号强度: device.RSSI ? `${device.RSSI} dBm` : '未知'
             });
           });
-        } else {
-          console.log('⚠️ 未发现任何符合MAC前缀(84:AA:A4)的设备');
         }
         console.log('============================');
         
