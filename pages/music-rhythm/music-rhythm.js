@@ -27,7 +27,9 @@ Page({
     startWatchdogTimer: null, // 录音启动看门狗（用于定位start后无回调）
     audioStartTime: 0, // 本次监听开始时间（用于开场稳定期）
     recordingPending: false, // 已调用 start、尚未收到 onStart（用于避免未录音时 stop 报错）
-    showHelpPopup: false
+    showHelpPopup: false,
+    /** 帮助弹窗一行展示版本（避免 Android 上连续两个 text 第二行不渲染） */
+    helpVersionLine: '小程序版本：V1.0.0'
   },
 
   /**
@@ -65,8 +67,22 @@ Page({
       });
     }
     
+    // 帮助文案：优先用微信返回的小程序版本号（体验版/正式版有值），开发版常为空则用兜底
+    let mpVer = '';
+    try {
+      const acc = wx.getAccountInfoSync();
+      mpVer = (acc.miniProgram && acc.miniProgram.version) || '';
+    } catch (e) {
+      mpVer = '';
+    }
+    const helpVersionLine = mpVer
+      ? `小程序版本：${mpVer}`
+      : '小程序版本：V1.0.0';
+
     // 初始化音频监听
     this.initAudioListener();
+
+    this.setData({ helpVersionLine });
   },
 
   /**
