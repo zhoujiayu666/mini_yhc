@@ -36,13 +36,6 @@
       </view>
     </view>
 
-    <view class="step-row">
-      <text class="step-num">04</text>
-      <view class="step-body">
-        <text class="step-desc">进入演唱会模式或手机控制模式</text>
-      </view>
-    </view>
-
     <view class="step-row step-row--notes">
       <text class="step-num">05</text>
       <view class="step-body">

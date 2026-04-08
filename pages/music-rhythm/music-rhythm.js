@@ -736,6 +736,15 @@ Page({
    */
   startAudioAnalysis() {
     console.log('🎵 开始音频分析');
+    const envVersion = (() => {
+      try {
+        const info = wx.getAccountInfoSync();
+        return (info && info.miniProgram && info.miniProgram.envVersion) || 'release';
+      } catch (e) {
+        return 'release';
+      }
+    })();
+    const allowMockAudio = envVersion !== 'release';
     
     const timer = setInterval(() => {
       if (!this.data.isListening || !this.data.isConnected) {
@@ -757,9 +766,12 @@ Page({
         }
       }
       
-      // 如果没有真实音频数据，使用模拟数据（用于测试和演示）
+      // 如果没有真实音频数据，开发/体验版允许使用模拟数据（正式版关闭）
       // 模拟不同音量级别，让颜色有变化
-      if (currentVolume === 0 || (this.data.volumeHistory && this.data.volumeHistory.length === 0)) {
+      if (
+        allowMockAudio &&
+        (currentVolume === 0 || (this.data.volumeHistory && this.data.volumeHistory.length === 0))
+      ) {
         // 使用时间戳生成更平滑的模拟数据
         const time = Date.now();
         const baseVolume = 50 + Math.sin(time / 1000) * 30; // 50-80之间波动（提高基础音量）
@@ -783,6 +795,12 @@ Page({
         }
       }
       
+      // 检测鼓点
+      const hasBeat = this.detectBeat(currentVolume);
+      
+      // 计算BPM
+      const bpm = this.calculateBPM();
+      
       // 添加音量日志（每20次记录一次）
       if (Math.random() < 0.05) {
         console.log('🎵 当前音频状态:', {
@@ -792,12 +810,6 @@ Page({
           BPM: bpm || 0
         });
       }
-      
-      // 检测鼓点
-      const hasBeat = this.detectBeat(currentVolume);
-      
-      // 计算BPM
-      const bpm = this.calculateBPM();
       if (bpm > 0) {
         this.setData({ bpm });
       }
