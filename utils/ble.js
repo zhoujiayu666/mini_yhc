@@ -76,21 +76,12 @@ class BLEController {
 
   /**
    * 获取已发现的设备列表
-   * @param {Boolean} filterByMacPrefix 是否过滤MAC地址前缀，默认true（只返回符合MAC前缀的设备）
    */
-  getBluetoothDevices(filterByMacPrefix = true) {
+  getBluetoothDevices() {
     return new Promise((resolve, reject) => {
       wx.getBluetoothDevices({
         success: (res) => {
           let devices = res.devices || [];
-          
-          // 默认过滤MAC地址前缀为84:AA:A4的设备
-          if (filterByMacPrefix) {
-            devices = devices.filter(device => {
-              const deviceId = (device.deviceId || '').toUpperCase();
-              return deviceId.startsWith('84:AA:A4');
-            });
-          }
           
           // 按RSSI降序排列（信号越强，绝对值越小，排前面）
           devices.sort((a, b) => {
@@ -99,7 +90,7 @@ class BLEController {
             return rssiA - rssiB; // RSSI值越小（绝对值越大），信号越强，排前面
           });
           
-          console.log('设备列表（过滤MAC前缀:', filterByMacPrefix, '）:', devices);
+          console.log('设备列表:', devices);
           resolve(devices);
         },
         fail: (err) => {

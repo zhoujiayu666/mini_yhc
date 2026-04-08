@@ -52,6 +52,31 @@ Page({
   },
 
   /**
+   * 查看隐私保护指引
+   */
+  openPrivacyGuide() {
+    if (wx.openPrivacyContract) {
+      wx.openPrivacyContract({
+        success: () => {},
+        fail: () => {
+          wx.showModal({
+            title: '提示',
+            content: '暂时无法打开隐私保护指引，请稍后重试或升级微信版本。',
+            showCancel: false
+          });
+        }
+      });
+      return;
+    }
+
+    wx.showModal({
+      title: '提示',
+      content: '当前微信版本暂不支持直接打开隐私保护指引，请升级微信后重试。',
+      showCancel: false
+    });
+  },
+
+  /**
    * 清除缓存
    */
   clearCache() {

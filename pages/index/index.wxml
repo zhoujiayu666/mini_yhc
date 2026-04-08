@@ -136,7 +136,6 @@
             <text class="device-item-name">{{item.name || item.deviceId || '未知设备'}}</text>
             <text class="device-connected-tag" wx:if="{{item.isConnectedDevice}}">已连接</text>
           </view>
-          <text class="device-id">{{item.deviceId}}</text>
         </view>
         <view class="device-rssi">
           <text class="rssi-text">信号: {{item.RSSI || '未知'}}</text>

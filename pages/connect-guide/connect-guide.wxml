@@ -36,15 +36,8 @@
       </view>
     </view>
 
-    <view class="step-row">
-      <text class="step-num">04</text>
-      <view class="step-body">
-        <text class="step-desc">进入演唱会模式或手机控制模式</text>
-      </view>
-    </view>
-
     <view class="step-row step-row--notes">
-      <text class="step-num">05</text>
+      <text class="step-num">04</text>
       <view class="step-body">
         <text class="notes-title">注意事项：</text>
         <text class="notes-text">同一场地中，只需开启一部手机即可使用小程序控制多个荧光棒。如有多台手机打开应用，可能出现灯光信号控制干扰</text>

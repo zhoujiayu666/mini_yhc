@@ -47,6 +47,10 @@
     <!-- 其他设置 -->
     <view class="settings-section card">
       <view class="section-title">其他</view>
+      <view class="settings-item clickable" bindtap="openPrivacyGuide">
+        <text class="settings-label">隐私保护指引</text>
+        <text class="settings-arrow">></text>
+      </view>
       <view class="settings-item clickable" bindtap="clearCache">
         <text class="settings-label">清除缓存</text>
         <text class="settings-arrow">></text>

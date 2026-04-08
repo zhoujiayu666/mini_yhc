@@ -1,6 +1,9 @@
 // app.js
 const bleController = require('./utils/ble.js');
 
+/** 进入后台后延迟断开蓝牙，便于用户去系统设置授权后返回仍保持连接 */
+const BG_BLE_DISCONNECT_DELAY_MS = 30000;
+
 App({
   globalData: {
     bleController: bleController,
@@ -21,17 +24,32 @@ App({
   },
 
   onHide() {
-    console.log('小程序进入后台，断开蓝牙连接');
-    // 进入后台时断开蓝牙连接，避免连接状态异常影响下次连接
-    if (this.globalData.isConnected) {
+    console.log('小程序进入后台');
+    if (this._bgBleDisconnectTimer) {
+      clearTimeout(this._bgBleDisconnectTimer);
+      this._bgBleDisconnectTimer = null;
+    }
+    if (!this.globalData.isConnected) {
+      return;
+    }
+    this._bgBleDisconnectTimer = setTimeout(() => {
+      this._bgBleDisconnectTimer = null;
+      if (!this.globalData.isConnected) {
+        return;
+      }
+      console.log('后台超时，断开蓝牙连接');
       bleController.disconnect();
       this.globalData.isConnected = false;
       this.globalData.currentDevice = null;
-    }
+    }, BG_BLE_DISCONNECT_DELAY_MS);
   },
 
   onShow() {
     console.log('小程序进入前台');
+    if (this._bgBleDisconnectTimer) {
+      clearTimeout(this._bgBleDisconnectTimer);
+      this._bgBleDisconnectTimer = null;
+    }
   },
 
   initCloud() {
