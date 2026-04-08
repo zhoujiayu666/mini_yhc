@@ -335,7 +335,7 @@ Page({
       
       let errorMsg = '搜索失败';
       if (error.errCode === 10001) {
-        errorMsg = '蓝牙仍不可用。请开启系统蓝牙，并检查微信权限后重试。';
+        errorMsg = '蓝牙仍不可用。请开启系统蓝牙，并检查微信蓝牙权限后重试。';
       } else if (error.errCode === 10009) {
         errorMsg = '蓝牙适配器未初始化';
       } else if (error.errMsg) {
@@ -387,7 +387,7 @@ Page({
                     console.error('蓝牙状态重试失败', retryErr);
                     resolve({
                       available: false,
-                      message: '蓝牙仍不可用。请开启系统蓝牙，并检查微信权限后重试。',
+                      message: '蓝牙仍不可用。请开启系统蓝牙，并检查微信蓝牙权限后重试。',
                       errCode: retryErr.errCode
                     });
                   }
@@ -397,7 +397,7 @@ Page({
                 console.error('蓝牙初始化失败', initErr);
                 resolve({
                   available: false,
-                  message: '蓝牙仍不可用。请开启系统蓝牙，并检查微信权限后重试。',
+                  message: '蓝牙仍不可用。请开启系统蓝牙，并检查微信蓝牙权限后重试。',
                   errCode: initErr.errCode || err.errCode
                 });
               });
