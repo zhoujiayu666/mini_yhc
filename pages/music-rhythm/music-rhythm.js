@@ -29,7 +29,7 @@ Page({
     recordingPending: false, // 已调用 start、尚未收到 onStart（用于避免未录音时 stop 报错）
     showHelpPopup: false,
     /** 帮助弹窗一行展示版本（避免 Android 上连续两个 text 第二行不渲染） */
-    helpVersionLine: '小程序版本：V1.0.0'
+    helpVersionLine: '小程序版本：V1.0.1'
   },
 
   /**
@@ -77,7 +77,7 @@ Page({
     }
     const helpVersionLine = mpVer
       ? `小程序版本：${mpVer}`
-      : '小程序版本：V1.0.0';
+      : '小程序版本：V1.0.1';
 
     // 初始化音频监听
     this.initAudioListener();
