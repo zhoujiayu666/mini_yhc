@@ -77,20 +77,22 @@ Page({
       }, 0);
     }
     this.loadGroups();
+    this.applyGroupControlToDeviceIfNeeded();
+    this.startGroupSyncTimer();
   },
 
   /**
    * 生命周期函数--监听页面隐藏
    */
   onHide() {
-
+    this.stopGroupSyncTimer();
   },
 
   /**
    * 生命周期函数--监听页面卸载
    */
   onUnload() {
-
+    this.stopGroupSyncTimer();
   },
 
   /**
@@ -152,6 +154,31 @@ Page({
       patch.deviceList = this.annotateDeviceConnection(this.data.deviceList);
     }
     this.setData(patch);
+    if (!patch.isConnected) {
+      // 断线后清空签名，避免重连时同参数被误判为“已下发”
+      this._lastAppliedGroupControlSignature = '';
+    }
+    if (patch.isConnected) {
+      this.applyGroupControlToDeviceIfNeeded();
+    }
+  },
+
+  startGroupSyncTimer() {
+    if (this._groupSyncTimer) {
+      return;
+    }
+    this._groupSyncTimer = setInterval(() => {
+      if (this.data.activeUserRole === 'member' || this.data.activeGroup) {
+        this.loadGroups();
+      }
+    }, 3000);
+  },
+
+  stopGroupSyncTimer() {
+    if (this._groupSyncTimer) {
+      clearInterval(this._groupSyncTimer);
+      this._groupSyncTimer = null;
+    }
   },
 
   /**
@@ -571,11 +598,17 @@ Page({
 
   async callGroupService(payload) {
     const functionName = this.data.groupServiceFunctionName;
+    console.log('[group] call function request', {
+      name: functionName,
+      data: payload
+    });
     const res = await wx.cloud.callFunction({
       name: functionName,
       data: payload
     });
-    return res.result || {};
+    const result = res.result || {};
+    console.log('[group] call function response', result);
+    return result;
   },
 
   async loadGroups() {
@@ -606,6 +639,7 @@ Page({
         groupControlEffect: activeGroup && activeGroup.controlState ? activeGroup.controlState.effect : '常亮',
         groupControlBrightness: activeGroup && activeGroup.controlState ? activeGroup.controlState.brightness : 80
       });
+      this.applyGroupControlToDeviceIfNeeded();
     } catch (error) {
       console.error('加载群组失败', error);
     }
@@ -732,6 +766,7 @@ Page({
       groupControlEffect: group.controlState ? group.controlState.effect : '常亮',
       groupControlBrightness: group.controlState ? group.controlState.brightness : 80
     });
+    this.applyGroupControlToDeviceIfNeeded();
   },
 
   onControlEffectChange(e) {
@@ -747,13 +782,23 @@ Page({
   },
 
   async applyGroupControl() {
+    console.log('[group] apply click', {
+      activeGroup: this.data.activeGroup,
+      activeUserRole: this.data.activeUserRole,
+      effect: this.data.groupControlEffect,
+      brightness: this.data.groupControlBrightness
+    });
     const active = this.data.activeGroup;
     if (!active) {
+      console.warn('[group] apply blocked: no active group');
       wx.showToast({ title: '请先创建或加入群组', icon: 'none' });
       return;
     }
 
     if (this.data.activeUserRole !== 'admin') {
+      console.warn('[group] apply blocked: not admin', {
+        activeUserRole: this.data.activeUserRole
+      });
       wx.showToast({ title: '当前用户不是管理员', icon: 'none' });
       return;
     }
@@ -768,15 +813,68 @@ Page({
       });
       wx.hideLoading();
       if (!result.success) {
+        console.warn('[group] apply failed result', result);
         wx.showToast({ title: result.message || '下发失败', icon: 'none' });
         return;
       }
       await this.loadGroups();
+      console.log('[group] apply success', result);
       wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
     } catch (error) {
       wx.hideLoading();
       wx.showToast({ title: '下发失败', icon: 'none' });
-      console.error('统一下发失败', error);
+      console.error('[group] apply error', error);
+    }
+  },
+
+  /**
+   * 成员端自动将群控状态同步到当前连接设备
+   */
+  async applyGroupControlToDeviceIfNeeded() {
+    const activeGroup = this.data.activeGroup;
+    if (!activeGroup) {
+      return;
+    }
+    if (this.data.activeUserRole !== 'member') {
+      return;
+    }
+    const connected = app.globalData.isConnected || bleController.isConnected;
+    if (!connected) {
+      console.log('[group] skip device apply: device not connected');
+      return;
+    }
+    if (!activeGroup.controlState) {
+      return;
+    }
+
+    const effect = activeGroup.controlState.effect || '常亮';
+    const brightness = Number(activeGroup.controlState.brightness || 80);
+    const signature = `${activeGroup.id}|${effect}|${brightness}`;
+    if (this._lastAppliedGroupControlSignature === signature) {
+      return;
+    }
+
+    try {
+      let frame;
+      const hue = 50;
+      const saturation = 95;
+      switch (effect) {
+        case '闪烁':
+          frame = protocol.buildQuickFlashFrame(0, hue, saturation, brightness);
+          break;
+        case '呼吸':
+          frame = protocol.buildBreathEffectFrame(0, hue, saturation, brightness);
+          break;
+        case '常亮':
+        default:
+          frame = protocol.buildConstantFrame(0, hue, saturation, brightness);
+          break;
+      }
+      await bleController.sendFrame(frame, true);
+      this._lastAppliedGroupControlSignature = signature;
+      console.log('[group] device apply success', { groupId: activeGroup.id, effect, brightness });
+    } catch (error) {
+      console.error('[group] device apply failed', error);
     }
   }
 })
