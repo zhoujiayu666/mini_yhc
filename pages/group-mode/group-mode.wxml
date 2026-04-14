@@ -1,0 +1,99 @@
+<navigation-bar title="群组模式" back="{{true}}" color="#E0E0E0" background="#121212"></navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y>
+  <view class="container">
+    <view class="group-card card">
+      <view class="owner-entry" bindtap="openCreateGroupModal">
+        <text class="owner-entry-text">创建群组</text>
+        <text class="owner-entry-arrow">></text>
+      </view>
+      <view class="owner-entry" bindtap="openJoinGroupModal">
+        <text class="owner-entry-text">加入群组</text>
+        <text class="owner-entry-arrow">></text>
+      </view>
+
+      <view class="group-header">
+        <text class="group-title">群组控制</text>
+        <text class="group-subtitle" wx:if="{{activeGroup}}">{{activeGroup.name}}（{{activeGroup.id}}）</text>
+      </view>
+
+      <view class="group-tabs">
+        <view class="group-tab {{groupTab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchGroupTab">我的群组</view>
+        <view class="group-tab {{groupTab === 'joined' ? 'active' : ''}}" data-tab="joined" bindtap="switchGroupTab">加入过的群组</view>
+      </view>
+
+      <view class="group-list" wx:if="{{filteredGroups.length > 0}}">
+        <view
+          class="group-item {{activeGroup && activeGroup.id === item.id ? 'active' : ''}}"
+          wx:for="{{filteredGroups}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="selectGroup"
+        >
+          <text class="group-item-name">{{item.name}}</text>
+          <text class="group-item-id">ID: {{item.id}} | 成员: {{item.members.length}}</text>
+        </view>
+      </view>
+      <view class="empty-tip-box" wx:if="{{filteredGroups.length === 0}}">
+        <text class="empty-tip-text">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无加入过的群组'}}</text>
+      </view>
+
+      <view class="admin-panel" wx:if="{{activeGroup && activeUserRole === 'admin'}}">
+        <text class="admin-title">管理员统一控制成员灯光</text>
+        <view class="effect-row">
+          <text class="effect-label">效果</text>
+          <view class="effect-options">
+            <view class="effect-chip {{groupControlEffect === '常亮' ? 'active' : ''}}" data-effect="常亮" bindtap="onControlEffectChange">常亮</view>
+            <view class="effect-chip {{groupControlEffect === '呼吸' ? 'active' : ''}}" data-effect="呼吸" bindtap="onControlEffectChange">呼吸</view>
+            <view class="effect-chip {{groupControlEffect === '闪烁' ? 'active' : ''}}" data-effect="闪烁" bindtap="onControlEffectChange">闪烁</view>
+          </view>
+        </view>
+        <view class="brightness-row">
+          <text class="effect-label">亮度 {{groupControlBrightness}}%</text>
+          <slider min="1" max="100" step="1" value="{{groupControlBrightness}}" activeColor="#FFD100" backgroundColor="#333333" bindchange="onControlBrightnessChange" />
+        </view>
+        <button class="group-btn apply" bindtap="applyGroupControl">统一下发到成员</button>
+
+        <view class="member-list">
+          <view class="member-item" wx:for="{{activeGroup.members}}" wx:key="nickname">
+            <text class="member-name">{{item.nickname}} {{item.role === 'admin' ? '(管理员)' : ''}}</text>
+            <text class="member-state">效果: {{item.effect || '-'}} / 亮度: {{item.brightness || '-'}}%</text>
+          </view>
+        </view>
+      </view>
+      <view class="admin-panel" wx:if="{{activeGroup && activeUserRole !== 'admin'}}">
+        <text class="admin-title">当前身份：{{activeUserNickname || '成员'}}（仅管理员可统一控制成员灯光）</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<view class="group-modal {{showCreateGroupModal ? 'show' : ''}}" bindtap="closeCreateGroupModal">
+  <view class="group-modal-content" catchtap="stopPropagation">
+    <view class="group-modal-header">
+      <text class="group-modal-title">创建新群组</text>
+      <view class="close-btn" bindtap="closeCreateGroupModal">×</view>
+    </view>
+    <view class="group-modal-body">
+      <input class="group-input" placeholder="请输入群组名称" data-field="name" value="{{createGroupForm.name}}" bindinput="onCreateGroupInput" />
+      <input class="group-input" placeholder="请输入群组ID" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
+      <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" data-field="password" value="{{createGroupForm.password}}" bindinput="onCreateGroupInput" />
+      <button class="group-btn apply" bindtap="createGroup">确认创建</button>
+    </view>
+  </view>
+</view>
+
+<view class="group-modal {{showJoinGroupModal ? 'show' : ''}}" bindtap="closeJoinGroupModal">
+  <view class="group-modal-content" catchtap="stopPropagation">
+    <view class="group-modal-header">
+      <text class="group-modal-title">加入群组</text>
+      <view class="close-btn" bindtap="closeJoinGroupModal">×</view>
+    </view>
+    <view class="group-modal-body">
+      <input class="group-input" placeholder="请输入群组ID" data-field="id" value="{{joinGroupForm.id}}" bindinput="onJoinGroupInput" />
+      <input class="group-input" placeholder="请输入昵称" data-field="nickname" value="{{joinGroupForm.nickname}}" bindinput="onJoinGroupInput" />
+      <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" data-field="password" value="{{joinGroupForm.password}}" bindinput="onJoinGroupInput" />
+      <button class="group-btn apply" bindtap="joinGroup">确认加入</button>
+    </view>
+  </view>
+</view>

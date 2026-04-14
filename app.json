@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/group-mode/group-mode",
     "pages/color-control/color-control",
     "pages/connect-guide/connect-guide",
     "pages/music-rhythm/music-rhythm",

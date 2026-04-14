@@ -16,26 +16,7 @@ Page({
     isScanning: false,
     deviceList: [],
     showDeviceList: false,
-    currentDevice: null,
-    groups: [],
-    activeGroup: null,
-    activeUserRole: '',
-    activeUserNickname: '',
-    showCreateGroupModal: false,
-    showJoinGroupModal: false,
-    groupServiceFunctionName: 'group-service',
-    createGroupForm: {
-      name: '',
-      id: '',
-      password: ''
-    },
-    joinGroupForm: {
-      id: '',
-      nickname: '',
-      password: ''
-    },
-    groupControlEffect: '常亮',
-    groupControlBrightness: 80
+    currentDevice: null
   },
 
   /**
@@ -53,7 +34,6 @@ Page({
     
     // 加载设备连接历史
     this.loadDeviceHistory();
-    this.loadGroups();
   },
 
   /**
@@ -76,23 +56,20 @@ Page({
         this.searchDevices();
       }, 0);
     }
-    this.loadGroups();
-    this.applyGroupControlToDeviceIfNeeded();
-    this.startGroupSyncTimer();
   },
 
   /**
    * 生命周期函数--监听页面隐藏
    */
   onHide() {
-    this.stopGroupSyncTimer();
+
   },
 
   /**
    * 生命周期函数--监听页面卸载
    */
   onUnload() {
-    this.stopGroupSyncTimer();
+
   },
 
   /**
@@ -136,6 +113,12 @@ Page({
     });
   },
 
+  navigateToGroupMode() {
+    wx.navigateTo({
+      url: '/pages/group-mode/group-mode'
+    });
+  },
+
   /**
    * 更新连接状态
    */
@@ -154,31 +137,6 @@ Page({
       patch.deviceList = this.annotateDeviceConnection(this.data.deviceList);
     }
     this.setData(patch);
-    if (!patch.isConnected) {
-      // 断线后清空签名，避免重连时同参数被误判为“已下发”
-      this._lastAppliedGroupControlSignature = '';
-    }
-    if (patch.isConnected) {
-      this.applyGroupControlToDeviceIfNeeded();
-    }
-  },
-
-  startGroupSyncTimer() {
-    if (this._groupSyncTimer) {
-      return;
-    }
-    this._groupSyncTimer = setInterval(() => {
-      if (this.data.activeUserRole === 'member' || this.data.activeGroup) {
-        this.loadGroups();
-      }
-    }, 3000);
-  },
-
-  stopGroupSyncTimer() {
-    if (this._groupSyncTimer) {
-      clearInterval(this._groupSyncTimer);
-      this._groupSyncTimer = null;
-    }
   },
 
   /**
@@ -202,6 +160,34 @@ Page({
         (d.deviceId || '').toUpperCase() === connectedId
       )
     }));
+  },
+
+  /**
+   * 按deviceId去重，优先保留RSSI更强或字段更完整的记录
+   */
+  dedupeDevicesById(devices) {
+    const map = {};
+    (devices || []).forEach((d) => {
+      const id = (d.deviceId || '').toUpperCase();
+      if (!id) {
+        return;
+      }
+      const prev = map[id];
+      if (!prev) {
+        map[id] = d;
+        return;
+      }
+      const prevRssi = typeof prev.RSSI === 'number' ? prev.RSSI : -999;
+      const nextRssi = typeof d.RSSI === 'number' ? d.RSSI : -999;
+      const prevScore = (prev.name ? 1 : 0) + (prev.localName ? 1 : 0) + (prev.advertisData ? 1 : 0);
+      const nextScore = (d.name ? 1 : 0) + (d.localName ? 1 : 0) + (d.advertisData ? 1 : 0);
+      if (nextRssi > prevRssi || (nextRssi === prevRssi && nextScore > prevScore)) {
+        map[id] = { ...prev, ...d };
+      } else {
+        map[id] = { ...d, ...prev };
+      }
+    });
+    return Object.values(map);
   },
 
   /**
@@ -305,7 +291,8 @@ Page({
             });
           });
           // 添加到列表显示
-          this.setData({ deviceList: this.annotateDeviceConnection(existingDevices) });
+          const deduped = this.dedupeDevicesById(existingDevices);
+          this.setData({ deviceList: this.annotateDeviceConnection(deduped) });
         } else {
           console.log('暂无已缓存的设备');
         }
@@ -359,14 +346,15 @@ Page({
           }
         });
 
-        // 按RSSI降序排列（信号越强，绝对值越小，排前面）
-        newList.sort((a, b) => {
+        // 去重后按RSSI降序排列（信号越强，绝对值越小，排前面）
+        const uniqueList = this.dedupeDevicesById(newList);
+        uniqueList.sort((a, b) => {
           const rssiA = a.RSSI || -100;
           const rssiB = b.RSSI || -100;
           return rssiA - rssiB; // RSSI值越小（绝对值越大），信号越强，排前面
         });
 
-        this.setData({ deviceList: this.annotateDeviceConnection(newList) });
+        this.setData({ deviceList: this.annotateDeviceConnection(uniqueList) });
       });
 
       // 延长搜索时间到10秒
@@ -594,287 +582,5 @@ Page({
       showCancel: false,
       confirmText: '知道了'
     });
-  },
-
-  async callGroupService(payload) {
-    const functionName = this.data.groupServiceFunctionName;
-    console.log('[group] call function request', {
-      name: functionName,
-      data: payload
-    });
-    const res = await wx.cloud.callFunction({
-      name: functionName,
-      data: payload
-    });
-    const result = res.result || {};
-    console.log('[group] call function response', result);
-    return result;
-  },
-
-  async loadGroups() {
-    if (!wx.cloud) {
-      return;
-    }
-    try {
-      const localActiveGroupId = wx.getStorageSync('activeGroupId') || '';
-      const result = await this.callGroupService({ action: 'listGroups' });
-      if (!result.success) {
-        wx.showToast({ title: result.message || '加载群组失败', icon: 'none' });
-        return;
-      }
-      const groups = result.groups || [];
-      const activeGroup =
-        groups.find((g) => g.id === localActiveGroupId) ||
-        groups.find((g) => g.id === result.activeGroupId) ||
-        groups[0] ||
-        null;
-      if (activeGroup) {
-        wx.setStorageSync('activeGroupId', activeGroup.id);
-      }
-      this.setData({
-        groups,
-        activeGroup,
-        activeUserRole: activeGroup ? activeGroup.activeUserRole : '',
-        activeUserNickname: activeGroup ? activeGroup.activeUserNickname : '',
-        groupControlEffect: activeGroup && activeGroup.controlState ? activeGroup.controlState.effect : '常亮',
-        groupControlBrightness: activeGroup && activeGroup.controlState ? activeGroup.controlState.brightness : 80
-      });
-      this.applyGroupControlToDeviceIfNeeded();
-    } catch (error) {
-      console.error('加载群组失败', error);
-    }
-  },
-
-  openCreateGroupModal() {
-    this.setData({
-      showCreateGroupModal: true,
-      createGroupForm: { name: '', id: '', password: '' }
-    });
-  },
-
-  openJoinGroupModal() {
-    this.setData({
-      showJoinGroupModal: true,
-      joinGroupForm: { id: '', nickname: '', password: '' }
-    });
-  },
-
-  closeCreateGroupModal() {
-    this.setData({ showCreateGroupModal: false });
-  },
-
-  closeJoinGroupModal() {
-    this.setData({ showJoinGroupModal: false });
-  },
-
-  onCreateGroupInput(e) {
-    const field = e.currentTarget.dataset.field;
-    const value = (e.detail.value || '').trim();
-    this.setData({
-      [`createGroupForm.${field}`]: value
-    });
-  },
-
-  onJoinGroupInput(e) {
-    const field = e.currentTarget.dataset.field;
-    const value = (e.detail.value || '').trim();
-    this.setData({
-      [`joinGroupForm.${field}`]: value
-    });
-  },
-
-  async createGroup() {
-    const form = this.data.createGroupForm;
-    if (!form.name || !form.id || !form.password) {
-      wx.showToast({ title: '请完整填写信息', icon: 'none' });
-      return;
-    }
-    if (!/^\d{4}$/.test(form.password)) {
-      wx.showToast({ title: '密码需为4位数字', icon: 'none' });
-      return;
-    }
-
-    try {
-      wx.showLoading({ title: '创建中...', mask: true });
-      const result = await this.callGroupService({
-        action: 'createGroup',
-        name: form.name,
-        groupId: form.id,
-        password: form.password
-      });
-      wx.hideLoading();
-      if (!result.success) {
-        wx.showToast({ title: result.message || '创建失败', icon: 'none' });
-        return;
-      }
-      this.setData({ showCreateGroupModal: false });
-      await this.loadGroups();
-      wx.showToast({ title: '群组创建成功', icon: 'success' });
-    } catch (error) {
-      wx.hideLoading();
-      wx.showToast({ title: '创建失败', icon: 'none' });
-      console.error('创建群组失败', error);
-    }
-  },
-
-  async joinGroup() {
-    const form = this.data.joinGroupForm;
-    if (!form.id || !form.nickname || !form.password) {
-      wx.showToast({ title: '请完整填写信息', icon: 'none' });
-      return;
-    }
-    if (!/^\d{4}$/.test(form.password)) {
-      wx.showToast({ title: '密码需为4位数字', icon: 'none' });
-      return;
-    }
-
-    try {
-      wx.showLoading({ title: '加入中...', mask: true });
-      const result = await this.callGroupService({
-        action: 'joinGroup',
-        groupId: form.id,
-        nickname: form.nickname,
-        password: form.password
-      });
-      wx.hideLoading();
-      if (!result.success) {
-        wx.showToast({ title: result.message || '加入失败', icon: 'none' });
-        return;
-      }
-      this.setData({ showJoinGroupModal: false });
-      wx.setStorageSync('activeGroupId', form.id);
-      await this.loadGroups();
-      wx.showToast({ title: '已加入群组', icon: 'success' });
-    } catch (error) {
-      wx.hideLoading();
-      wx.showToast({ title: '加入失败', icon: 'none' });
-      console.error('加入群组失败', error);
-    }
-  },
-
-  selectGroup(e) {
-    const id = e.currentTarget.dataset.id;
-    const group = this.data.groups.find((item) => item.id === id);
-    if (!group) {
-      return;
-    }
-    wx.setStorageSync('activeGroupId', id);
-    this.setData({
-      activeGroup: group,
-      activeUserRole: group.activeUserRole || '',
-      activeUserNickname: group.activeUserNickname || '',
-      groupControlEffect: group.controlState ? group.controlState.effect : '常亮',
-      groupControlBrightness: group.controlState ? group.controlState.brightness : 80
-    });
-    this.applyGroupControlToDeviceIfNeeded();
-  },
-
-  onControlEffectChange(e) {
-    this.setData({
-      groupControlEffect: e.currentTarget.dataset.effect
-    });
-  },
-
-  onControlBrightnessChange(e) {
-    this.setData({
-      groupControlBrightness: Number(e.detail.value || 0)
-    });
-  },
-
-  async applyGroupControl() {
-    console.log('[group] apply click', {
-      activeGroup: this.data.activeGroup,
-      activeUserRole: this.data.activeUserRole,
-      effect: this.data.groupControlEffect,
-      brightness: this.data.groupControlBrightness
-    });
-    const active = this.data.activeGroup;
-    if (!active) {
-      console.warn('[group] apply blocked: no active group');
-      wx.showToast({ title: '请先创建或加入群组', icon: 'none' });
-      return;
-    }
-
-    if (this.data.activeUserRole !== 'admin') {
-      console.warn('[group] apply blocked: not admin', {
-        activeUserRole: this.data.activeUserRole
-      });
-      wx.showToast({ title: '当前用户不是管理员', icon: 'none' });
-      return;
-    }
-
-    try {
-      wx.showLoading({ title: '下发中...', mask: true });
-      const result = await this.callGroupService({
-        action: 'applyControl',
-        groupId: active.id,
-        effect: this.data.groupControlEffect,
-        brightness: this.data.groupControlBrightness
-      });
-      wx.hideLoading();
-      if (!result.success) {
-        console.warn('[group] apply failed result', result);
-        wx.showToast({ title: result.message || '下发失败', icon: 'none' });
-        return;
-      }
-      await this.loadGroups();
-      console.log('[group] apply success', result);
-      wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
-    } catch (error) {
-      wx.hideLoading();
-      wx.showToast({ title: '下发失败', icon: 'none' });
-      console.error('[group] apply error', error);
-    }
-  },
-
-  /**
-   * 成员端自动将群控状态同步到当前连接设备
-   */
-  async applyGroupControlToDeviceIfNeeded() {
-    const activeGroup = this.data.activeGroup;
-    if (!activeGroup) {
-      return;
-    }
-    if (this.data.activeUserRole !== 'member') {
-      return;
-    }
-    const connected = app.globalData.isConnected || bleController.isConnected;
-    if (!connected) {
-      console.log('[group] skip device apply: device not connected');
-      return;
-    }
-    if (!activeGroup.controlState) {
-      return;
-    }
-
-    const effect = activeGroup.controlState.effect || '常亮';
-    const brightness = Number(activeGroup.controlState.brightness || 80);
-    const signature = `${activeGroup.id}|${effect}|${brightness}`;
-    if (this._lastAppliedGroupControlSignature === signature) {
-      return;
-    }
-
-    try {
-      let frame;
-      const hue = 50;
-      const saturation = 95;
-      switch (effect) {
-        case '闪烁':
-          frame = protocol.buildQuickFlashFrame(0, hue, saturation, brightness);
-          break;
-        case '呼吸':
-          frame = protocol.buildBreathEffectFrame(0, hue, saturation, brightness);
-          break;
-        case '常亮':
-        default:
-          frame = protocol.buildConstantFrame(0, hue, saturation, brightness);
-          break;
-      }
-      await bleController.sendFrame(frame, true);
-      this._lastAppliedGroupControlSignature = signature;
-      console.log('[group] device apply success', { groupId: activeGroup.id, effect, brightness });
-    } catch (error) {
-      console.error('[group] device apply failed', error);
-    }
   }
 })
