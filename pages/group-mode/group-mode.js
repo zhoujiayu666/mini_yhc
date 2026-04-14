@@ -7,10 +7,14 @@ Page({
     isConnected: false,
     groups: [],
     filteredGroups: [],
+    groupDetailMode: false,
     activeGroup: null,
     activeUserRole: '',
     activeUserNickname: '',
     groupTab: 'mine',
+    previewHue: 50,
+    previewSaturation: 95,
+    previewBrightness: 80,
     showCreateGroupModal: false,
     showJoinGroupModal: false,
     groupServiceFunctionName: 'group-service',
@@ -46,10 +50,16 @@ Page({
 
   onHide() {
     this.stopGroupSyncTimer();
+    if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
+      this.stopAdminPresenceHeartbeat();
+    }
   },
 
   onUnload() {
     this.stopGroupSyncTimer();
+    if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
+      this.stopAdminPresenceHeartbeat();
+    }
   },
 
   updateConnectionStatus() {
@@ -102,21 +112,53 @@ Page({
       return;
     }
     try {
-      const localActiveGroupId = wx.getStorageSync('activeGroupId') || '';
       const result = await this.callGroupService({ action: 'listGroups' });
       if (!result.success) {
         wx.showToast({ title: result.message || '加载群组失败', icon: 'none' });
         return;
       }
       const groups = result.groups || [];
-      const activeGroup =
-        groups.find((g) => g.id === localActiveGroupId) ||
-        groups.find((g) => g.id === result.activeGroupId) ||
-        groups[0] ||
-        null;
-      if (activeGroup) {
-        wx.setStorageSync('activeGroupId', activeGroup.id);
+      let activeGroup = null;
+
+      if (this.data.groupDetailMode && this.data.activeGroup) {
+        const curId = this.data.activeGroup.id;
+        const fresh = groups.find((g) => g.id === curId) || null;
+        if (!fresh) {
+          this.stopAdminPresenceHeartbeat();
+          this.setData({
+            groups,
+            groupDetailMode: false,
+            activeGroup: null,
+            activeUserRole: '',
+            activeUserNickname: ''
+          });
+          this.applyGroupTab();
+          return;
+        }
+        wx.setStorageSync('activeGroupId', fresh.id);
+        if (this.data.activeUserRole === 'admin') {
+          activeGroup = {
+            ...fresh,
+            controlState: {
+              effect: this.data.groupControlEffect,
+              brightness: this.data.groupControlBrightness
+            }
+          };
+        } else {
+          activeGroup = fresh;
+        }
+      } else {
+        const localActiveGroupId = wx.getStorageSync('activeGroupId') || '';
+        activeGroup =
+          groups.find((g) => g.id === localActiveGroupId) ||
+          groups.find((g) => g.id === result.activeGroupId) ||
+          groups[0] ||
+          null;
+        if (activeGroup) {
+          wx.setStorageSync('activeGroupId', activeGroup.id);
+        }
       }
+
       this.setData({
         groups,
         activeGroup,
@@ -141,6 +183,12 @@ Page({
       }
       return g.activeUserRole === 'member';
     });
+
+    if (this.data.groupDetailMode) {
+      this.setData({ filteredGroups });
+      return;
+    }
+
     let activeGroup = this.data.activeGroup;
     if (!activeGroup || !filteredGroups.some((g) => g.id === activeGroup.id)) {
       activeGroup = filteredGroups[0] || null;
@@ -280,21 +328,94 @@ Page({
     }
   },
 
-  selectGroup(e) {
+  openGroupDetail(e) {
     const id = e.currentTarget.dataset.id;
     const group = this.data.groups.find((item) => item.id === id);
     if (!group) {
       return;
     }
     wx.setStorageSync('activeGroupId', id);
+    const cc = app.globalData.colorControlState;
+    const previewHue = cc && typeof cc.hue === 'number' ? cc.hue : 50;
+    const previewSaturation = cc && typeof cc.saturation === 'number' ? cc.saturation : 95;
+    const br =
+      group.controlState && typeof group.controlState.brightness === 'number'
+        ? group.controlState.brightness
+        : 80;
     this.setData({
+      groupDetailMode: true,
       activeGroup: group,
       activeUserRole: group.activeUserRole || '',
       activeUserNickname: group.activeUserNickname || '',
       groupControlEffect: group.controlState ? group.controlState.effect : '常亮',
-      groupControlBrightness: group.controlState ? group.controlState.brightness : 80
+      groupControlBrightness: br,
+      previewHue,
+      previewSaturation,
+      previewBrightness: br
     });
+    this.applyGroupTab();
+    if (group.activeUserRole === 'admin') {
+      this.startAdminPresenceHeartbeat(id);
+    }
     this.applyGroupControlToDeviceIfNeeded();
+  },
+
+  exitGroupDetail() {
+    this.stopAdminPresenceHeartbeat();
+    this.setData({ groupDetailMode: false });
+    this.applyGroupTab();
+  },
+
+  startAdminPresenceHeartbeat(groupId) {
+    this.stopAdminPresenceHeartbeatQuiet();
+    this._adminPresenceGroupId = groupId;
+    const tick = () => {
+      this.callGroupService({
+        action: 'adminDetailPresence',
+        groupId,
+        inDetail: true
+      }).catch(() => {});
+    };
+    tick();
+    this._adminHb = setInterval(tick, 8000);
+  },
+
+  stopAdminPresenceHeartbeatQuiet() {
+    if (this._adminHb) {
+      clearInterval(this._adminHb);
+      this._adminHb = null;
+    }
+  },
+
+  stopAdminPresenceHeartbeat() {
+    const gid = this._adminPresenceGroupId;
+    this.stopAdminPresenceHeartbeatQuiet();
+    this._adminPresenceGroupId = null;
+    if (gid) {
+      this.callGroupService({
+        action: 'adminDetailPresence',
+        groupId: gid,
+        inDetail: false
+      }).catch(() => {});
+    }
+  },
+
+  onPreviewColorChange(e) {
+    const { hue, saturation, brightness } = e.detail;
+    this.setData({
+      previewHue: hue,
+      previewSaturation: saturation,
+      previewBrightness: brightness,
+      groupControlBrightness: brightness
+    });
+  },
+
+  onPreviewBrightnessChange(e) {
+    const brightness = Number(e.detail.value || 0);
+    this.setData({
+      previewBrightness: brightness,
+      groupControlBrightness: brightness
+    });
   },
 
   onControlEffectChange(e) {
@@ -304,8 +425,10 @@ Page({
   },
 
   onControlBrightnessChange(e) {
+    const v = Number(e.detail.value || 0);
     this.setData({
-      groupControlBrightness: Number(e.detail.value || 0)
+      groupControlBrightness: v,
+      previewBrightness: v
     });
   },
 
@@ -334,6 +457,12 @@ Page({
         return;
       }
       await this.loadGroups();
+      // 管理员下发成功后，本机若已连接也立即应用相同效果
+      await this.sendGroupControlFrameToDevice(
+        this.data.groupControlEffect,
+        this.data.groupControlBrightness,
+        this.data.activeGroup && this.data.activeGroup.id
+      );
       wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
     } catch (error) {
       wx.hideLoading();
@@ -360,22 +489,7 @@ Page({
     }
 
     try {
-      let frame;
-      const hue = 50;
-      const saturation = 95;
-      switch (effect) {
-        case '闪烁':
-          frame = protocol.buildQuickFlashFrame(0, hue, saturation, brightness);
-          break;
-        case '呼吸':
-          frame = protocol.buildBreathEffectFrame(0, hue, saturation, brightness);
-          break;
-        case '常亮':
-        default:
-          frame = protocol.buildConstantFrame(0, hue, saturation, brightness);
-          break;
-      }
-      await bleController.sendFrame(frame, true);
+      await this.sendGroupControlFrameToDevice(effect, brightness, activeGroup.id);
       this._lastAppliedGroupControlSignature = signature;
       console.log('[group] device apply success', {
         groupId: activeGroup.id,
@@ -384,6 +498,32 @@ Page({
       });
     } catch (error) {
       console.error('[group] device apply failed', error);
+    }
+  },
+
+  async sendGroupControlFrameToDevice(effect, brightness, groupId) {
+    const connected = app.globalData.isConnected || bleController.isConnected;
+    if (!connected) {
+      return;
+    }
+    const hue = 50;
+    const saturation = 95;
+    let frame;
+    switch (effect) {
+      case '闪烁':
+        frame = protocol.buildQuickFlashFrame(0, hue, saturation, brightness);
+        break;
+      case '呼吸':
+        frame = protocol.buildBreathEffectFrame(0, hue, saturation, brightness);
+        break;
+      case '常亮':
+      default:
+        frame = protocol.buildConstantFrame(0, hue, saturation, brightness);
+        break;
+    }
+    await bleController.sendFrame(frame, true);
+    if (groupId) {
+      this._lastAppliedGroupControlSignature = `${groupId}|${effect}|${brightness}`;
     }
   }
 });

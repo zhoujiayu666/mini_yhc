@@ -493,22 +493,6 @@ Page({
       audioStartTime: 0
     });
     
-    // 发送一次常亮数据，恢复默认状态
-    if (this.data.isConnected) {
-      try {
-        const frame = protocol.buildConstantFrame(
-          0,
-          this.data.hue,
-          this.data.saturation,
-          100
-        );
-        bleController.sendFrame(frame, true).catch(err => {
-          console.error('恢复默认状态失败', err);
-        });
-      } catch (error) {
-        console.error('构建恢复数据帧失败', error);
-      }
-    }
   },
 
   /**

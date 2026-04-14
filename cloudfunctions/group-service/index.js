@@ -24,6 +24,8 @@ exports.main = async (event, context) => {
         return await listGroups(openid);
       case 'applyControl':
         return await applyControl(openid, event);
+      case 'adminDetailPresence':
+        return await adminDetailPresence(openid, event);
       default:
         return { success: false, message: '未知操作' };
     }
@@ -61,6 +63,7 @@ async function createGroup(openid, payload) {
       password,
       adminOpenid: openid,
       controlState: { effect: '常亮', brightness: 80 },
+      adminInDetailAt: 0,
       createdAt: now,
       updatedAt: now
     }
@@ -166,16 +169,47 @@ async function listGroups(openid) {
     selfRoleMap[m.groupId] = { role: m.role, nickname: m.nickname };
   });
 
-  const groups = groupsRes.data.map((g) => ({
-    id: g.groupId,
-    name: g.name,
-    controlState: g.controlState,
-    members: memberMap[g.groupId] || [],
-    activeUserRole: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].role : '',
-    activeUserNickname: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].nickname : ''
-  }));
+  const now = Date.now();
+  /** 管理员「在线」判定：心跳8s 一次，适当放宽避免成员端偶发拉取间隔导致误判 */
+  const presenceTtlMs = 60000;
+
+  const groups = groupsRes.data.map((g) => {
+    const at = g.adminInDetailAt || 0;
+    return {
+      id: g.groupId,
+      name: g.name,
+      controlState: g.controlState,
+      members: memberMap[g.groupId] || [],
+      activeUserRole: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].role : '',
+      activeUserNickname: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].nickname : '',
+      adminIsInGroupDetail: !!(at && now - at < presenceTtlMs)
+    };
+  });
 
   return { success: true, groups, activeGroupId: groups[0] ? groups[0].id : '' };
+}
+
+async function adminDetailPresence(openid, payload) {
+  const groupId = (payload.groupId || '').trim();
+  const inDetail = !!payload.inDetail;
+
+  if (!groupId) {
+    return { success: false, message: '参数无效' };
+  }
+
+  const roleRes = await db.collection('group_members').where({ groupId, openid }).limit(1).get();
+  if (roleRes.data.length === 0 || roleRes.data[0].role !== 'admin') {
+    return { success: false, message: '仅管理员可上报' };
+  }
+
+  await db.collection('groups').where({ groupId }).update({
+    data: {
+      adminInDetailAt: inDetail ? Date.now() : 0,
+      updatedAt: Date.now()
+    }
+  });
+
+  return { success: true, message: inDetail ? '已进入' : '已离开' };
 }
 
 async function applyControl(openid, payload) {
@@ -195,16 +229,18 @@ async function applyControl(openid, payload) {
     return { success: false, message: '当前用户不是管理员' };
   }
 
+  const ts = Date.now();
   await db.collection('groups').where({ groupId }).update({
     data: {
       controlState: { effect, brightness },
-      updatedAt: Date.now()
+      /** 统一下发成功即视为管理员正在操作本群，成员端可显示「正在本群组页面」 */
+      adminInDetailAt: ts,
+      updatedAt: ts
     }
   });
 
   await db.collection('group_members').where({
-    groupId,
-    role: 'member'
+    groupId
   }).update({
     data: {
       effect,
