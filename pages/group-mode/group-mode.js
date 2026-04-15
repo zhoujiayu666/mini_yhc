@@ -4,7 +4,12 @@ const app = getApp();
 
 Page({
   data: {
+    deviceStatus: '未连接',
     isConnected: false,
+    isScanning: false,
+    deviceList: [],
+    showDeviceList: false,
+    currentDevice: null,
     groups: [],
     filteredGroups: [],
     groupDetailMode: false,
@@ -12,8 +17,8 @@ Page({
     activeUserRole: '',
     activeUserNickname: '',
     groupTab: 'mine',
-    previewHue: 50,
-    previewSaturation: 95,
+    previewHue: 0,
+    previewSaturation: 100,
     previewBrightness: 80,
     showCreateGroupModal: false,
     showJoinGroupModal: false,
@@ -45,11 +50,14 @@ Page({
     this.updateConnectionStatus();
     this.loadGroups();
     this.applyGroupControlToDeviceIfNeeded();
-    this.startGroupSyncTimer();
+    if (this.data.groupDetailMode) {
+      this.startGroupSyncTimer();
+    }
   },
 
   onHide() {
     this.stopGroupSyncTimer();
+    this.stopDynamicEffectLoop();
     if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
       this.stopAdminPresenceHeartbeat();
     }
@@ -57,6 +65,7 @@ Page({
 
   onUnload() {
     this.stopGroupSyncTimer();
+    this.stopDynamicEffectLoop();
     if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
       this.stopAdminPresenceHeartbeat();
     }
@@ -64,12 +73,218 @@ Page({
 
   updateConnectionStatus() {
     const isConnected = app.globalData.isConnected || bleController.isConnected;
-    this.setData({ isConnected });
+    const patch = {
+      isConnected,
+      deviceStatus: isConnected ? '已连接' : '未连接',
+      currentDevice: app.globalData.currentDevice
+    };
+    if (this.data.deviceList && this.data.deviceList.length > 0) {
+      patch.deviceList = this.annotateDeviceConnection(this.data.deviceList);
+    }
+    this.setData(patch);
     if (!isConnected) {
       this._lastAppliedGroupControlSignature = '';
+      this.stopDynamicEffectLoop();
       return;
     }
     this.applyGroupControlToDeviceIfNeeded();
+  },
+
+  annotateDeviceConnection(devices) {
+    if (!devices || !devices.length) {
+      return devices || [];
+    }
+    const isLinked = app.globalData.isConnected || bleController.isConnected;
+    const connectedId = (
+      bleController.deviceId ||
+      (app.globalData.currentDevice && app.globalData.currentDevice.deviceId) ||
+      ''
+    ).toUpperCase();
+    return devices.map((d) => ({
+      ...d,
+      isConnectedDevice: !!(
+        isLinked &&
+        connectedId &&
+        (d.deviceId || '').toUpperCase() === connectedId
+      )
+    }));
+  },
+
+  dedupeDevicesById(devices) {
+    const map = {};
+    (devices || []).forEach((d) => {
+      const id = (d.deviceId || '').toUpperCase();
+      if (!id) {
+        return;
+      }
+      const prev = map[id];
+      if (!prev) {
+        map[id] = d;
+        return;
+      }
+      const prevRssi = typeof prev.RSSI === 'number' ? prev.RSSI : -999;
+      const nextRssi = typeof d.RSSI === 'number' ? d.RSSI : -999;
+      const prevScore = (prev.name ? 1 : 0) + (prev.localName ? 1 : 0) + (prev.advertisData ? 1 : 0);
+      const nextScore = (d.name ? 1 : 0) + (d.localName ? 1 : 0) + (d.advertisData ? 1 : 0);
+      if (nextRssi > prevRssi || (nextRssi === prevRssi && nextScore > prevScore)) {
+        map[id] = { ...prev, ...d };
+      } else {
+        map[id] = { ...d, ...prev };
+      }
+    });
+    return Object.values(map);
+  },
+
+  normalizeUuid(uuid) {
+    return String(uuid || '').replace(/-/g, '').toUpperCase();
+  },
+
+  isTargetBleDevice(device) {
+    const targetService = this.normalizeUuid(protocol.BLE_SERVICE_ID);
+    const serviceUuids = device.advertisServiceUUIDs || device.serviceUUIDs || [];
+    const hasServiceMatch = serviceUuids.some((u) => {
+      const nu = this.normalizeUuid(u);
+      return nu === targetService || nu.includes('FFE0');
+    });
+    if (hasServiceMatch) {
+      return true;
+    }
+    const deviceId = (device.deviceId || '').toUpperCase();
+    return deviceId.startsWith('84:AA:A4');
+  },
+
+  openDeviceConnectPanel() {
+    this.searchDevices();
+  },
+
+  async searchDevices() {
+    if (this.data.isScanning) {
+      return;
+    }
+    try {
+      await bleController.initBluetoothAdapter().catch(() => {});
+      const adapterState = await this.checkBluetoothAdapter();
+      if (!adapterState.available) {
+        wx.showModal({
+          title: '无法使用蓝牙',
+          content: adapterState.message || '请先打开蓝牙并检查微信蓝牙权限',
+          showCancel: false,
+          confirmText: '知道了'
+        });
+        return;
+      }
+
+      this.setData({ isScanning: true, showDeviceList: true, deviceList: [] });
+
+      try {
+        const existingDevices = (await bleController.getBluetoothDevices()).filter((d) =>
+          this.isTargetBleDevice(d)
+        );
+        if (existingDevices.length > 0) {
+          const deduped = this.dedupeDevicesById(existingDevices);
+          this.setData({ deviceList: this.annotateDeviceConnection(deduped) });
+        }
+      } catch (err) {
+        console.log('获取已发现设备失败（可能没有）:', err);
+      }
+
+      await bleController.startBluetoothDevicesDiscovery();
+
+      wx.onBluetoothDeviceFound((res) => {
+        const foundDevices = (res.devices || []).filter((d) => this.isTargetBleDevice(d));
+        const currentList = this.data.deviceList;
+        const newList = [...currentList];
+        foundDevices.forEach((device) => {
+          const index = newList.findIndex((d) => d.deviceId === device.deviceId);
+          if (index >= 0) {
+            newList[index] = { ...newList[index], ...device };
+          } else {
+            newList.push(device);
+          }
+        });
+        const uniqueList = this.dedupeDevicesById(newList);
+        uniqueList.sort((a, b) => {
+          const rssiA = a.RSSI || -100;
+          const rssiB = b.RSSI || -100;
+          return rssiA - rssiB;
+        });
+        this.setData({ deviceList: this.annotateDeviceConnection(uniqueList) });
+      });
+
+      setTimeout(async () => {
+        await bleController.stopBluetoothDevicesDiscovery();
+        this.setData({ isScanning: false });
+        if (this.data.deviceList.length === 0) {
+          wx.showToast({ title: '未发现设备', icon: 'none', duration: 2500 });
+        }
+      }, 10000);
+    } catch (error) {
+      console.error('搜索设备失败', error);
+      this.setData({ isScanning: false });
+      wx.showModal({
+        title: '搜索失败',
+        content: error.errMsg || '请检查蓝牙状态后重试',
+        showCancel: false
+      });
+    }
+  },
+
+  checkBluetoothAdapter() {
+    return new Promise((resolve) => {
+      wx.getBluetoothAdapterState({
+        success: (res) => {
+          resolve({
+            available: res.available,
+            discovering: res.discovering,
+            state: res.adapterState
+          });
+        },
+        fail: (err) => {
+          resolve({
+            available: false,
+            message: err.errMsg || '蓝牙未开启',
+            errCode: err.errCode
+          });
+        }
+      });
+    });
+  },
+
+  async connectDevice(e) {
+    const { deviceid } = e.currentTarget.dataset;
+    const device = this.data.deviceList.find((d) => d.deviceId === deviceid);
+    if (!device) {
+      return;
+    }
+    wx.showLoading({ title: '连接中...', mask: true });
+    try {
+      await bleController.connectDevice(deviceid);
+      app.globalData.currentDevice = device;
+      app.saveDeviceHistory(device);
+      this.setData({
+        showDeviceList: false,
+        currentDevice: device
+      });
+      wx.hideLoading();
+      wx.showToast({ title: '连接成功', icon: 'success' });
+      this.updateConnectionStatus();
+    } catch (error) {
+      console.error('连接设备失败', error);
+      wx.hideLoading();
+      wx.showModal({
+        title: '连接失败',
+        content: (error.userMessage || '请确认设备已开启并靠近后重试'),
+        showCancel: false
+      });
+    }
+  },
+
+  closeDeviceList() {
+    this.setData({ showDeviceList: false });
+    if (this.data.isScanning) {
+      bleController.stopBluetoothDevicesDiscovery();
+      this.setData({ isScanning: false });
+    }
   },
 
   startGroupSyncTimer() {
@@ -77,9 +292,10 @@ Page({
       return;
     }
     this._groupSyncTimer = setInterval(() => {
-      if (this.data.activeUserRole === 'member' || this.data.activeGroup) {
-        this.loadGroups();
+      if (!this.data.groupDetailMode) {
+        return;
       }
+      this.loadGroups();
     }, 3000);
   },
 
@@ -90,7 +306,91 @@ Page({
     }
   },
 
+  stopDynamicEffectLoop() {
+    if (this._partyTimer) {
+      clearInterval(this._partyTimer);
+      this._partyTimer = null;
+    }
+    if (this._starTimer) {
+      clearInterval(this._starTimer);
+      this._starTimer = null;
+    }
+    this._dynamicEffectMeta = null;
+  },
+
+  resolveSeedBySync(sync) {
+    const seed = Number(sync && sync.seed);
+    const startAt = Number(sync && sync.startAt);
+    const stepMs = Number(sync && sync.stepMs);
+    if (!Number.isFinite(seed) || !Number.isFinite(startAt) || !Number.isFinite(stepMs) || stepMs <= 0) {
+      return Math.floor(Math.random() * 256);
+    }
+    const elapsed = Math.max(0, Date.now() - startAt);
+    const step = Math.floor(elapsed / stepMs);
+    return ((Math.round(seed) + step) % 256 + 256) % 256;
+  },
+
+  startDynamicEffectLoop(effect, sync) {
+    const isPartyLike = effect === '聚会' || effect === '彩虹';
+    const isStar = effect === '星空';
+    if (!isPartyLike && !isStar) {
+      return;
+    }
+    const stepMsRaw = Number(sync && sync.stepMs);
+    const stepMs = Number.isFinite(stepMsRaw) && stepMsRaw > 0 ? stepMsRaw : 200;
+    if (isPartyLike) {
+      this._partyTimer = setInterval(async () => {
+        const connected = app.globalData.isConnected || bleController.isConnected;
+        if (!connected || !this._dynamicEffectMeta || !this.data.groupDetailMode) {
+          this.stopDynamicEffectLoop();
+          return;
+        }
+        if (this._dynamicEffectMeta.effect !== effect) {
+          this.stopDynamicEffectLoop();
+          return;
+        }
+        try {
+          const seed = this.resolveSeedBySync(sync);
+          const frame = protocol.buildPartyFrame(0, seed);
+          await bleController.sendFrame(frame, true);
+        } catch (error) {
+          console.error('[group] party/rainbow loop send failed', error);
+        }
+      }, stepMs);
+      return;
+    }
+
+    this._starTimer = setInterval(async () => {
+      const connected = app.globalData.isConnected || bleController.isConnected;
+      if (!connected || !this._dynamicEffectMeta || !this.data.groupDetailMode) {
+        this.stopDynamicEffectLoop();
+        return;
+      }
+      if (this._dynamicEffectMeta.effect !== '星空') {
+        this.stopDynamicEffectLoop();
+        return;
+      }
+      try {
+        const seed = this.resolveSeedBySync(sync);
+        const frame = protocol.buildStarFrame(0, seed);
+        await bleController.sendFrame(frame, true);
+      } catch (error) {
+        console.error('[group] star loop send failed', error);
+      }
+    }, stepMs);
+  },
+
   stopPropagation() {},
+
+  goBackPage() {
+    if (getCurrentPages().length > 1) {
+      wx.navigateBack({ delta: 1 });
+      return;
+    }
+    wx.redirectTo({
+      url: '/pages/index/index'
+    });
+  },
 
   async callGroupService(payload) {
     const functionName = this.data.groupServiceFunctionName;
@@ -125,6 +425,9 @@ Page({
         const fresh = groups.find((g) => g.id === curId) || null;
         if (!fresh) {
           this.stopAdminPresenceHeartbeat();
+          this.stopGroupSyncTimer();
+          this.stopDynamicEffectLoop();
+          const wasMemberInDetail = this.data.activeUserRole === 'member';
           this.setData({
             groups,
             groupDetailMode: false,
@@ -133,15 +436,23 @@ Page({
             activeUserNickname: ''
           });
           this.applyGroupTab();
+          if (wasMemberInDetail) {
+            wx.showToast({ title: '该群已被管理员解散', icon: 'none' });
+          }
           return;
         }
         wx.setStorageSync('activeGroupId', fresh.id);
         if (this.data.activeUserRole === 'admin') {
+          const fcs = fresh.controlState || {};
           activeGroup = {
             ...fresh,
             controlState: {
               effect: this.data.groupControlEffect,
-              brightness: this.data.groupControlBrightness
+              brightness: this.data.groupControlBrightness,
+              hue: this.data.previewHue,
+              saturation: this.data.previewSaturation,
+              dispatchId: Number(fcs.dispatchId || 0),
+              sync: fcs.sync || null
             }
           };
         } else {
@@ -159,14 +470,22 @@ Page({
         }
       }
 
-      this.setData({
+      const cs = activeGroup && activeGroup.controlState ? activeGroup.controlState : {};
+      const patch = {
         groups,
         activeGroup,
         activeUserRole: activeGroup ? activeGroup.activeUserRole : '',
         activeUserNickname: activeGroup ? activeGroup.activeUserNickname : '',
-        groupControlEffect: activeGroup && activeGroup.controlState ? activeGroup.controlState.effect : '常亮',
-        groupControlBrightness: activeGroup && activeGroup.controlState ? activeGroup.controlState.brightness : 80
-      });
+        groupControlEffect: cs.effect != null ? cs.effect : '常亮',
+        groupControlBrightness: typeof cs.brightness === 'number' ? cs.brightness : 80
+      };
+      if (!(this.data.groupDetailMode && this.data.activeUserRole === 'admin')) {
+        patch.previewHue = typeof cs.hue === 'number' ? cs.hue : 0;
+        patch.previewSaturation = typeof cs.saturation === 'number' ? cs.saturation : 100;
+        patch.previewBrightness =
+          typeof cs.brightness === 'number' ? cs.brightness : patch.groupControlBrightness;
+      }
+      this.setData(patch);
       this.applyGroupTab();
       this.applyGroupControlToDeviceIfNeeded();
     } catch (error) {
@@ -196,13 +515,17 @@ Page({
         wx.setStorageSync('activeGroupId', activeGroup.id);
       }
     }
+    const cs = activeGroup && activeGroup.controlState ? activeGroup.controlState : {};
     this.setData({
       filteredGroups,
       activeGroup,
       activeUserRole: activeGroup ? activeGroup.activeUserRole : '',
       activeUserNickname: activeGroup ? activeGroup.activeUserNickname : '',
-      groupControlEffect: activeGroup && activeGroup.controlState ? activeGroup.controlState.effect : '常亮',
-      groupControlBrightness: activeGroup && activeGroup.controlState ? activeGroup.controlState.brightness : 80
+      groupControlEffect: cs.effect != null ? cs.effect : '常亮',
+      groupControlBrightness: typeof cs.brightness === 'number' ? cs.brightness : 80,
+      previewHue: typeof cs.hue === 'number' ? cs.hue : 0,
+      previewSaturation: typeof cs.saturation === 'number' ? cs.saturation : 100,
+      previewBrightness: typeof cs.brightness === 'number' ? cs.brightness : 80
     });
   },
 
@@ -336,8 +659,19 @@ Page({
     }
     wx.setStorageSync('activeGroupId', id);
     const cc = app.globalData.colorControlState;
-    const previewHue = cc && typeof cc.hue === 'number' ? cc.hue : 50;
-    const previewSaturation = cc && typeof cc.saturation === 'number' ? cc.saturation : 95;
+    const gcs = group.controlState || {};
+    const previewHue =
+      typeof gcs.hue === 'number'
+        ? gcs.hue
+        : cc && typeof cc.hue === 'number'
+          ? cc.hue
+          : 0;
+    const previewSaturation =
+      typeof gcs.saturation === 'number'
+        ? gcs.saturation
+        : cc && typeof cc.saturation === 'number'
+          ? cc.saturation
+          : 100;
     const br =
       group.controlState && typeof group.controlState.brightness === 'number'
         ? group.controlState.brightness
@@ -357,13 +691,103 @@ Page({
     if (group.activeUserRole === 'admin') {
       this.startAdminPresenceHeartbeat(id);
     }
-    this.applyGroupControlToDeviceIfNeeded();
+    this.startGroupSyncTimer();
+    void this.loadGroups();
   },
 
   exitGroupDetail() {
     this.stopAdminPresenceHeartbeat();
+    this.stopGroupSyncTimer();
+    this.stopDynamicEffectLoop();
     this.setData({ groupDetailMode: false });
     this.applyGroupTab();
+  },
+
+  async confirmDismissGroup() {
+    const active = this.data.activeGroup;
+    if (!active || this.data.activeUserRole !== 'admin') {
+      return;
+    }
+    const modal = await wx.showModal({
+      title: '解散群组',
+      content: `确认解散「${active.name}」？解散后成员将无法继续使用该群。`,
+      confirmText: '确认解散',
+      confirmColor: '#FF6B6B'
+    });
+    if (!modal.confirm) {
+      return;
+    }
+    try {
+      wx.showLoading({ title: '解散中...', mask: true });
+      const result = await this.callGroupService({
+        action: 'dismissGroup',
+        groupId: active.id
+      });
+      wx.hideLoading();
+      if (!result.success) {
+        wx.showToast({ title: result.message || '解散失败', icon: 'none' });
+        return;
+      }
+      this.stopAdminPresenceHeartbeatQuiet();
+      this.stopGroupSyncTimer();
+      this.stopDynamicEffectLoop();
+      this.setData({
+        groupDetailMode: false,
+        activeGroup: null,
+        activeUserRole: '',
+        activeUserNickname: ''
+      });
+      await this.loadGroups();
+      this.applyGroupTab();
+      wx.showToast({ title: '群组已解散', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: '解散失败', icon: 'none' });
+      console.error('解散群组失败', error);
+    }
+  },
+
+  async confirmLeaveGroup() {
+    const active = this.data.activeGroup;
+    if (!active || this.data.activeUserRole !== 'member') {
+      return;
+    }
+    const modal = await wx.showModal({
+      title: '退出群组',
+      content: `确认退出「${active.name}」？`,
+      confirmText: '确认退出',
+      confirmColor: '#FF6B6B'
+    });
+    if (!modal.confirm) {
+      return;
+    }
+    try {
+      wx.showLoading({ title: '退出中...', mask: true });
+      const result = await this.callGroupService({
+        action: 'leaveGroup',
+        groupId: active.id
+      });
+      wx.hideLoading();
+      if (!result.success) {
+        wx.showToast({ title: result.message || '退出失败', icon: 'none' });
+        return;
+      }
+      this.stopGroupSyncTimer();
+      this.stopDynamicEffectLoop();
+      this.setData({
+        groupDetailMode: false,
+        activeGroup: null,
+        activeUserRole: '',
+        activeUserNickname: ''
+      });
+      await this.loadGroups();
+      this.applyGroupTab();
+      wx.showToast({ title: '已退出群组', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: '退出失败', icon: 'none' });
+      console.error('退出群组失败', error);
+    }
   },
 
   startAdminPresenceHeartbeat(groupId) {
@@ -410,14 +834,6 @@ Page({
     });
   },
 
-  onPreviewBrightnessChange(e) {
-    const brightness = Number(e.detail.value || 0);
-    this.setData({
-      previewBrightness: brightness,
-      groupControlBrightness: brightness
-    });
-  },
-
   onControlEffectChange(e) {
     this.setData({
       groupControlEffect: e.currentTarget.dataset.effect
@@ -444,12 +860,32 @@ Page({
     }
 
     try {
+      const dispatchId = Date.now();
+      const effect = this.data.groupControlEffect;
+      let dispatchHue = this.data.previewHue;
+      let dispatchSaturation = this.data.previewSaturation;
+      // 随机模式：每次下发都重抽一次色相，确保二次点击也能明显变色
+      if (effect === '随机') {
+        dispatchHue = Math.floor(Math.random() * 360);
+        dispatchSaturation = 100;
+        this.setData({
+          previewHue: dispatchHue,
+          previewSaturation: dispatchSaturation
+        });
+      }
+      const dynamicSeed = Math.floor(Math.random() * 256);
+      const dynamicStepMs = 200;
       wx.showLoading({ title: '下发中...', mask: true });
       const result = await this.callGroupService({
         action: 'applyControl',
         groupId: active.id,
-        effect: this.data.groupControlEffect,
-        brightness: this.data.groupControlBrightness
+        effect,
+        brightness: this.data.groupControlBrightness,
+        hue: dispatchHue,
+        saturation: dispatchSaturation,
+        dispatchId,
+        seed: dynamicSeed,
+        stepMs: dynamicStepMs
       });
       wx.hideLoading();
       if (!result.success) {
@@ -458,10 +894,17 @@ Page({
       }
       await this.loadGroups();
       // 管理员下发成功后，本机若已连接也立即应用相同效果
+      const cs = (this.data.activeGroup && this.data.activeGroup.controlState) || {};
       await this.sendGroupControlFrameToDevice(
-        this.data.groupControlEffect,
-        this.data.groupControlBrightness,
-        this.data.activeGroup && this.data.activeGroup.id
+        cs.effect || this.data.groupControlEffect,
+        Number(cs.brightness || this.data.groupControlBrightness),
+        this.data.activeGroup && this.data.activeGroup.id,
+        {
+          hue: typeof cs.hue === 'number' ? cs.hue : this.data.previewHue,
+          saturation: typeof cs.saturation === 'number' ? cs.saturation : this.data.previewSaturation,
+          dispatchId: Number(cs.dispatchId || dispatchId),
+          sync: cs.sync || null
+        }
       );
       wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
     } catch (error) {
@@ -473,7 +916,7 @@ Page({
 
   async applyGroupControlToDeviceIfNeeded() {
     const activeGroup = this.data.activeGroup;
-    if (!activeGroup || this.data.activeUserRole !== 'member') {
+    if (!activeGroup || this.data.activeUserRole !== 'member' || !this.data.groupDetailMode) {
       return;
     }
     const connected = app.globalData.isConnected || bleController.isConnected;
@@ -481,15 +924,27 @@ Page({
       return;
     }
 
-    const effect = activeGroup.controlState.effect || '常亮';
-    const brightness = Number(activeGroup.controlState.brightness || 80);
-    const signature = `${activeGroup.id}|${effect}|${brightness}`;
+    const cs = activeGroup.controlState || {};
+    const effect = cs.effect || '常亮';
+    const brightness = Number(cs.brightness || 80);
+    const hue = typeof cs.hue === 'number' ? cs.hue : 0;
+    const saturation = typeof cs.saturation === 'number' ? cs.saturation : 100;
+    const dispatchId = Number(cs.dispatchId || 0);
+    const syncSeed = Number(cs.sync && cs.sync.seed);
+    const syncStartAt = Number(cs.sync && cs.sync.startAt);
+    const syncStepMs = Number(cs.sync && cs.sync.stepMs);
+    const signature = `${activeGroup.id}|${effect}|${brightness}|${hue}|${saturation}|${dispatchId}|${syncSeed}|${syncStartAt}|${syncStepMs}`;
     if (this._lastAppliedGroupControlSignature === signature) {
       return;
     }
 
     try {
-      await this.sendGroupControlFrameToDevice(effect, brightness, activeGroup.id);
+      await this.sendGroupControlFrameToDevice(effect, brightness, activeGroup.id, {
+        hue,
+        saturation,
+        dispatchId,
+        sync: cs.sync || null
+      });
       this._lastAppliedGroupControlSignature = signature;
       console.log('[group] device apply success', {
         groupId: activeGroup.id,
@@ -501,20 +956,56 @@ Page({
     }
   },
 
-  async sendGroupControlFrameToDevice(effect, brightness, groupId) {
+  async sendGroupControlFrameToDevice(effect, brightness, groupId, colorOverride) {
     const connected = app.globalData.isConnected || bleController.isConnected;
     if (!connected) {
       return;
     }
-    const hue = 50;
-    const saturation = 95;
+    const hue =
+      colorOverride && Number.isFinite(colorOverride.hue)
+        ? colorOverride.hue
+        : Number.isFinite(this.data.previewHue)
+          ? this.data.previewHue
+          : 0;
+    const saturation =
+      colorOverride && Number.isFinite(colorOverride.saturation)
+        ? colorOverride.saturation
+        : Number.isFinite(this.data.previewSaturation)
+          ? this.data.previewSaturation
+          : 100;
+    const dispatchId = colorOverride && Number(colorOverride.dispatchId || 0);
+    const sync = (colorOverride && colorOverride.sync) || null;
+    const baseSeed = this.resolveSeedBySync(sync);
+
+    this.stopDynamicEffectLoop();
     let frame;
     switch (effect) {
-      case '闪烁':
+      case '黑场':
+        frame = protocol.buildBlackOutFrame(0);
+        break;
+      case '随机':
+        frame = protocol.buildConstantFrame(0, hue, 100, brightness);
+        break;
+      case '快闪':
         frame = protocol.buildQuickFlashFrame(0, hue, saturation, brightness);
+        break;
+      case '眨眼':
+        frame = protocol.buildBlinkFrame(0, hue, saturation, brightness);
         break;
       case '呼吸':
         frame = protocol.buildBreathEffectFrame(0, hue, saturation, brightness);
+        break;
+      case '聚会':
+      case '彩虹': {
+        frame = protocol.buildPartyFrame(0, baseSeed);
+        this._dynamicEffectMeta = { effect, groupId: groupId || '', dispatchId };
+        this.startDynamicEffectLoop(effect, sync);
+        break;
+      }
+      case '星空':
+        frame = protocol.buildStarFrame(0, baseSeed);
+        this._dynamicEffectMeta = { effect: '星空', groupId: groupId || '', dispatchId };
+        this.startDynamicEffectLoop('星空', sync);
         break;
       case '常亮':
       default:
@@ -523,7 +1014,7 @@ Page({
     }
     await bleController.sendFrame(frame, true);
     if (groupId) {
-      this._lastAppliedGroupControlSignature = `${groupId}|${effect}|${brightness}`;
+      this._lastAppliedGroupControlSignature = `${groupId}|${effect}|${brightness}|${hue}|${saturation}|${dispatchId}`;
     }
   }
 });

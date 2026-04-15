@@ -9,6 +9,56 @@ function isFourDigitPassword(password) {
   return /^\d{4}$/.test(password || '');
 }
 
+/** 与 color-wheel 一致：色相 0–359°，饱和度 0–100 */
+function clampHue(n, fallback = 0) {
+  if (n === undefined || n === null || n === '') {
+    return fallback;
+  }
+  const h = Math.round(Number(n));
+  if (!Number.isFinite(h)) {
+    return fallback;
+  }
+  return ((h % 360) + 360) % 360;
+}
+
+function clampSat(n, fallback = 100) {
+  if (n === undefined || n === null || n === '') {
+    return fallback;
+  }
+  const s = Math.round(Number(n));
+  if (!Number.isFinite(s)) {
+    return fallback;
+  }
+  return Math.min(100, Math.max(0, s));
+}
+
+function resolveHueSat(payload, prevState) {
+  const prev = prevState || {};
+  const prevHue = typeof prev.hue === 'number' ? clampHue(prev.hue, 0) : 0;
+  const prevSat = typeof prev.saturation === 'number' ? clampSat(prev.saturation, 100) : 100;
+  const hue =
+    payload.hue !== undefined && payload.hue !== null && payload.hue !== ''
+      ? clampHue(payload.hue, prevHue)
+      : prevHue;
+  const saturation =
+    payload.saturation !== undefined && payload.saturation !== null && payload.saturation !== ''
+      ? clampSat(payload.saturation, prevSat)
+      : prevSat;
+  return { hue, saturation };
+}
+
+function isDynamicLoopEffect(effect) {
+  return effect === '聚会' || effect === '彩虹' || effect === '星空';
+}
+
+function normalizeStepMs(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) {
+    return 200;
+  }
+  return Math.min(1000, Math.max(100, Math.round(n)));
+}
+
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext();
   const openid = wxContext.OPENID;
@@ -26,6 +76,10 @@ exports.main = async (event, context) => {
         return await applyControl(openid, event);
       case 'adminDetailPresence':
         return await adminDetailPresence(openid, event);
+      case 'dismissGroup':
+        return await dismissGroup(openid, event);
+      case 'leaveGroup':
+        return await leaveGroup(openid, event);
       default:
         return { success: false, message: '未知操作' };
     }
@@ -62,7 +116,14 @@ async function createGroup(openid, payload) {
       name,
       password,
       adminOpenid: openid,
-      controlState: { effect: '常亮', brightness: 80 },
+      controlState: {
+        effect: '常亮',
+        brightness: 80,
+        hue: 0,
+        saturation: 100,
+        dispatchId: 0,
+        sync: null
+      },
       adminInDetailAt: 0,
       createdAt: now,
       updatedAt: now
@@ -77,6 +138,8 @@ async function createGroup(openid, payload) {
       role: 'admin',
       effect: '常亮',
       brightness: 100,
+      hue: 0,
+      saturation: 100,
       joinedAt: now
     }
   });
@@ -119,14 +182,17 @@ async function joinGroup(openid, payload) {
     openid
   }).limit(1).get();
   if (selfExists.data.length === 0) {
+    const cs = group.controlState || {};
     await db.collection('group_members').add({
       data: {
         groupId,
         openid,
         nickname,
         role: 'member',
-        effect: group.controlState.effect,
-        brightness: group.controlState.brightness,
+        effect: cs.effect,
+        brightness: cs.brightness,
+        hue: typeof cs.hue === 'number' ? clampHue(cs.hue, 0) : 0,
+        saturation: typeof cs.saturation === 'number' ? clampSat(cs.saturation, 100) : 100,
         joinedAt: Date.now()
       }
     });
@@ -160,6 +226,8 @@ async function listGroups(openid) {
       role: m.role,
       effect: m.effect,
       brightness: m.brightness,
+      hue: m.hue,
+      saturation: m.saturation,
       openid: m.openid
     });
   });
@@ -229,10 +297,27 @@ async function applyControl(openid, payload) {
     return { success: false, message: '当前用户不是管理员' };
   }
 
+  const groupDoc = await db.collection('groups').where({ groupId }).limit(1).get();
+  if (groupDoc.data.length === 0) {
+    return { success: false, message: '群组不存在' };
+  }
+  const { hue, saturation } = resolveHueSat(payload, groupDoc.data[0].controlState);
+  const dispatchIdRaw = Number(payload.dispatchId);
+  const dispatchId = Number.isFinite(dispatchIdRaw) && dispatchIdRaw > 0 ? dispatchIdRaw : Date.now();
   const ts = Date.now();
+  const sync = isDynamicLoopEffect(effect)
+    ? {
+        seed: Number.isFinite(Number(payload.seed))
+          ? (Math.round(Number(payload.seed)) % 256 + 256) % 256
+          : Math.floor(Math.random() * 256),
+        stepMs: normalizeStepMs(payload.stepMs),
+        startAt: ts
+      }
+    : null;
+
   await db.collection('groups').where({ groupId }).update({
     data: {
-      controlState: { effect, brightness },
+      controlState: { effect, brightness, hue, saturation, dispatchId, sync },
       /** 统一下发成功即视为管理员正在操作本群，成员端可显示「正在本群组页面」 */
       adminInDetailAt: ts,
       updatedAt: ts
@@ -244,9 +329,51 @@ async function applyControl(openid, payload) {
   }).update({
     data: {
       effect,
-      brightness
+      brightness,
+      hue,
+      saturation
     }
   });
 
   return { success: true, message: '已统一下发灯光效果' };
+}
+
+async function dismissGroup(openid, payload) {
+  const groupId = (payload.groupId || '').trim();
+  if (!groupId) {
+    return { success: false, message: '参数无效' };
+  }
+
+  const roleRes = await db.collection('group_members').where({
+    groupId,
+    openid
+  }).limit(1).get();
+  if (roleRes.data.length === 0 || roleRes.data[0].role !== 'admin') {
+    return { success: false, message: '仅管理员可解散群组' };
+  }
+
+  await db.collection('groups').where({ groupId }).remove();
+  await db.collection('group_members').where({ groupId }).remove();
+  return { success: true, message: '群组已解散' };
+}
+
+async function leaveGroup(openid, payload) {
+  const groupId = (payload.groupId || '').trim();
+  if (!groupId) {
+    return { success: false, message: '参数无效' };
+  }
+
+  const roleRes = await db.collection('group_members').where({
+    groupId,
+    openid
+  }).limit(1).get();
+  if (roleRes.data.length === 0) {
+    return { success: true, message: '已退出群组' };
+  }
+  if (roleRes.data[0].role === 'admin') {
+    return { success: false, message: '管理员请使用解散群组' };
+  }
+
+  await db.collection('group_members').where({ groupId, openid }).remove();
+  return { success: true, message: '已退出群组' };
 }

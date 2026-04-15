@@ -1,21 +1,22 @@
 <!--components/color-wheel/color-wheel.wxml-->
 <view class="color-wheel-wrapper">
-  <view class="color-wheel-inner">
+  <view class="color-wheel-inner" style="width: {{wheelSize}}rpx; height: {{wheelSize}}rpx;">
     <view 
       class="color-wheel-container"
+      style="width: {{wheelSize}}rpx; height: {{wheelSize}}rpx;"
       bindtouchstart="onTouchStart"
       bindtouchmove="onTouchMove"
       bindtap="onTap"
     >
       <view class="color-wheel-ring"></view>
-      <view class="color-wheel-center"></view>
+      <view class="color-wheel-center" style="width: {{centerSize}}rpx; height: {{centerSize}}rpx;"></view>
       <view 
         class="color-selector"
-        style="left: {{selectorX}}rpx; top: {{selectorY}}rpx;"
+        style="left: {{selectorX}}rpx; top: {{selectorY}}rpx; width: {{selectorSize}}rpx; height: {{selectorSize}}rpx;"
       >
-        <view class="selector-dot"></view>
+        <view class="selector-dot" style="border-width: {{selectorBorder}}rpx;"></view>
       </view>
     </view>
   </view>
-  <view class="color-preview" style="background-color: {{previewColor}};"></view>
+  <view class="color-preview" style="background-color: {{previewColor}}; width: {{previewSize}}rpx; height: {{previewSize}}rpx; transform: translate({{previewOffset}}rpx, {{previewOffset}}rpx);"></view>
 </view>
