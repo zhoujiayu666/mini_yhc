@@ -11,6 +11,8 @@ Page({
     showDeviceList: false,
     currentDevice: null,
     groups: [],
+    mineGroups: [],
+    allGroups: [],
     filteredGroups: [],
     groupDetailMode: false,
     activeGroup: null,
@@ -22,11 +24,16 @@ Page({
     previewBrightness: 80,
     showCreateGroupModal: false,
     showJoinGroupModal: false,
+    showEnterPasswordModal: false,
+    enterPassword: '',
+    pendingEnterGroupId: '',
+    memberAwaitingNewDispatch: false,
     groupServiceFunctionName: 'group-service',
     createGroupForm: {
       name: '',
       id: '',
-      password: ''
+      password: '',
+      needPassword: true
     },
     joinGroupForm: {
       id: '',
@@ -318,6 +325,42 @@ Page({
     this._dynamicEffectMeta = null;
   },
 
+  /** 从云端 controlState 解析同步参数（兼容旧数据嵌套 sync + 新数据平铺字段） */
+  getSyncFromControlState(cs) {
+    if (!cs) {
+      return null;
+    }
+    if (cs.sync && typeof cs.sync === 'object') {
+      const seed = Number(cs.sync.seed);
+      const startAt = Number(cs.sync.startAt);
+      const stepMs = Number(cs.sync.stepMs);
+      if (Number.isFinite(seed) && Number.isFinite(startAt) && Number.isFinite(stepMs) && stepMs > 0) {
+        return { seed, startAt, stepMs };
+      }
+    }
+    const seed = Number(cs.syncSeed);
+    const startAt = Number(cs.syncStartAt);
+    const stepMs = Number(cs.syncStepMs);
+    if (Number.isFinite(seed) && Number.isFinite(startAt) && Number.isFinite(stepMs) && stepMs > 0) {
+      return { seed, startAt, stepMs };
+    }
+    return null;
+  },
+
+  buildControlSignature(groupId, cs) {
+    const state = cs || {};
+    const effect = state.effect || '常亮';
+    const brightness = Number(state.brightness || 80);
+    const hue = typeof state.hue === 'number' ? state.hue : 0;
+    const saturation = typeof state.saturation === 'number' ? state.saturation : 100;
+    const dispatchId = Number(state.dispatchId || 0);
+    const syncObj = this.getSyncFromControlState(state);
+    const sigSync = syncObj
+      ? `${syncObj.seed}|${syncObj.startAt}|${syncObj.stepMs}`
+      : '0|0|0';
+    return `${groupId || ''}|${effect}|${brightness}|${hue}|${saturation}|${dispatchId}|${sigSync}`;
+  },
+
   resolveSeedBySync(sync) {
     const seed = Number(sync && sync.seed);
     const startAt = Number(sync && sync.startAt);
@@ -417,7 +460,9 @@ Page({
         wx.showToast({ title: result.message || '加载群组失败', icon: 'none' });
         return;
       }
-      const groups = result.groups || [];
+      const mineGroups = result.mineGroups || [];
+      const allGroups = result.allGroups || [];
+      const groups = this.data.groupTab === 'mine' ? mineGroups : allGroups;
       let activeGroup = null;
 
       if (this.data.groupDetailMode && this.data.activeGroup) {
@@ -430,11 +475,15 @@ Page({
           const wasMemberInDetail = this.data.activeUserRole === 'member';
           this.setData({
             groups,
+            mineGroups,
+            allGroups,
             groupDetailMode: false,
             activeGroup: null,
             activeUserRole: '',
-            activeUserNickname: ''
+            activeUserNickname: '',
+            memberAwaitingNewDispatch: false
           });
+          this._memberDispatchBaselineSignature = '';
           this.applyGroupTab();
           if (wasMemberInDetail) {
             wx.showToast({ title: '该群已被管理员解散', icon: 'none' });
@@ -452,7 +501,10 @@ Page({
               hue: this.data.previewHue,
               saturation: this.data.previewSaturation,
               dispatchId: Number(fcs.dispatchId || 0),
-              sync: fcs.sync || null
+              syncSeed: fcs.syncSeed,
+              syncStartAt: fcs.syncStartAt,
+              syncStepMs: fcs.syncStepMs,
+              sync: fcs.sync
             }
           };
         } else {
@@ -473,6 +525,8 @@ Page({
       const cs = activeGroup && activeGroup.controlState ? activeGroup.controlState : {};
       const patch = {
         groups,
+        mineGroups,
+        allGroups,
         activeGroup,
         activeUserRole: activeGroup ? activeGroup.activeUserRole : '',
         activeUserNickname: activeGroup ? activeGroup.activeUserNickname : '',
@@ -495,13 +549,10 @@ Page({
 
   applyGroupTab() {
     const groupTab = this.data.groupTab;
-    const groups = this.data.groups || [];
-    const filteredGroups = groups.filter((g) => {
-      if (groupTab === 'mine') {
-        return g.activeUserRole === 'admin';
-      }
-      return g.activeUserRole === 'member';
-    });
+    const groups = groupTab === 'mine' ? (this.data.mineGroups || []) : (this.data.allGroups || []);
+    const filteredGroups = groupTab === 'mine'
+      ? groups.filter((g) => g.activeUserRole === 'admin')
+      : groups.filter((g) => g.activeUserRole !== 'admin');
 
     if (this.data.groupDetailMode) {
       this.setData({ filteredGroups });
@@ -534,16 +585,17 @@ Page({
     if (!tab || tab === this.data.groupTab) {
       return;
     }
-    this.setData({ groupTab: tab }, () => {
-      this.applyGroupTab();
-      this.applyGroupControlToDeviceIfNeeded();
-    });
+    this.setData({ groupTab: tab });
+    this.applyGroupTab();
+    this.applyGroupControlToDeviceIfNeeded();
+    // 先本地秒切列表，再异步拉云刷新，避免切换体感延迟
+    this.loadGroups();
   },
 
   openCreateGroupModal() {
     this.setData({
       showCreateGroupModal: true,
-      createGroupForm: { name: '', id: '', password: '' }
+      createGroupForm: { name: '', id: '', password: '', needPassword: true }
     });
   },
 
@@ -564,9 +616,18 @@ Page({
 
   onCreateGroupInput(e) {
     const field = e.currentTarget.dataset.field;
-    const value = (e.detail.value || '').trim();
+    const raw = (e.detail.value || '').trim();
+    const value = field === 'id' ? raw.replace(/\D/g, '') : raw;
     this.setData({
       [`createGroupForm.${field}`]: value
+    });
+  },
+
+  onCreateNeedPasswordChange(e) {
+    const needPassword = !!e.detail.value;
+    this.setData({
+      'createGroupForm.needPassword': needPassword,
+      'createGroupForm.password': needPassword ? this.data.createGroupForm.password : ''
     });
   },
 
@@ -580,11 +641,15 @@ Page({
 
   async createGroup() {
     const form = this.data.createGroupForm;
-    if (!form.name || !form.id || !form.password) {
+    if (!form.name || !form.id) {
       wx.showToast({ title: '请完整填写信息', icon: 'none' });
       return;
     }
-    if (!/^\d{4}$/.test(form.password)) {
+    if (!/^\d+$/.test(form.id)) {
+      wx.showToast({ title: '群组ID仅支持数字', icon: 'none' });
+      return;
+    }
+    if (form.needPassword && !/^\d{4}$/.test(form.password)) {
       wx.showToast({ title: '密码需为4位数字', icon: 'none' });
       return;
     }
@@ -595,7 +660,8 @@ Page({
         action: 'createGroup',
         name: form.name,
         groupId: form.id,
-        password: form.password
+        password: form.password,
+        needPassword: !!form.needPassword
       });
       wx.hideLoading();
       if (!result.success) {
@@ -641,7 +707,7 @@ Page({
       this.setData({ showJoinGroupModal: false });
       wx.setStorageSync('activeGroupId', form.id);
       await this.loadGroups();
-      this.setData({ groupTab: 'joined' });
+      this.setData({ groupTab: 'all' });
       this.applyGroupTab();
       wx.showToast({ title: '已加入群组', icon: 'success' });
     } catch (error) {
@@ -653,8 +719,21 @@ Page({
 
   openGroupDetail(e) {
     const id = e.currentTarget.dataset.id;
-    const group = this.data.groups.find((item) => item.id === id);
+    const group = this.data.filteredGroups.find((item) => item.id === id);
     if (!group) {
+      return;
+    }
+    if (!group.activeUserRole) {
+      // 仅在「所有群组」里点到未加入群组时，按是否有密码处理进入
+      if (group.needPassword) {
+        this.setData({
+          showEnterPasswordModal: true,
+          pendingEnterGroupId: id,
+          enterPassword: ''
+        });
+      } else {
+        this.joinAndEnterGroup(id, '');
+      }
       return;
     }
     wx.setStorageSync('activeGroupId', id);
@@ -676,11 +755,16 @@ Page({
       group.controlState && typeof group.controlState.brightness === 'number'
         ? group.controlState.brightness
         : 80;
+    const isMemberDetail = (group.activeUserRole || '') === 'member';
+    this._memberDispatchBaselineSignature = isMemberDetail
+      ? this.buildControlSignature(id, gcs)
+      : '';
     this.setData({
       groupDetailMode: true,
       activeGroup: group,
       activeUserRole: group.activeUserRole || '',
       activeUserNickname: group.activeUserNickname || '',
+      memberAwaitingNewDispatch: isMemberDetail,
       groupControlEffect: group.controlState ? group.controlState.effect : '常亮',
       groupControlBrightness: br,
       previewHue,
@@ -695,11 +779,66 @@ Page({
     void this.loadGroups();
   },
 
+  onEnterPasswordInput(e) {
+    this.setData({ enterPassword: (e.detail.value || '').trim() });
+  },
+
+  closeEnterPasswordModal() {
+    this.setData({
+      showEnterPasswordModal: false,
+      pendingEnterGroupId: '',
+      enterPassword: ''
+    });
+  },
+
+  async confirmEnterWithPassword() {
+    const groupId = this.data.pendingEnterGroupId;
+    const password = (this.data.enterPassword || '').trim();
+    if (!/^\d{4}$/.test(password)) {
+      wx.showToast({ title: '请输入4位数字密码', icon: 'none' });
+      return;
+    }
+    await this.joinAndEnterGroup(groupId, password);
+  },
+
+  async joinAndEnterGroup(groupId, password) {
+    if (!groupId) {
+      return;
+    }
+    try {
+      wx.showLoading({ title: '进入中...', mask: true });
+      const result = await this.callGroupService({
+        action: 'joinGroup',
+        groupId,
+        password
+      });
+      wx.hideLoading();
+      if (!result.success) {
+        wx.showToast({ title: result.message || '进入失败', icon: 'none' });
+        return;
+      }
+      this.closeEnterPasswordModal();
+      wx.setStorageSync('activeGroupId', groupId);
+      await this.loadGroups();
+      this.setData({ groupTab: 'all' });
+      this.applyGroupTab();
+      const target = (this.data.allGroups || []).find((g) => g.id === groupId);
+      if (target) {
+        this.openGroupDetail({ currentTarget: { dataset: { id: groupId } } });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: '进入失败', icon: 'none' });
+      console.error('进入群组失败', error);
+    }
+  },
+
   exitGroupDetail() {
     this.stopAdminPresenceHeartbeat();
     this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
-    this.setData({ groupDetailMode: false });
+    this._memberDispatchBaselineSignature = '';
+    this.setData({ groupDetailMode: false, memberAwaitingNewDispatch: false });
     this.applyGroupTab();
   },
 
@@ -735,8 +874,10 @@ Page({
         groupDetailMode: false,
         activeGroup: null,
         activeUserRole: '',
-        activeUserNickname: ''
+        activeUserNickname: '',
+        memberAwaitingNewDispatch: false
       });
+      this._memberDispatchBaselineSignature = '';
       await this.loadGroups();
       this.applyGroupTab();
       wx.showToast({ title: '群组已解散', icon: 'success' });
@@ -778,8 +919,10 @@ Page({
         groupDetailMode: false,
         activeGroup: null,
         activeUserRole: '',
-        activeUserNickname: ''
+        activeUserNickname: '',
+        memberAwaitingNewDispatch: false
       });
+      this._memberDispatchBaselineSignature = '';
       await this.loadGroups();
       this.applyGroupTab();
       wx.showToast({ title: '已退出群组', icon: 'success' });
@@ -903,7 +1046,7 @@ Page({
           hue: typeof cs.hue === 'number' ? cs.hue : this.data.previewHue,
           saturation: typeof cs.saturation === 'number' ? cs.saturation : this.data.previewSaturation,
           dispatchId: Number(cs.dispatchId || dispatchId),
-          sync: cs.sync || null
+          sync: this.getSyncFromControlState(cs)
         }
       );
       wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
@@ -930,10 +1073,15 @@ Page({
     const hue = typeof cs.hue === 'number' ? cs.hue : 0;
     const saturation = typeof cs.saturation === 'number' ? cs.saturation : 100;
     const dispatchId = Number(cs.dispatchId || 0);
-    const syncSeed = Number(cs.sync && cs.sync.seed);
-    const syncStartAt = Number(cs.sync && cs.sync.startAt);
-    const syncStepMs = Number(cs.sync && cs.sync.stepMs);
-    const signature = `${activeGroup.id}|${effect}|${brightness}|${hue}|${saturation}|${dispatchId}|${syncSeed}|${syncStartAt}|${syncStepMs}`;
+    const syncObj = this.getSyncFromControlState(cs);
+    const signature = this.buildControlSignature(activeGroup.id, cs);
+    if (this.data.memberAwaitingNewDispatch) {
+      if (signature === this._memberDispatchBaselineSignature) {
+        return;
+      }
+      this._memberDispatchBaselineSignature = '';
+      this.setData({ memberAwaitingNewDispatch: false });
+    }
     if (this._lastAppliedGroupControlSignature === signature) {
       return;
     }
@@ -943,7 +1091,7 @@ Page({
         hue,
         saturation,
         dispatchId,
-        sync: cs.sync || null
+        sync: syncObj
       });
       this._lastAppliedGroupControlSignature = signature;
       console.log('[group] device apply success', {

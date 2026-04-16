@@ -14,10 +14,6 @@
           <text class="owner-entry-text">创建群组</text>
           <text class="owner-entry-arrow">›</text>
         </view>
-        <view class="owner-entry" bindtap="openJoinGroupModal">
-          <text class="owner-entry-text">加入群组</text>
-          <text class="owner-entry-arrow">›</text>
-        </view>
 
         <view class="group-header">
           <text class="group-title">群组控制</text>
@@ -25,7 +21,7 @@
 
         <view class="group-tabs">
           <view class="group-tab {{groupTab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchGroupTab">我的群组</view>
-          <view class="group-tab {{groupTab === 'joined' ? 'active' : ''}}" data-tab="joined" bindtap="switchGroupTab">加入过的群组</view>
+          <view class="group-tab {{groupTab === 'all' ? 'active' : ''}}" data-tab="all" bindtap="switchGroupTab">可加入的群组</view>
         </view>
 
         <view class="group-list" wx:if="{{filteredGroups.length > 0}}">
@@ -37,12 +33,12 @@
             bindtap="openGroupDetail"
           >
             <text class="group-item-name">{{item.name}}</text>
-            <text class="group-item-id">ID: {{item.id}} | 成员: {{item.members.length}}</text>
+            <text class="group-item-id">ID: {{item.id}}</text>
             <text class="group-item-enter">进入 ›</text>
           </view>
         </view>
         <view class="empty-tip-box" wx:if="{{filteredGroups.length === 0}}">
-          <text class="empty-tip-text">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无加入过的群组'}}</text>
+          <text class="empty-tip-text">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无可加入群组'}}</text>
         </view>
       </view>
     </block>
@@ -126,6 +122,7 @@
         <block wx:else>
           <view class="member-presence card">
             <text class="presence-title">管理员状态</text>
+            <text class="presence-hint" wx:if="{{memberAwaitingNewDispatch}}">已进入群组，等待管理员下发</text>
             <text class="presence-value {{activeGroup.adminIsInGroupDetail ? 'online' : ''}}">
               {{activeGroup.adminIsInGroupDetail ? '管理员正在本群组页面' : '管理员未进入本群组页面'}}
             </text>
@@ -145,8 +142,21 @@
     </view>
     <view class="group-modal-body">
       <input class="group-input" placeholder="请输入群组名称" data-field="name" value="{{createGroupForm.name}}" bindinput="onCreateGroupInput" />
-      <input class="group-input" placeholder="请输入群组ID" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
-      <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" data-field="password" value="{{createGroupForm.password}}" bindinput="onCreateGroupInput" />
+      <input class="group-input" placeholder="请输入群组ID（仅数字）" type="number" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
+      <view class="password-switch-row">
+        <text class="password-switch-label">需要密码</text>
+        <switch color="#FFD100" checked="{{createGroupForm.needPassword}}" bindchange="onCreateNeedPasswordChange" />
+      </view>
+      <input
+        wx:if="{{createGroupForm.needPassword}}"
+        class="group-input"
+        placeholder="请输入4位数字密码"
+        type="number"
+        maxlength="4"
+        data-field="password"
+        value="{{createGroupForm.password}}"
+        bindinput="onCreateGroupInput"
+      />
       <button class="group-btn apply" bindtap="createGroup">确认创建</button>
     </view>
   </view>
@@ -181,17 +191,15 @@
   </view>
 </view>
 
-<view class="group-modal {{showJoinGroupModal ? 'show' : ''}}" bindtap="closeJoinGroupModal">
+<view class="group-modal {{showEnterPasswordModal ? 'show' : ''}}" bindtap="closeEnterPasswordModal">
   <view class="group-modal-content" catchtap="stopPropagation">
     <view class="group-modal-header">
-      <text class="group-modal-title">加入群组</text>
-      <view class="close-btn" bindtap="closeJoinGroupModal">×</view>
+      <text class="group-modal-title">输入群组密码</text>
+      <view class="close-btn" bindtap="closeEnterPasswordModal">×</view>
     </view>
     <view class="group-modal-body">
-      <input class="group-input" placeholder="请输入群组ID" data-field="id" value="{{joinGroupForm.id}}" bindinput="onJoinGroupInput" />
-      <input class="group-input" placeholder="请输入昵称" data-field="nickname" value="{{joinGroupForm.nickname}}" bindinput="onJoinGroupInput" />
-      <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" data-field="password" value="{{joinGroupForm.password}}" bindinput="onJoinGroupInput" />
-      <button class="group-btn apply" bindtap="joinGroup">确认加入</button>
+      <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" value="{{enterPassword}}" bindinput="onEnterPasswordInput" />
+      <button class="group-btn apply" bindtap="confirmEnterWithPassword">确认进入</button>
     </view>
   </view>
 </view>

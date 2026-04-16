@@ -493,6 +493,19 @@ page {
   box-sizing: border-box;
 }
 
+.password-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  padding: 8rpx 4rpx;
+}
+
+.password-switch-label {
+  color: #E0E0E0;
+  font-size: 24rpx;
+}
+
 .detail-toolbar {
   display: flex;
   align-items: center;

@@ -4,9 +4,14 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const _ = db.command;
+const ADMIN_ACTIVE_WINDOW_MS = 6 * 60 * 60 * 1000;
 
 function isFourDigitPassword(password) {
   return /^\d{4}$/.test(password || '');
+}
+
+function isNumericGroupId(v) {
+  return /^\d+$/.test(String(v || ''));
 }
 
 /** 与 color-wheel 一致：色相 0–359°，饱和度 0–100 */
@@ -96,11 +101,15 @@ async function createGroup(openid, payload) {
   const name = (payload.name || '').trim();
   const groupId = (payload.groupId || '').trim();
   const password = (payload.password || '').trim();
+  const needPassword = payload.needPassword !== false;
 
-  if (!name || !groupId || !password) {
+  if (!name || !groupId) {
     return { success: false, message: '请完整填写信息' };
   }
-  if (!isFourDigitPassword(password)) {
+  if (!isNumericGroupId(groupId)) {
+    return { success: false, message: '群组ID仅支持数字' };
+  }
+  if (needPassword && !isFourDigitPassword(password)) {
     return { success: false, message: '密码需为4位数字' };
   }
 
@@ -114,7 +123,8 @@ async function createGroup(openid, payload) {
     data: {
       groupId,
       name,
-      password,
+      password: needPassword ? password : '',
+      needPassword,
       adminOpenid: openid,
       controlState: {
         effect: '常亮',
@@ -122,9 +132,12 @@ async function createGroup(openid, payload) {
         hue: 0,
         saturation: 100,
         dispatchId: 0,
-        sync: null
+        syncSeed: null,
+        syncStartAt: null,
+        syncStepMs: null
       },
       adminInDetailAt: 0,
+      lastAdminActiveAt: now,
       createdAt: now,
       updatedAt: now
     }
@@ -149,14 +162,11 @@ async function createGroup(openid, payload) {
 
 async function joinGroup(openid, payload) {
   const groupId = (payload.groupId || '').trim();
-  const nickname = (payload.nickname || '').trim();
+  const nicknameInput = (payload.nickname || '').trim();
   const password = (payload.password || '').trim();
 
-  if (!groupId || !nickname || !password) {
-    return { success: false, message: '请完整填写信息' };
-  }
-  if (!isFourDigitPassword(password)) {
-    return { success: false, message: '密码需为4位数字' };
+  if (!groupId) {
+    return { success: false, message: '请填写群组ID' };
   }
 
   const groupsRes = await db.collection('groups').where({ groupId }).limit(1).get();
@@ -165,22 +175,44 @@ async function joinGroup(openid, payload) {
   }
 
   const group = groupsRes.data[0];
-  if (group.password !== password) {
+  const needPassword = group.needPassword !== false;
+  if (needPassword) {
+    if (!isFourDigitPassword(password)) {
+      return { success: false, message: '密码需为4位数字' };
+    }
+  }
+  if (needPassword && group.password !== password) {
     return { success: false, message: '密码错误' };
   }
-
-  const memberExists = await db.collection('group_members').where({
-    groupId,
-    nickname
-  }).limit(1).get();
-  if (memberExists.data.length > 0) {
-    return { success: false, message: '昵称已被占用' };
-  }
-
   const selfExists = await db.collection('group_members').where({
     groupId,
     openid
   }).limit(1).get();
+
+  let nickname = nicknameInput;
+  if (!nickname) {
+    let trial = `成员${openid.slice(-4)}`;
+    for (let i = 0; i < 5; i += 1) {
+      const exists = await db.collection('group_members').where({ groupId, nickname: trial }).limit(1).get();
+      if (exists.data.length === 0) {
+        nickname = trial;
+        break;
+      }
+      trial = `成员${openid.slice(-4)}${Math.floor(Math.random() * 10)}`;
+    }
+    if (!nickname) {
+      nickname = `成员${Date.now() % 10000}`;
+    }
+  } else {
+    const memberExists = await db.collection('group_members').where({
+      groupId,
+      nickname
+    }).limit(1).get();
+    if (memberExists.data.length > 0) {
+      return { success: false, message: '昵称已被占用' };
+    }
+  }
+
   if (selfExists.data.length === 0) {
     const cs = group.controlState || {};
     await db.collection('group_members').add({
@@ -203,21 +235,19 @@ async function joinGroup(openid, payload) {
 
 async function listGroups(openid) {
   const memberships = await db.collection('group_members').where({ openid }).get();
-  if (memberships.data.length === 0) {
-    return { success: true, groups: [], activeGroupId: '' };
-  }
-
   const groupIds = memberships.data.map((m) => m.groupId);
-  const groupsRes = await db.collection('groups').where({
-    groupId: _.in(groupIds)
-  }).get();
+  const allGroupsRes = await db.collection('groups').get();
 
-  const allMembersRes = await db.collection('group_members').where({
-    groupId: _.in(groupIds)
-  }).get();
+  const mineGroupsRes = groupIds.length > 0
+    ? await db.collection('groups').where({ groupId: _.in(groupIds) }).get()
+    : { data: [] };
+  const mineMembersRes = groupIds.length > 0
+    ? await db.collection('group_members').where({ groupId: _.in(groupIds) }).get()
+    : { data: [] };
+  const allMembersRes = await db.collection('group_members').get();
 
   const memberMap = {};
-  allMembersRes.data.forEach((m) => {
+  mineMembersRes.data.forEach((m) => {
     if (!memberMap[m.groupId]) {
       memberMap[m.groupId] = [];
     }
@@ -241,20 +271,51 @@ async function listGroups(openid) {
   /** 管理员「在线」判定：心跳8s 一次，适当放宽避免成员端偶发拉取间隔导致误判 */
   const presenceTtlMs = 60000;
 
-  const groups = groupsRes.data.map((g) => {
+  const mineGroups = mineGroupsRes.data.map((g) => {
     const at = g.adminInDetailAt || 0;
     return {
       id: g.groupId,
       name: g.name,
       controlState: g.controlState,
+      needPassword: g.needPassword !== false,
       members: memberMap[g.groupId] || [],
+      memberCount: (memberMap[g.groupId] || []).length,
       activeUserRole: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].role : '',
       activeUserNickname: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].nickname : '',
       adminIsInGroupDetail: !!(at && now - at < presenceTtlMs)
     };
   });
 
-  return { success: true, groups, activeGroupId: groups[0] ? groups[0].id : '' };
+  const memberCountMap = {};
+  allMembersRes.data.forEach((m) => {
+    memberCountMap[m.groupId] = (memberCountMap[m.groupId] || 0) + 1;
+  });
+  const activeThreshold = now - ADMIN_ACTIVE_WINDOW_MS;
+  const allGroups = allGroupsRes.data
+    .filter((g) => {
+      const lastAdminActiveAt = Number(g.lastAdminActiveAt || g.updatedAt || 0);
+      return lastAdminActiveAt >= activeThreshold;
+    })
+    .map((g) => {
+      const at = g.adminInDetailAt || 0;
+      return {
+        id: g.groupId,
+        name: g.name,
+        controlState: g.controlState,
+        needPassword: g.needPassword !== false,
+        memberCount: memberCountMap[g.groupId] || 0,
+        activeUserRole: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].role : '',
+        activeUserNickname: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].nickname : '',
+        adminIsInGroupDetail: !!(at && now - at < presenceTtlMs)
+      };
+    });
+
+  return {
+    success: true,
+    mineGroups,
+    allGroups,
+    activeGroupId: mineGroups[0] ? mineGroups[0].id : ''
+  };
 }
 
 async function adminDetailPresence(openid, payload) {
@@ -270,12 +331,11 @@ async function adminDetailPresence(openid, payload) {
     return { success: false, message: '仅管理员可上报' };
   }
 
-  await db.collection('groups').where({ groupId }).update({
-    data: {
-      adminInDetailAt: inDetail ? Date.now() : 0,
-      updatedAt: Date.now()
-    }
-  });
+  const ts = Date.now();
+  const data = inDetail
+    ? { adminInDetailAt: ts, lastAdminActiveAt: ts, updatedAt: ts }
+    : { adminInDetailAt: 0, updatedAt: ts };
+  await db.collection('groups').where({ groupId }).update({ data });
 
   return { success: true, message: inDetail ? '已进入' : '已离开' };
 }
@@ -305,21 +365,31 @@ async function applyControl(openid, payload) {
   const dispatchIdRaw = Number(payload.dispatchId);
   const dispatchId = Number.isFinite(dispatchIdRaw) && dispatchIdRaw > 0 ? dispatchIdRaw : Date.now();
   const ts = Date.now();
-  const sync = isDynamicLoopEffect(effect)
-    ? {
-        seed: Number.isFinite(Number(payload.seed))
-          ? (Math.round(Number(payload.seed)) % 256 + 256) % 256
-          : Math.floor(Math.random() * 256),
-        stepMs: normalizeStepMs(payload.stepMs),
-        startAt: ts
-      }
+  const isDyn = isDynamicLoopEffect(effect);
+  /** 平铺字段，避免部分环境下嵌套对象写入触发校验/写入失败（如 -502001） */
+  const syncSeed = isDyn
+    ? Number.isFinite(Number(payload.seed))
+      ? (Math.round(Number(payload.seed)) % 256 + 256) % 256
+      : Math.floor(Math.random() * 256)
     : null;
+  const syncStartAt = isDyn ? ts : null;
+  const syncStepMs = isDyn ? normalizeStepMs(payload.stepMs) : null;
 
   await db.collection('groups').where({ groupId }).update({
     data: {
-      controlState: { effect, brightness, hue, saturation, dispatchId, sync },
+      controlState: {
+        effect,
+        brightness,
+        hue,
+        saturation,
+        dispatchId,
+        syncSeed,
+        syncStartAt,
+        syncStepMs
+      },
       /** 统一下发成功即视为管理员正在操作本群，成员端可显示「正在本群组页面」 */
       adminInDetailAt: ts,
+      lastAdminActiveAt: ts,
       updatedAt: ts
     }
   });
