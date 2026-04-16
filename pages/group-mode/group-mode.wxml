@@ -114,7 +114,6 @@
               <text class="effect-label">下发亮度 {{groupControlBrightness}}%</text>
               <slider min="1" max="100" step="1" value="{{groupControlBrightness}}" activeColor="#FFD100" backgroundColor="#333333" bindchange="onControlBrightnessChange" />
             </view>
-            <button class="group-btn apply" bindtap="applyGroupControl">统一下发到成员</button>
           </view>
         </block>
 

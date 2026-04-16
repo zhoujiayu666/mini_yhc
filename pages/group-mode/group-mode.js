@@ -63,6 +63,10 @@ Page({
   },
 
   onHide() {
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+      this._autoApplyTimer = null;
+    }
     this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
     if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
@@ -71,6 +75,10 @@ Page({
   },
 
   onUnload() {
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+      this._autoApplyTimer = null;
+    }
     this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
     if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
@@ -834,6 +842,10 @@ Page({
   },
 
   exitGroupDetail() {
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+      this._autoApplyTimer = null;
+    }
     this.stopAdminPresenceHeartbeat();
     this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
@@ -975,12 +987,20 @@ Page({
       previewBrightness: brightness,
       groupControlBrightness: brightness
     });
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+    }
+    // 调色盘拖动频繁，做轻度防抖后自动下发
+    this._autoApplyTimer = setTimeout(() => {
+      this.applyGroupControl({ silent: true }).catch(() => {});
+    }, 160);
   },
 
   onControlEffectChange(e) {
     this.setData({
       groupControlEffect: e.currentTarget.dataset.effect
     });
+    this.applyGroupControl({ silent: true }).catch(() => {});
   },
 
   onControlBrightnessChange(e) {
@@ -989,16 +1009,22 @@ Page({
       groupControlBrightness: v,
       previewBrightness: v
     });
+    this.applyGroupControl({ silent: true }).catch(() => {});
   },
 
-  async applyGroupControl() {
+  async applyGroupControl(options = {}) {
+    const silent = !!options.silent;
     const active = this.data.activeGroup;
     if (!active) {
-      wx.showToast({ title: '请先创建或加入群组', icon: 'none' });
+      if (!silent) {
+        wx.showToast({ title: '请先创建或加入群组', icon: 'none' });
+      }
       return;
     }
     if (this.data.activeUserRole !== 'admin') {
-      wx.showToast({ title: '当前用户不是管理员', icon: 'none' });
+      if (!silent) {
+        wx.showToast({ title: '当前用户不是管理员', icon: 'none' });
+      }
       return;
     }
 
@@ -1018,7 +1044,9 @@ Page({
       }
       const dynamicSeed = Math.floor(Math.random() * 256);
       const dynamicStepMs = 200;
-      wx.showLoading({ title: '下发中...', mask: true });
+      if (!silent) {
+        wx.showLoading({ title: '下发中...', mask: true });
+      }
       const result = await this.callGroupService({
         action: 'applyControl',
         groupId: active.id,
@@ -1030,9 +1058,13 @@ Page({
         seed: dynamicSeed,
         stepMs: dynamicStepMs
       });
-      wx.hideLoading();
+      if (!silent) {
+        wx.hideLoading();
+      }
       if (!result.success) {
-        wx.showToast({ title: result.message || '下发失败', icon: 'none' });
+        if (!silent) {
+          wx.showToast({ title: result.message || '下发失败', icon: 'none' });
+        }
         return;
       }
       await this.loadGroups();
@@ -1049,10 +1081,14 @@ Page({
           sync: this.getSyncFromControlState(cs)
         }
       );
-      wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
+      if (!silent) {
+        wx.showToast({ title: '已统一下发灯光效果', icon: 'success' });
+      }
     } catch (error) {
-      wx.hideLoading();
-      wx.showToast({ title: '下发失败', icon: 'none' });
+      if (!silent) {
+        wx.hideLoading();
+        wx.showToast({ title: '下发失败', icon: 'none' });
+      }
       console.error('[group] apply error', error);
     }
   },
