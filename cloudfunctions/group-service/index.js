@@ -268,9 +268,6 @@ async function listGroups(openid) {
   });
 
   const now = Date.now();
-  /** 管理员「在线」判定：心跳8s 一次，适当放宽避免成员端偶发拉取间隔导致误判 */
-  const presenceTtlMs = 60000;
-
   const mineGroups = mineGroupsRes.data.map((g) => {
     const at = g.adminInDetailAt || 0;
     return {
@@ -282,7 +279,7 @@ async function listGroups(openid) {
       memberCount: (memberMap[g.groupId] || []).length,
       activeUserRole: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].role : '',
       activeUserNickname: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].nickname : '',
-      adminIsInGroupDetail: !!(at && now - at < presenceTtlMs)
+      adminIsInGroupDetail: !!at
     };
   });
 
@@ -306,7 +303,7 @@ async function listGroups(openid) {
         memberCount: memberCountMap[g.groupId] || 0,
         activeUserRole: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].role : '',
         activeUserNickname: selfRoleMap[g.groupId] ? selfRoleMap[g.groupId].nickname : '',
-        adminIsInGroupDetail: !!(at && now - at < presenceTtlMs)
+        adminIsInGroupDetail: !!at
       };
     });
 

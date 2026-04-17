@@ -123,9 +123,9 @@
             <text class="presence-title">管理员状态</text>
             <text class="presence-hint" wx:if="{{memberAwaitingNewDispatch}}">已进入群组，等待管理员下发</text>
             <text class="presence-value {{activeGroup.adminIsInGroupDetail ? 'online' : ''}}">
-              {{activeGroup.adminIsInGroupDetail ? '管理员正在本群组页面' : '管理员未进入本群组页面'}}
+              {{activeGroup.adminIsInGroupDetail ? '管理员已进入本群' : '管理员当前未进入本群'}}
             </text>
-            <text class="presence-hint">说明：管理员在本群详情内操作或统一下发后，约 60 秒内会显示为「正在本群组页面」</text>
+            <text class="presence-hint">说明：该状态基于管理员进入/退出群详情及统一下发操作更新，不保证异常退出时绝对实时。</text>
           </view>
         </block>
       </view>

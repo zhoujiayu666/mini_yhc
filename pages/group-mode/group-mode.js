@@ -50,24 +50,30 @@ Page({
       app.globalData.isConnected = connected;
       this.updateConnectionStatus();
     };
+    // 首次进入页面由 onLoad 拉取一次，避免 onShow 紧跟再拉一次
+    this._skipOnShowLoadOnce = true;
     this.loadGroups();
   },
 
   onShow() {
     this.updateConnectionStatus();
-    this.loadGroups();
+    if (this._skipOnShowLoadOnce) {
+      this._skipOnShowLoadOnce = false;
+    } else {
+      this.loadGroups();
+    }
     this.applyGroupControlToDeviceIfNeeded();
     if (this.data.groupDetailMode) {
-      this.startGroupSyncTimer();
+      this.startGroupWatch(this.data.activeGroup && this.data.activeGroup.id);
     }
   },
 
   onHide() {
+    this.stopGroupWatch();
     if (this._autoApplyTimer) {
       clearTimeout(this._autoApplyTimer);
       this._autoApplyTimer = null;
     }
-    this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
     if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
       this.stopAdminPresenceHeartbeat();
@@ -75,11 +81,11 @@ Page({
   },
 
   onUnload() {
+    this.stopGroupWatch();
     if (this._autoApplyTimer) {
       clearTimeout(this._autoApplyTimer);
       this._autoApplyTimer = null;
     }
-    this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
     if (this.data.groupDetailMode && this.data.activeUserRole === 'admin') {
       this.stopAdminPresenceHeartbeat();
@@ -302,25 +308,6 @@ Page({
     }
   },
 
-  startGroupSyncTimer() {
-    if (this._groupSyncTimer) {
-      return;
-    }
-    this._groupSyncTimer = setInterval(() => {
-      if (!this.data.groupDetailMode) {
-        return;
-      }
-      this.loadGroups();
-    }, 3000);
-  },
-
-  stopGroupSyncTimer() {
-    if (this._groupSyncTimer) {
-      clearInterval(this._groupSyncTimer);
-      this._groupSyncTimer = null;
-    }
-  },
-
   stopDynamicEffectLoop() {
     if (this._partyTimer) {
       clearInterval(this._partyTimer);
@@ -331,6 +318,124 @@ Page({
       this._starTimer = null;
     }
     this._dynamicEffectMeta = null;
+  },
+
+  applyGroupDocFromWatch(doc, source = 'watch') {
+    if (!doc || !this.data.groupDetailMode || !this.data.activeGroup) {
+      return;
+    }
+    const currentId = this.data.activeGroup.id;
+    if (String(doc.groupId || '') !== String(currentId || '')) {
+      return;
+    }
+    const adminIsInGroupDetail = !!Number(doc.adminInDetailAt || 0);
+    const nextGroup = {
+      ...this.data.activeGroup,
+      name: doc.name || this.data.activeGroup.name,
+      needPassword: doc.needPassword !== false,
+      adminIsInGroupDetail,
+      controlState: doc.controlState || this.data.activeGroup.controlState || {}
+    };
+    const cs = nextGroup.controlState || {};
+    const patch = { activeGroup: nextGroup };
+    if (this.data.activeUserRole !== 'admin') {
+      patch.groupControlEffect = cs.effect != null ? cs.effect : this.data.groupControlEffect;
+      patch.groupControlBrightness =
+        typeof cs.brightness === 'number' ? cs.brightness : this.data.groupControlBrightness;
+      patch.previewHue = typeof cs.hue === 'number' ? cs.hue : this.data.previewHue;
+      patch.previewSaturation =
+        typeof cs.saturation === 'number' ? cs.saturation : this.data.previewSaturation;
+      patch.previewBrightness =
+        typeof cs.brightness === 'number' ? cs.brightness : this.data.previewBrightness;
+    }
+    this.setData(patch, () => {
+      if (this.data.activeUserRole === 'member') {
+        this.applyGroupControlToDeviceIfNeeded();
+      }
+    });
+    console.log('[group-watch] applied', {
+      source,
+      groupId: currentId,
+      effect: cs.effect,
+      brightness: cs.brightness,
+      dispatchId: cs.dispatchId
+    });
+  },
+
+  startGroupWatch(groupId) {
+    const gid = String(groupId || '').trim();
+    if (!gid || !wx.cloud || !wx.cloud.database) {
+      console.warn('[group-watch] skip start: invalid groupId or cloud unavailable', { groupId: gid });
+      return;
+    }
+    if (this._groupWatch && this._groupWatchGroupId === gid) {
+      console.log('[group-watch] already watching', gid);
+      return;
+    }
+    this.stopGroupWatch();
+    try {
+      const db = wx.cloud.database();
+      console.log('[group-watch] start', gid);
+      this._groupWatchGroupId = gid;
+      this._groupWatch = db.collection('groups').where({ groupId: gid }).watch({
+        onChange: (snapshot) => {
+          const doc = snapshot && snapshot.docs && snapshot.docs[0] ? snapshot.docs[0] : null;
+          const cs = doc && doc.controlState ? doc.controlState : null;
+          console.log('[group-watch] onChange', {
+            groupId: gid,
+            type: snapshot && snapshot.type,
+            docCount: snapshot && snapshot.docs ? snapshot.docs.length : 0,
+            effect: cs && cs.effect,
+            brightness: cs && cs.brightness,
+            dispatchId: cs && cs.dispatchId
+          });
+          if (snapshot && snapshot.docs && snapshot.docs.length === 0) {
+            console.log('[group-watch] group removed', gid);
+            this.stopGroupWatch();
+            const wasMemberInDetail = this.data.activeUserRole === 'member';
+            this._memberDispatchBaselineSignature = '';
+            this.setData({
+              groupDetailMode: false,
+              activeGroup: null,
+              activeUserRole: '',
+              activeUserNickname: '',
+              memberAwaitingNewDispatch: false
+            });
+            this.applyGroupTab();
+            wx.showToast({
+              title: wasMemberInDetail ? '该群已被管理员解散' : '群组已被解散',
+              icon: 'none'
+            });
+            return;
+          }
+          if (doc) {
+            this.applyGroupDocFromWatch(doc, snapshot && snapshot.type ? snapshot.type : 'watch');
+          }
+        },
+        onError: (error) => {
+          console.error('[group-watch] onError', {
+            groupId: gid,
+            errMsg: error && error.errMsg,
+            error
+          });
+        }
+      });
+    } catch (error) {
+      console.error('[group-watch] start failed', { groupId: gid, error });
+    }
+  },
+
+  stopGroupWatch() {
+    if (this._groupWatch && typeof this._groupWatch.close === 'function') {
+      try {
+        this._groupWatch.close();
+        console.log('[group-watch] closed', this._groupWatchGroupId || '');
+      } catch (error) {
+        console.error('[group-watch] close failed', error);
+      }
+    }
+    this._groupWatch = null;
+    this._groupWatchGroupId = '';
   },
 
   /** 从云端 controlState 解析同步参数（兼容旧数据嵌套 sync + 新数据平铺字段） */
@@ -477,8 +582,8 @@ Page({
         const curId = this.data.activeGroup.id;
         const fresh = groups.find((g) => g.id === curId) || null;
         if (!fresh) {
+          this.stopGroupWatch();
           this.stopAdminPresenceHeartbeat();
-          this.stopGroupSyncTimer();
           this.stopDynamicEffectLoop();
           const wasMemberInDetail = this.data.activeUserRole === 'member';
           this.setData({
@@ -783,8 +888,7 @@ Page({
     if (group.activeUserRole === 'admin') {
       this.startAdminPresenceHeartbeat(id);
     }
-    this.startGroupSyncTimer();
-    void this.loadGroups();
+    this.startGroupWatch(id);
   },
 
   onEnterPasswordInput(e) {
@@ -842,12 +946,12 @@ Page({
   },
 
   exitGroupDetail() {
+    this.stopGroupWatch();
     if (this._autoApplyTimer) {
       clearTimeout(this._autoApplyTimer);
       this._autoApplyTimer = null;
     }
     this.stopAdminPresenceHeartbeat();
-    this.stopGroupSyncTimer();
     this.stopDynamicEffectLoop();
     this._memberDispatchBaselineSignature = '';
     this.setData({ groupDetailMode: false, memberAwaitingNewDispatch: false });
@@ -880,7 +984,7 @@ Page({
         return;
       }
       this.stopAdminPresenceHeartbeatQuiet();
-      this.stopGroupSyncTimer();
+      this.stopGroupWatch();
       this.stopDynamicEffectLoop();
       this.setData({
         groupDetailMode: false,
@@ -925,7 +1029,7 @@ Page({
         wx.showToast({ title: result.message || '退出失败', icon: 'none' });
         return;
       }
-      this.stopGroupSyncTimer();
+      this.stopGroupWatch();
       this.stopDynamicEffectLoop();
       this.setData({
         groupDetailMode: false,
@@ -946,29 +1050,18 @@ Page({
   },
 
   startAdminPresenceHeartbeat(groupId) {
-    this.stopAdminPresenceHeartbeatQuiet();
     this._adminPresenceGroupId = groupId;
-    const tick = () => {
-      this.callGroupService({
-        action: 'adminDetailPresence',
-        groupId,
-        inDetail: true
-      }).catch(() => {});
-    };
-    tick();
-    this._adminHb = setInterval(tick, 8000);
+    this.callGroupService({
+      action: 'adminDetailPresence',
+      groupId,
+      inDetail: true
+    }).catch(() => {});
   },
 
-  stopAdminPresenceHeartbeatQuiet() {
-    if (this._adminHb) {
-      clearInterval(this._adminHb);
-      this._adminHb = null;
-    }
-  },
+  stopAdminPresenceHeartbeatQuiet() {},
 
   stopAdminPresenceHeartbeat() {
     const gid = this._adminPresenceGroupId;
-    this.stopAdminPresenceHeartbeatQuiet();
     this._adminPresenceGroupId = null;
     if (gid) {
       this.callGroupService({
@@ -987,6 +1080,13 @@ Page({
       previewBrightness: brightness,
       groupControlBrightness: brightness
     });
+    if (this.data.groupControlEffect === '随机') {
+      if (this._autoApplyTimer) {
+        clearTimeout(this._autoApplyTimer);
+        this._autoApplyTimer = null;
+      }
+      return;
+    }
     if (this._autoApplyTimer) {
       clearTimeout(this._autoApplyTimer);
     }
@@ -997,6 +1097,10 @@ Page({
   },
 
   onControlEffectChange(e) {
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+      this._autoApplyTimer = null;
+    }
     this.setData({
       groupControlEffect: e.currentTarget.dataset.effect
     });
@@ -1067,18 +1171,39 @@ Page({
         }
         return;
       }
-      await this.loadGroups();
+      const syncStartAt = Date.now();
+      const nextControlState = {
+        effect,
+        brightness: this.data.groupControlBrightness,
+        hue: dispatchHue,
+        saturation: dispatchSaturation,
+        dispatchId,
+        syncSeed: isNaN(dynamicSeed) ? null : dynamicSeed,
+        syncStartAt: ['聚会', '彩虹', '星空'].includes(effect) ? syncStartAt : null,
+        syncStepMs: ['聚会', '彩虹', '星空'].includes(effect) ? dynamicStepMs : null
+      };
+      if (this.data.activeGroup) {
+        this.setData({
+          activeGroup: {
+            ...this.data.activeGroup,
+            adminIsInGroupDetail: true,
+            controlState: nextControlState
+          }
+        });
+      }
       // 管理员下发成功后，本机若已连接也立即应用相同效果
-      const cs = (this.data.activeGroup && this.data.activeGroup.controlState) || {};
       await this.sendGroupControlFrameToDevice(
-        cs.effect || this.data.groupControlEffect,
-        Number(cs.brightness || this.data.groupControlBrightness),
+        nextControlState.effect,
+        Number(nextControlState.brightness || this.data.groupControlBrightness),
         this.data.activeGroup && this.data.activeGroup.id,
         {
-          hue: typeof cs.hue === 'number' ? cs.hue : this.data.previewHue,
-          saturation: typeof cs.saturation === 'number' ? cs.saturation : this.data.previewSaturation,
-          dispatchId: Number(cs.dispatchId || dispatchId),
-          sync: this.getSyncFromControlState(cs)
+          hue: typeof nextControlState.hue === 'number' ? nextControlState.hue : this.data.previewHue,
+          saturation:
+            typeof nextControlState.saturation === 'number'
+              ? nextControlState.saturation
+              : this.data.previewSaturation,
+          dispatchId: Number(nextControlState.dispatchId || dispatchId),
+          sync: this.getSyncFromControlState(nextControlState)
         }
       );
       if (!silent) {
