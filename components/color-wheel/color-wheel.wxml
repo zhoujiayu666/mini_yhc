@@ -18,5 +18,9 @@
       </view>
     </view>
   </view>
-  <view class="color-preview" style="background-color: {{previewColor}}; width: {{previewSize}}rpx; height: {{previewSize}}rpx; transform: translate({{previewOffset}}rpx, {{previewOffset}}rpx);"></view>
+  <view
+    wx:if="{{showPreview}}"
+    class="color-preview"
+    style="background-color: {{previewColor}}; width: {{previewSize}}rpx; height: {{previewSize}}rpx; transform: translate({{previewOffset}}rpx, {{previewOffset}}rpx);"
+  ></view>
 </view>

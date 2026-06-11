@@ -1,128 +1,313 @@
 /** connect-guide.wxss **/
+
 page {
+
   height: 100vh;
+
   display: flex;
+
   flex-direction: column;
-  background-color: #121212;
+
+  background-color: var(--page-bg);
+
 }
+
+
 
 .scrollarea {
+
   flex: 1;
+
   min-height: 0;
+
   height: 0;
+
   padding-bottom: 48rpx;
+
 }
+
+
 
 .container {
-  padding: 32rpx 40rpx 48rpx;
+
+  padding: 24rpx 32rpx 48rpx;
+
   box-sizing: border-box;
+
 }
+
+
 
 .logo-container {
+
   display: flex;
+
   align-items: center;
+
   padding-left: 32rpx;
+
 }
+
+
 
 .logo-icon {
+
   width: 48rpx;
+
   height: 48rpx;
+
   margin-right: 16rpx;
+
 }
 
-.logo-text {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #FFD100;
+
+
+.guide-hero {
+
+  margin-bottom: 28rpx;
+
+  padding: 8rpx 4rpx;
+
 }
+
+
+
+.guide-hero-title {
+
+  display: block;
+
+  font-size: 40rpx;
+
+  font-weight: 700;
+
+  color: var(--text-primary);
+
+  margin-bottom: 8rpx;
+
+}
+
+
+
+.guide-hero-desc {
+
+  display: block;
+
+  font-size: 26rpx;
+
+  color: var(--text-secondary);
+
+}
+
+
+
+.step-card {
+
+  margin: 0 0 24rpx;
+
+  padding: 8rpx 32rpx;
+
+}
+
+
+
+.notes-card {
+
+  margin: 0;
+
+  padding: 28rpx 32rpx;
+
+  background: var(--brand-yellow-light);
+
+  border-color: rgba(255, 209, 0, 0.25);
+
+}
+
+
 
 .step-row {
+
   display: flex;
+
   align-items: flex-start;
-  margin-bottom: 48rpx;
+
+  padding: 28rpx 0;
+
 }
 
-.step-row--notes {
-  margin-bottom: 0;
+
+
+.step-divider {
+
+  height: 1rpx;
+
+  background: var(--border-color);
+
+  margin: 0;
+
 }
+
+
+
+.step-num-wrap {
+
+  flex-shrink: 0;
+
+  width: 72rpx;
+
+  height: 72rpx;
+
+  border-radius: 50%;
+
+  background: var(--brand-yellow-soft);
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin-right: 20rpx;
+
+}
+
+
 
 .step-num {
-  flex-shrink: 0;
-  width: 88rpx;
-  font-size: 56rpx;
+
+  font-size: 28rpx;
+
   font-weight: 700;
-  color: #FFFFFF;
-  line-height: 1.1;
+
+  color: var(--brand-yellow-text);
+
+  line-height: 1;
+
 }
+
+
 
 .step-body {
+
   flex: 1;
+
   min-width: 0;
-  padding-top: 8rpx;
+
   display: flex;
+
   flex-direction: column;
+
   align-items: flex-start;
+
 }
+
+
+
+.step-body--with-connect {
+
+  align-items: flex-start;
+
+}
+
+
+
+.step-title {
+
+  display: block;
+
+  font-size: 30rpx;
+
+  font-weight: 600;
+
+  color: var(--text-primary);
+
+  margin-bottom: 8rpx;
+
+}
+
+
 
 .step-desc {
+
   display: block;
+
   width: 100%;
-  box-sizing: border-box;
-  font-size: 30rpx;
-  color: #E0E0E0;
+
+  font-size: 26rpx;
+
+  color: var(--text-secondary);
+
   line-height: 1.55;
+
 }
 
-/* 用 view 代替 button，避免系统按钮默认整行居中、宽度撑满 */
-.step-body--with-connect {
-  align-items: flex-start;
-}
+
 
 .connect-btn {
-  margin-top: 28rpx;
-  margin-bottom: 20rpx;
-  width: 200rpx;
+
+  margin-top: 24rpx;
+
+  width: 240rpx;
+
   height: 80rpx;
-  padding: 0;
-  font-size: 30rpx;
+
+  font-size: 28rpx;
+
   font-weight: 600;
-  color: #121212;
-  background-color: #FFD100;
-  border-radius: 12rpx;
+
+  color: var(--bg-black);
+
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+
+  border-radius: var(--radius-md);
+
   display: flex;
+
   align-items: center;
+
   justify-content: center;
-  box-sizing: border-box;
+
+  box-shadow: 0 6rpx 20rpx var(--brand-yellow-glow);
+
 }
+
+
 
 .connect-btn-hover {
+
   opacity: 0.88;
+
+  transform: scale(0.98);
+
 }
 
-.step-sub {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 24rpx;
-  color: #9E9E9E;
-  line-height: 1.5;
-}
+
 
 .notes-title {
+
   display: block;
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 30rpx;
-  color: #E0E0E0;
-  font-weight: 500;
-  margin-bottom: 16rpx;
+
+  font-size: 28rpx;
+
+  color: var(--text-primary);
+
+  font-weight: 600;
+
+  margin-bottom: 12rpx;
+
 }
 
+
+
 .notes-text {
+
   display: block;
-  width: 100%;
-  box-sizing: border-box;
+
   font-size: 26rpx;
-  color: #9E9E9E;
-  line-height: 1.6;
+
+  color: var(--text-secondary);
+
+  line-height: 1.65;
+
 }
+
+

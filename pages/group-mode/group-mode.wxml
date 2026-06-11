@@ -1,7 +1,7 @@
-<navigation-bar title="群组模式" back="{{true}}" color="#E0E0E0" background="#121212"></navigation-bar>
+<navigation-bar title="群组模式" back="{{true}}" color="#212121" background="#FFFFFF"></navigation-bar>
 
 <scroll-view class="scrollarea" scroll-y>
-  <view class="container">
+  <view class="container page-ambient">
     <view class="page-back-entry" bindtap="goBackPage">
       <text class="page-back-arrow">‹</text>
       <text class="page-back-text">返回</text>
@@ -37,8 +37,11 @@
             <text class="group-item-enter">进入 ›</text>
           </view>
         </view>
-        <view class="empty-tip-box" wx:if="{{filteredGroups.length === 0}}">
-          <text class="empty-tip-text">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无可加入群组'}}</text>
+        <view class="empty-state inline-empty" wx:if="{{filteredGroups.length === 0}}">
+          <view class="empty-state-icon">👥</view>
+          <text class="empty-state-title">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无可加入群组'}}</text>
+          <text class="empty-state-desc" wx:if="{{groupTab === 'mine'}}">点击上方「创建群组」开始群控</text>
+          <text class="empty-state-desc" wx:else>稍后再来看看，或请管理员分享群组 ID</text>
         </view>
       </view>
     </block>
@@ -112,7 +115,7 @@
             </view>
             <view class="brightness-row">
               <text class="effect-label">下发亮度 {{groupControlBrightness}}%</text>
-              <slider min="1" max="100" step="1" value="{{groupControlBrightness}}" activeColor="#FFD100" backgroundColor="#333333" bindchange="onControlBrightnessChange" />
+              <slider min="1" max="100" step="1" value="{{groupControlBrightness}}" activeColor="#FFD100" backgroundColor="#E0E0E0" bindchange="onControlBrightnessChange" />
             </view>
           </view>
         </block>
@@ -133,13 +136,13 @@
   </view>
 </scroll-view>
 
-<view class="group-modal {{showCreateGroupModal ? 'show' : ''}}" bindtap="closeCreateGroupModal">
-  <view class="group-modal-content" catchtap="stopPropagation">
-    <view class="group-modal-header">
-      <text class="group-modal-title">创建新群组</text>
-      <view class="close-btn" bindtap="closeCreateGroupModal">×</view>
+<view class="sheet-modal {{showCreateGroupModal ? 'show' : ''}}" bindtap="closeCreateGroupModal">
+  <view class="sheet-content" catchtap="stopPropagation">
+    <view class="sheet-header">
+      <text class="sheet-title">创建新群组</text>
+      <view class="sheet-close" bindtap="closeCreateGroupModal">×</view>
     </view>
-    <view class="group-modal-body">
+    <view class="sheet-body">
       <input class="group-input" placeholder="请输入群组名称" data-field="name" value="{{createGroupForm.name}}" bindinput="onCreateGroupInput" />
       <input class="group-input" placeholder="请输入群组ID（仅数字）" type="number" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
       <view class="password-switch-row">
@@ -161,13 +164,13 @@
   </view>
 </view>
 
-<view class="device-list-modal {{showDeviceList ? 'show' : ''}}" bindtap="closeDeviceList">
-  <view class="device-list-content" catchtap="stopPropagation">
-    <view class="device-list-header">
-      <text class="device-list-title">选择设备</text>
-      <view class="close-btn" bindtap="closeDeviceList">×</view>
+<view class="sheet-modal {{showDeviceList ? 'show' : ''}}" bindtap="closeDeviceList">
+  <view class="sheet-content" catchtap="stopPropagation">
+    <view class="sheet-header">
+      <text class="sheet-title">选择设备</text>
+      <view class="sheet-close" bindtap="closeDeviceList">×</view>
     </view>
-    <view class="device-list-body">
+    <view class="sheet-body">
       <view class="device-item" wx:for="{{deviceList}}" wx:key="deviceId" data-deviceid="{{item.deviceId}}" bindtap="connectDevice">
         <view class="device-info">
           <view class="device-name-row">
@@ -179,24 +182,26 @@
           <text class="rssi-text">信号: {{item.RSSI || '未知'}}</text>
         </view>
       </view>
-      <view class="device-list-empty" wx:if="{{deviceList.length === 0 && !isScanning}}">
-        <text class="empty-text">未发现设备</text>
-        <text class="empty-tip">请确保蓝牙已开启，且设备在附近并处于可连接状态</text>
+      <view class="empty-state" wx:if="{{deviceList.length === 0 && !isScanning}}">
+        <view class="empty-state-icon">📡</view>
+        <text class="empty-state-title">未发现设备</text>
+        <text class="empty-state-desc">请确保蓝牙已开启，且设备在附近</text>
       </view>
-      <view class="device-list-scanning" wx:if="{{isScanning}}">
-        <text class="scanning-text">正在搜索设备...</text>
+      <view class="empty-state" wx:if="{{isScanning}}">
+        <view class="empty-state-icon scanning-pulse">🔍</view>
+        <text class="empty-state-title">正在搜索设备...</text>
       </view>
     </view>
   </view>
 </view>
 
-<view class="group-modal {{showEnterPasswordModal ? 'show' : ''}}" bindtap="closeEnterPasswordModal">
-  <view class="group-modal-content" catchtap="stopPropagation">
-    <view class="group-modal-header">
-      <text class="group-modal-title">输入群组密码</text>
-      <view class="close-btn" bindtap="closeEnterPasswordModal">×</view>
+<view class="sheet-modal {{showEnterPasswordModal ? 'show' : ''}}" bindtap="closeEnterPasswordModal">
+  <view class="sheet-content" catchtap="stopPropagation">
+    <view class="sheet-header">
+      <text class="sheet-title">输入群组密码</text>
+      <view class="sheet-close" bindtap="closeEnterPasswordModal">×</view>
     </view>
-    <view class="group-modal-body">
+    <view class="sheet-body">
       <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" value="{{enterPassword}}" bindinput="onEnterPasswordInput" />
       <button class="group-btn apply" bindtap="confirmEnterWithPassword">确认进入</button>
     </view>

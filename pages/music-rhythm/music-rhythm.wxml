@@ -1,79 +1,193 @@
 <!--pages/music-rhythm/music-rhythm.wxml-->
-<navigation-bar title="" back="{{true}}" color="#E0E0E0" background="#121212">
+
+<navigation-bar title="" back="{{true}}" color="#212121" background="#FFFFFF">
+
   <view slot="left" class="logo-container">
+
     <view class="logo-icon">
+
       <text class="logo-icon-text">♪</text>
+
     </view>
+
     <text class="logo-text">音乐律动</text>
+
   </view>
+
   <view slot="right" class="help-btn" bindtap="showHelp">
-    <view class="help-badge">?</view>
+
+    <view class="help-btn-icon"><text class="help-q">?</text></view>
+
   </view>
+
 </navigation-bar>
 
+
+
 <scroll-view class="scrollarea" scroll-y>
-  <view class="container">
+
+  <view class="container page-ambient">
+
     <!-- 麦克风图标区域 -->
+
     <view class="microphone-section">
+
       <view class="microphone-icon {{isListening ? 'listening' : ''}}" bindtap="{{isListening ? 'stopRecording' : 'startRecording'}}">
+
         <view class="mic-visual" wx:if="{{!isListening}}">
+
           <view class="mic-head"></view>
+
           <view class="mic-stem"></view>
+
           <view class="mic-base"></view>
+
         </view>
+
         <view class="stop-visual" wx:if="{{isListening}}">
+
           <view class="stop-dot"></view>
+
           <text class="stop-text">停止</text>
+
         </view>
-        <!-- 音频波纹效果 -->
+
         <view class="audio-waves" wx:if="{{isListening}}">
+
           <view class="wave wave1"></view>
+
           <view class="wave wave2"></view>
+
           <view class="wave wave3"></view>
+
         </view>
+
       </view>
+
+      <text class="mic-hint">{{isListening ? '正在聆听环境声音' : '点击开始音乐律动'}}</text>
+
+
+
+      <!-- 频谱可视化 -->
+
+      <view class="spectrum-wrap" wx:if="{{isListening}}">
+
+        <view
+
+          class="spectrum-bar"
+
+          wx:for="{{spectrumBars}}"
+
+          wx:key="index"
+
+          style="transform: scaleY({{item}});"
+
+        ></view>
+
+      </view>
+
     </view>
+
+
 
     <!-- 灵敏度调节区 -->
+
     <view class="sensitivity-section card">
-      <view class="section-title">灵敏度调节</view>
-      <view class="slider-container">
-        <view class="slider-btn" bindtap="decreaseSensitivity">−</view>
-        <view class="slider-wrapper">
-          <view class="slider-track-shell">
-            <slider
-              class="track-slider"
-              value="{{sensitivity}}"
-              min="0"
-              max="200"
-              step="1"
-              activeColor="#FFD100"
-              backgroundColor="#3D3D3D"
-              block-color="#FFD100"
-              block-size="28"
-              bindchange="onSensitivityChange"
-            />
-          </view>
-        </view>
-        <view class="slider-btn" bindtap="increaseSensitivity">+</view>
+
+      <view class="section-header">
+
+        <text class="section-title">灵敏度调节</text>
+
+        <text class="sensitivity-value">{{sensitivity}}%</text>
+
       </view>
-      <view class="sensitivity-value">灵敏度 {{sensitivity}}%</view>
+
+      <view class="sensitivity-presets">
+
+        <view class="preset-chip {{sensitivity <= 50 ? 'active' : ''}}" data-value="40" bindtap="setSensitivityPreset">低</view>
+
+        <view class="preset-chip {{sensitivity > 50 && sensitivity <= 120 ? 'active' : ''}}" data-value="100" bindtap="setSensitivityPreset">中</view>
+
+        <view class="preset-chip {{sensitivity > 120 ? 'active' : ''}}" data-value="160" bindtap="setSensitivityPreset">高</view>
+
+      </view>
+
+      <view class="slider-container">
+
+        <view class="slider-btn" bindtap="decreaseSensitivity">−</view>
+
+        <view class="slider-wrapper">
+
+          <view class="slider-track-shell">
+
+            <slider
+
+              class="track-slider"
+
+              value="{{sensitivity}}"
+
+              min="0"
+
+              max="200"
+
+              step="1"
+
+              activeColor="#FFD100"
+
+              backgroundColor="#E0E0E0"
+
+              block-color="#FFD100"
+
+              block-size="28"
+
+              bindchange="onSensitivityChange"
+
+            />
+
+          </view>
+
+        </view>
+
+        <view class="slider-btn" bindtap="increaseSensitivity">+</view>
+
+      </view>
+
     </view>
 
+
+
   </view>
+
 </scroll-view>
 
+
+
 <view class="help-modal-mask" wx:if="{{showHelpPopup}}" bindtap="closeHelp">
+
   <view class="help-modal" catchtap="stopPropagation">
+
     <view class="help-title">使用说明</view>
+
     <view class="help-content">
+
       <text>(1)小程序通过蓝牙连接和控制您的荧光棒或发光手环，请在使用过程中确保蓝牙保持打开状态；</text>
+
       <text>(2)出现设备无法控制状态时，请重新启动小程序或者设备；</text>
+
       <text>(3)设备低电状态可能出现颜色显示不准，请保持设备电量充足。</text>
+
       <text class="help-version">{{helpVersionLine}}</text>
+
     </view>
+
     <view class="help-confirm" bindtap="closeHelp">知道了</view>
+
   </view>
+
 </view>
 
+
+
 <bottom-nav current="music"></bottom-nav>
+
+

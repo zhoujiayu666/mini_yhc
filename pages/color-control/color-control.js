@@ -11,16 +11,16 @@ Page({
     hue: 0,
     saturation: 95,
     brightness: 50,
-    presetEffects: [
-      { id: 'black', name: '黑场', icon: '⚫' },
-      { id: 'white', name: '常亮', icon: '⚪' },
-      { id: 'random', name: '随机', icon: '🎲' },
-      { id: 'flash', name: '快闪', icon: '⚡' },
-      { id: 'blink', name: '眨眼', icon: '👁️' },
-      { id: 'breath', name: '呼吸', icon: '💨' },
-      { id: 'party', name: '聚会', icon: '🎉' },
-      { id: 'rainbow', name: '彩虹', icon: '🌈' },
-      { id: 'star', name: '星空', icon: '⭐' }
+    powerOn: false,
+    lastMode: 'white',
+    effectSpeed: 50,
+    sliderTint: '#D8E8D0',
+    displayModes: [
+      { id: 'white', name: 'ON', icon: './images/modes/white.png', iconActive: './images/modes/white-active.png' },
+      { id: 'flash', name: 'Flash', icon: './images/modes/flash.png', iconActive: './images/modes/flash-active.png' },
+      { id: 'breath', name: 'Dimming', icon: './images/modes/breath.png', iconActive: './images/modes/breath-active.png' },
+      { id: 'party', name: 'Party', icon: './images/modes/party.png', iconActive: './images/modes/party-active.png' },
+      { id: 'rainbow', name: 'Rainbow', icon: './images/modes/rainbow.png', iconActive: './images/modes/rainbow-active.png' }
     ],
     selectedEffect: null,
     /** 随机模式：固定色相，仅调亮度时不再重抽 */
@@ -40,7 +40,36 @@ Page({
       selectedEffect: this.data.selectedEffect,
       hue: this.data.hue,
       saturation: this.data.saturation,
-      randomHue: this.data.randomHue
+      randomHue: this.data.randomHue,
+      powerOn: this.data.powerOn,
+      lastMode: this.data.lastMode,
+      effectSpeed: this.data.effectSpeed
+    };
+  },
+
+  updateSliderTint() {
+    const { hue, saturation } = this.data;
+    const tint = `hsl(${hue}, ${Math.round(saturation * 0.35)}%, 78%)`;
+    if (tint !== this.data.sliderTint) {
+      this.setData({ sliderTint: tint });
+    }
+  },
+
+  getBreathTiming(speed) {
+    const ratio = (typeof speed === 'number' ? speed : 50) / 100;
+    const period = Math.round(4500 - ratio * 3700);
+    const duty = Math.round(period * 0.25);
+    return { period, duty };
+  },
+
+  getFlashTiming(speed) {
+    const ratio = (typeof speed === 'number' ? speed : 50) / 100;
+    const base = Math.round(20 - ratio * 14);
+    return {
+      onMin: Math.max(2, base - 4),
+      onMax: base,
+      offMin: Math.max(4, base - 2),
+      offMax: base + 4
     };
   },
 
@@ -59,12 +88,19 @@ Page({
       patch.hue = typeof saved.hue === 'number' ? saved.hue : this.data.hue;
       patch.saturation =
         typeof saved.saturation === 'number' ? saved.saturation : this.data.saturation;
+      if (typeof saved.effectSpeed === 'number') {
+        patch.effectSpeed = saved.effectSpeed;
+      }
+      if (typeof saved.lastMode === 'string') {
+        patch.lastMode = saved.lastMode;
+      }
+      if (typeof saved.powerOn === 'boolean') {
+        patch.powerOn = saved.powerOn;
+      } else {
+        patch.powerOn = saved.selectedEffect !== 'black';
+      }
       if (typeof saved.randomHue === 'number') {
         patch.randomHue = saved.randomHue;
-      } else if (saved.selectedEffect === 'random') {
-        const rh = Math.floor(Math.random() * 360);
-        patch.randomHue = rh;
-        patch.hue = rh;
       } else {
         patch.randomHue = null;
       }
@@ -76,8 +112,15 @@ Page({
       }
     }
 
+    const validModes = ['white', 'flash', 'breath', 'party', 'rainbow', 'black'];
+    if (patch.selectedEffect && !validModes.includes(patch.selectedEffect)) {
+      patch.selectedEffect = patch.powerOn === false ? 'black' : 'white';
+      patch.lastMode = 'white';
+    }
+
     this.setData(this.mergeScrollTop(patch), () => {
-      if (this.data.isConnected && this.data.selectedEffect) {
+      this.updateSliderTint();
+      if (this.data.isConnected && this.data.powerOn && this.data.selectedEffect) {
         this.sendEffectToDevice(this.data.selectedEffect);
       }
     });
@@ -181,40 +224,85 @@ Page({
    * 色轮颜色改变
    */
   onColorChange(e) {
+    if (!this.data.powerOn) return;
     const { hue, saturation, brightness } = e.detail;
+    const patch = {
+      hue,
+      saturation,
+      brightness: brightness || this.data.brightness
+    };
 
-    // 如果没有选中任何模式，只更新显示，不发送命令
     if (!this.data.selectedEffect) {
-      this.setData(
-        this.mergeScrollTop({
-          hue,
-          saturation,
-          brightness: brightness || this.data.brightness
-        }),
-        () => this.syncColorControlStateToGlobal()
-      );
+      this.setData(this.mergeScrollTop(patch), () => {
+        this.updateSliderTint();
+        this.syncColorControlStateToGlobal();
+      });
       return;
     }
 
-    // 已选中某个模式时：更新颜色，并按照当前模式重新发送效果数据（保持模式不变，例如常亮）
-    this.setData(
-      this.mergeScrollTop({
-        hue,
-        saturation,
-        brightness: brightness || this.data.brightness
-      }),
-      () => {
+    this.setData(this.mergeScrollTop(patch), () => {
+      this.updateSliderTint();
+      this.syncColorControlStateToGlobal();
+      this.sendEffectToDevice(this.data.selectedEffect);
+    });
+  },
+
+  onColorAreaTap() {
+    if (!this.data.powerOn) {
+      wx.showToast({ title: '请先开启电源', icon: 'none' });
+    }
+  },
+
+  onPowerChange(e) {
+    const powerOn = !!e.detail.value;
+    if (!powerOn) {
+      const lastMode = this.data.selectedEffect && this.data.selectedEffect !== 'black'
+        ? this.data.selectedEffect
+        : this.data.lastMode || 'white';
+      this.setData(this.mergeScrollTop({
+        powerOn: false,
+        lastMode,
+        selectedEffect: 'black'
+      }), () => {
         this.syncColorControlStateToGlobal();
+        if (this.data.isConnected) {
+          this.sendEffectToDevice('black');
+        }
+      });
+      return;
+    }
+
+    if (!this.ensureConnectedOrGoGuide()) {
+      this.setData(this.mergeScrollTop({ powerOn: false }));
+      return;
+    }
+
+    const mode = this.data.lastMode || 'white';
+    this.setData(this.mergeScrollTop({
+      powerOn: true,
+      selectedEffect: mode
+    }), () => {
+      this.syncColorControlStateToGlobal();
+      this.sendEffectToDevice(mode);
+    });
+  },
+
+  onSpeedChange(e) {
+    if (!this.data.powerOn || !this.ensureConnectedOrToast()) return;
+    const effectSpeed = e.detail.value;
+    this.setData(this.mergeScrollTop({ effectSpeed }), () => {
+      this.syncColorControlStateToGlobal();
+      if (this.data.selectedEffect) {
         this.sendEffectToDevice(this.data.selectedEffect);
       }
-    );
+    });
   },
 
   /**
    * 亮度改变
    */
   onBrightnessChange(e) {
-    if (!this.ensureConnectedOrToast()) {
+    if (!this.data.powerOn || !this.ensureConnectedOrToast()) {
       return;
     }
     const brightness = e.detail.value;
@@ -229,46 +317,20 @@ Page({
   /**
    * 亮度减少
    */
-  decreaseBrightness() {
-    if (!this.ensureConnectedOrToast()) {
-      return;
-    }
-    const brightness = Math.max(0, this.data.brightness - 5);
-    this.setData(this.mergeScrollTop({ brightness }), () => {
-      this.syncColorControlStateToGlobal();
-      if (this.data.selectedEffect) {
-        this.sendEffectToDevice(this.data.selectedEffect);
-      }
-    });
-  },
-
   /**
-   * 亮度增加
-   */
-  increaseBrightness() {
-    if (!this.ensureConnectedOrToast()) {
-      return;
-    }
-    const brightness = Math.min(100, this.data.brightness + 5);
-    this.setData(this.mergeScrollTop({ brightness }), () => {
-      this.syncColorControlStateToGlobal();
-      if (this.data.selectedEffect) {
-        this.sendEffectToDevice(this.data.selectedEffect);
-      }
-    });
-  },
-
-  /**
-   * 选择预设效果
+   * 选择模式
    */
   selectEffect(e) {
+    if (!this.data.powerOn) {
+      wx.showToast({ title: '请先开启电源', icon: 'none' });
+      return;
+    }
     if (!this.ensureConnectedOrGoGuide()) {
       return;
     }
     const { effect } = e.currentTarget.dataset;
     
-    // 如果选择的是同一个效果，不重复发送（随机模式除外，随机每次点击都要换颜色）
-    if (this.data.selectedEffect === effect.id && effect.id !== 'random') {
+    if (this.data.selectedEffect === effect.id) {
       return;
     }
     
@@ -282,14 +344,11 @@ Page({
       this.starTimer = null;
     }
     
-    const patch = { selectedEffect: effect.id };
-    if (effect.id === 'random') {
-      const newHue = Math.floor(Math.random() * 360);
-      patch.randomHue = newHue;
-      patch.hue = newHue;
-    } else {
-      patch.randomHue = null;
-    }
+    const patch = {
+      selectedEffect: effect.id,
+      lastMode: effect.id,
+      randomHue: null
+    };
 
     this.setData(this.mergeScrollTop(patch), () => {
       this.syncColorControlStateToGlobal();
@@ -375,35 +434,43 @@ Page({
           break;
         }
           
-        case 'flash':
-          // 快闪
-          frame = protocol.buildQuickFlashFrame(
-            frameSeq,
+        case 'flash': {
+          const rgb = protocol.hsbToRgb(
             this.data.hue,
             this.data.saturation,
             this.data.brightness
           );
+          const flashTiming = this.getFlashTiming(this.data.effectSpeed);
+          frame = protocol.buildFlashFrame(
+            frameSeq,
+            rgb.r,
+            rgb.g,
+            rgb.b,
+            flashTiming.onMin,
+            flashTiming.onMax,
+            flashTiming.offMin,
+            flashTiming.offMax
+          );
           break;
+        }
           
-        case 'blink':
-          // 眨眼（呼吸灯，周期1000ms）
-          frame = protocol.buildBlinkFrame(
-            frameSeq,
+        case 'breath': {
+          const rgb = protocol.hsbToRgb(
             this.data.hue,
             this.data.saturation,
             this.data.brightness
           );
-          break;
-          
-        case 'breath':
-          // 呼吸
-          frame = protocol.buildBreathEffectFrame(
+          const breathTiming = this.getBreathTiming(this.data.effectSpeed);
+          frame = protocol.buildBreathFrame(
             frameSeq,
-            this.data.hue,
-            this.data.saturation,
-            this.data.brightness
+            rgb.r,
+            rgb.g,
+            rgb.b,
+            breathTiming.period,
+            breathTiming.duty
           );
           break;
+        }
           
         case 'party':
           // 聚会（7色随机分布，闪烁模式）
@@ -504,8 +571,8 @@ Page({
     // 立即发送第一次（随机模式）
     sendPartyCycle();
     
-    // 每200ms循环一次，仅用于测试随机模式效果
-    this.partyTimer = setInterval(sendPartyCycle, 200);
+    const interval = Math.max(120, Math.round(420 - (this.data.effectSpeed / 100) * 300));
+    this.partyTimer = setInterval(sendPartyCycle, interval);
   },
   
   /**
@@ -556,8 +623,8 @@ Page({
    */
   showHelp() {
     wx.showModal({
-      title: '智能调光',
-      content: '• 拖动色轮选择颜色\n• 调节亮度滑块控制灯光亮度\n• 点击预设效果快速切换灯光模式',
+      title: '照明控制',
+      content: '• 开启电源后选择模式\n• 拖动色轮选择颜色\n• 调节速度与亮度控制灯光效果',
       showCancel: false,
       confirmText: '知道了'
     });

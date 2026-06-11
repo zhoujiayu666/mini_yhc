@@ -1,23 +1,4 @@
 <!--pages/color-control/color-control.wxml-->
-<navigation-bar title="" back="{{true}}" color="#E0E0E0" background="#121212">
-  <view slot="left" class="logo-container">
-    <view class="logo-icon">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="3" fill="#FFD100"/>
-        <path d="M12 2V6M12 18V22M2 12H6M18 12H22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="#FFD100" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    </view>
-    <text class="logo-text">智能调光</text>
-  </view>
-  <view slot="right" class="help-btn" bindtap="showHelp">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#9E9E9E" stroke-width="2"/>
-      <path d="M9 9C9 7.34315 10.3431 6 12 6C13.6569 6 15 7.34315 15 9C15 10.6569 13.6569 12 12 12V14" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="12" cy="18" r="1" fill="#9E9E9E"/>
-    </svg>
-  </view>
-</navigation-bar>
-
 <scroll-view
   class="scrollarea"
   scroll-y
@@ -25,55 +6,99 @@
   scroll-with-animation="{{false}}"
   bindscroll="onMainScroll"
 >
-  <view class="container">
-    <!-- 色轮区域 -->
-    <view class="color-wheel-section">
-      <color-wheel 
-        hue="{{hue}}"
-        saturation="{{saturation}}"
-        brightness="{{brightness}}"
-        bindchange="onColorChange"
-      ></color-wheel>
+  <view class="container {{powerOn ? '' : 'is-powered-off'}}">
+    <view class="page-header">
+      <text class="page-title">照明控制</text>
     </view>
 
-    <!-- 亮度调节区 -->
-    <view class="brightness-section card">
-      <view class="slider-container">
-        <view class="slider-btn" bindtap="decreaseBrightness">−</view>
-        <view class="slider-wrapper">
-          <view class="slider-track-shell">
-            <slider
-              class="track-slider"
-              value="{{brightness}}"
-              min="0"
-              max="100"
-              step="1"
-              activeColor="#FFD100"
-              backgroundColor="#3D3D3D"
-              block-color="#FFD100"
-              block-size="28"
-              bindchange="onBrightnessChange"
-            />
-          </view>
+    <!-- 电源 -->
+    <view class="section">
+      <text class="section-label">电源</text>
+      <view class="power-card">
+        <view class="power-info">
+          <text class="power-status">{{powerOn ? 'Power ON' : 'Power OFF'}}</text>
+          <text class="power-desc">{{powerOn ? '电源已开启' : '电源已关闭'}}</text>
         </view>
-        <view class="slider-btn" bindtap="increaseBrightness">+</view>
+        <switch
+          class="power-switch"
+          checked="{{powerOn}}"
+          color="#34C759"
+          bindchange="onPowerChange"
+        />
       </view>
     </view>
 
-    <!-- 预设效果区 -->
-    <view class="preset-section">
-      <view class="preset-grid">
-        <view 
-          class="preset-item {{selectedEffect === item.id ? 'active' : ''}}"
-          wx:for="{{presetEffects}}"
+    <!-- 模式 -->
+    <view class="section">
+      <text class="section-label">模式</text>
+      <view class="mode-row">
+        <view
+          class="mode-item {{selectedEffect === item.id ? 'active' : ''}} {{powerOn ? '' : 'disabled'}}"
+          wx:for="{{displayModes}}"
           wx:key="id"
           data-effect="{{item}}"
           bindtap="selectEffect"
         >
-          <view class="preset-icon">{{item.icon}}</view>
-          <text class="preset-name">{{item.name}}</text>
+          <view class="mode-icon-wrap">
+            <image
+              class="mode-icon-img {{powerOn ? '' : 'is-dim'}}"
+              src="{{selectedEffect === item.id ? item.iconActive : item.icon}}"
+              mode="aspectFit"
+            />
+          </view>
+          <text class="mode-name">{{item.name}}</text>
         </view>
       </view>
+    </view>
+
+    <!-- 颜色 -->
+    <view class="section">
+      <text class="section-label">颜色</text>
+      <view class="color-wheel-section" bindtap="onColorAreaTap">
+        <color-wheel
+          hue="{{hue}}"
+          saturation="{{saturation}}"
+          brightness="{{brightness}}"
+          showPreview="{{false}}"
+          bindchange="onColorChange"
+        ></color-wheel>
+      </view>
+    </view>
+
+    <!-- 调节速度 -->
+    <view class="section slider-section">
+      <text class="slider-label">调节速度</text>
+      <slider
+        class="plain-slider"
+        value="{{effectSpeed}}"
+        min="0"
+        max="100"
+        step="1"
+        activeColor="{{sliderTint}}"
+        backgroundColor="#EBEBEB"
+        block-color="#FFFFFF"
+        block-size="22"
+        disabled="{{!powerOn}}"
+        bindchange="onSpeedChange"
+      />
+    </view>
+
+    <!-- 调节亮度 -->
+    <view class="section slider-section">
+      <text class="slider-label">调节亮度</text>
+      <slider
+        class="plain-slider"
+        value="{{brightness}}"
+        min="0"
+        max="100"
+        step="1"
+        activeColor="{{sliderTint}}"
+        backgroundColor="#EBEBEB"
+        block-color="#FFFFFF"
+        block-size="22"
+        disabled="{{!powerOn}}"
+        bindchange="onBrightnessChange"
+      />
     </view>
   </view>
 </scroll-view>

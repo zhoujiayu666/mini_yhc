@@ -1,5 +1,5 @@
 <!--pages/connect-guide/connect-guide.wxml-->
-<navigation-bar title="" back="{{true}}" color="#E0E0E0" background="#121212">
+<navigation-bar title="" back="{{true}}" color="#212121" background="#FFFFFF">
   <view slot="left" class="logo-container">
     <view class="logo-icon">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -12,36 +12,46 @@
 </navigation-bar>
 
 <scroll-view class="scrollarea" scroll-y>
-  <view class="container">
-    <view class="step-row">
-      <text class="step-num">01</text>
-      <view class="step-body">
-        <text class="step-desc">确保荧光棒已安装电池或已充好电</text>
+  <view class="container page-ambient">
+    <view class="guide-hero">
+      <text class="guide-hero-title">快速连接</text>
+      <text class="guide-hero-desc">按以下步骤操作，即可开始控制灯光</text>
+    </view>
+
+    <view class="step-card card">
+      <view class="step-row">
+        <view class="step-num-wrap"><text class="step-num">01</text></view>
+        <view class="step-body">
+          <text class="step-title">安装电池</text>
+          <text class="step-desc">确保荧光棒已安装电池或已充好电</text>
+        </view>
+      </view>
+
+      <view class="step-divider"></view>
+
+      <view class="step-row">
+        <view class="step-num-wrap"><text class="step-num">02</text></view>
+        <view class="step-body">
+          <text class="step-title">开启电源</text>
+          <text class="step-desc">长按设备电源键，直到指示灯亮起</text>
+        </view>
+      </view>
+
+      <view class="step-divider"></view>
+
+      <view class="step-row">
+        <view class="step-num-wrap"><text class="step-num">03</text></view>
+        <view class="step-body step-body--with-connect">
+          <text class="step-title">连接测试</text>
+          <text class="step-desc">按下连接按钮，设备会响应显示一段专属灯光</text>
+          <view class="connect-btn" hover-class="connect-btn-hover" bindtap="goConnect">立即连接</view>
+        </view>
       </view>
     </view>
 
-    <view class="step-row">
-      <text class="step-num">02</text>
-      <view class="step-body">
-        <text class="step-desc">开启电源</text>
-      </view>
-    </view>
-
-    <view class="step-row">
-      <text class="step-num">03</text>
-      <view class="step-body step-body--with-connect">
-        <text class="step-desc">连接设备测试</text>
-        <view class="connect-btn" hover-class="connect-btn-hover" bindtap="goConnect">连接</view>
-        <text class="step-sub">按下连接按钮，设备会响应显示一段专属灯光</text>
-      </view>
-    </view>
-
-    <view class="step-row step-row--notes">
-      <text class="step-num">04</text>
-      <view class="step-body">
-        <text class="notes-title">注意事项：</text>
-        <text class="notes-text">同一场地中，只需开启一部手机即可使用小程序控制多个荧光棒。如有多台手机打开应用，可能出现灯光信号控制干扰</text>
-      </view>
+    <view class="notes-card card">
+      <text class="notes-title">注意事项</text>
+      <text class="notes-text">同一场地中，只需开启一部手机即可使用小程序控制多个荧光棒。如有多台手机打开应用，可能出现灯光信号控制干扰。</text>
     </view>
   </view>
 </scroll-view>

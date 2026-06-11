@@ -3,195 +3,146 @@ page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #121212;
+  background-color: #FFFFFF;
 }
 
-/* scroll-view 需有确定高度才能滚动 */
 .scrollarea {
   flex: 1;
   min-height: 0;
   height: 0;
-  padding-bottom: 0;
 }
 
 .container {
-  /* 预留底部导航（88rpx）+ 安全区，避免最后一排预设被遮挡 */
-  padding: 32rpx 20rpx calc(88rpx + env(safe-area-inset-bottom) + 24rpx);
+  padding: calc(env(safe-area-inset-top) + 24rpx) 40rpx calc(88rpx + env(safe-area-inset-bottom) + 40rpx);
+  box-sizing: border-box;
 }
 
-.logo-container {
+.page-header {
+  margin-bottom: 36rpx;
+}
+
+.page-title {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+  letter-spacing: 1rpx;
+}
+
+.section {
+  margin-bottom: 40rpx;
+}
+
+.section-label,
+.slider-label {
+  display: block;
+  font-size: 26rpx;
+  color: #9E9E9E;
+  margin-bottom: 16rpx;
+  letter-spacing: 1rpx;
+}
+
+/* 电源卡片 */
+.power-card {
   display: flex;
   align-items: center;
-  padding-left: 32rpx;
+  justify-content: space-between;
+  padding: 32rpx 36rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.06);
 }
 
-.logo-icon {
-  width: 48rpx;
-  height: 48rpx;
-  margin-right: 16rpx;
+.power-info {
+  display: flex;
+  flex-direction: column;
 }
 
-.logo-text {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #FFD100;
+.power-status {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 6rpx;
 }
 
-.help-btn {
-  padding: 16rpx 32rpx;
+.power-desc {
+  font-size: 26rpx;
+  color: #9E9E9E;
+}
+
+.power-switch {
+  transform: scale(0.92);
+}
+
+/* 模式行 */
+.mode-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8rpx 0;
+}
+
+.mode-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 10rpx;
 }
 
-/* 色轮区域 */
+/* 模式图标 PNG */
+.mode-icon-img {
+  width: 48rpx;
+  height: 48rpx;
+  display: block;
+}
+
+.mode-icon-img.is-dim {
+  opacity: 0.4;
+}
+
+.mode-name {
+  font-size: 22rpx;
+  color: #757575;
+  text-align: center;
+}
+
+.mode-item.disabled .mode-name {
+  color: #BDBDBD;
+}
+
+.mode-item.active .mode-name {
+  color: #1A1A1A;
+  font-weight: 600;
+}
+
+/* 色轮 */
 .color-wheel-section {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 16rpx 0 8rpx;
+}
+
+.is-powered-off .color-wheel-section {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* 滑块 */
+.slider-section {
+  padding-right: 8rpx;
+}
+
+.plain-slider {
+  margin: 0;
   width: 100%;
-  margin-bottom: 32rpx;
-  padding: 0 32rpx;
-  box-sizing: border-box;
-}
-
-/* 亮度调节区 */
-.brightness-section {
-  margin-bottom: 32rpx;
-}
-
-/* 卡片略贴屏，进度条在屏宽中占比更大（与 app.wxss .card 的 32rpx 左右边距配合） */
-.brightness-section.card {
-  margin-left: 24rpx;
-  margin-right: 24rpx;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.section-title {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #E0E0E0;
-  margin-bottom: 24rpx;
-}
-
-.slider-container {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16rpx;
-}
-
-/* 进度条行拉满卡片内容区（抵消 .card 的 padding:32rpx），轨道显著变长 */
-.brightness-section .slider-container {
-  margin-left: -32rpx;
-  margin-right: -32rpx;
-  padding-left: 16rpx;
-  padding-right: 16rpx;
-  box-sizing: border-box;
-}
-
-/* 参考设计：圆角方按钮 + 黄图标（略缩小，把宽度让给轨道） */
-.slider-btn {
-  width: 56rpx;
-  height: 56rpx;
-  flex-shrink: 0;
-  border-radius: 14rpx;
-  background-color: #2A2A2A;
-  border: 2rpx solid #3D3D3D;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FFD100;
-  font-size: 34rpx;
-  font-weight: 300;
-  line-height: 1;
-}
-
-.slider-btn:active {
-  background-color: #353535;
-}
-
-.slider-wrapper {
-  flex: 1;
-  min-width: 0;
-  margin: 0 10rpx;
-  display: flex;
-  align-items: center;
-}
-
-/* 胶囊形轨道底槽（与原生 slider 叠放） */
-.slider-track-shell {
-  width: 100%;
-  height: 32rpx;
-  border-radius: 32rpx;
-  background-color: #2C2C2C;
-  padding: 0 6rpx;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-}
-
-.track-slider {
-  width: 100%;
-}
-
-.brightness-value {
-  text-align: center;
-  font-size: 24rpx;
-  color: #9E9E9E;
-}
-
-/* 预设效果区 */
-.preset-section {
-  margin-top: 32rpx;
-}
-
-.preset-grid {
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: 24rpx;
-  margin-left: -12rpx;
-  margin-right: -12rpx;
-}
-
-.preset-item {
-  width: calc(33.333% - 24rpx);
-  margin: 0 12rpx 24rpx 12rpx;
-  background-color: #1E1E1E;
-  border: 2rpx solid #333333;
-  border-radius: 24rpx;
-  padding: 32rpx 24rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-sizing: border-box;
-}
-
-.preset-item:active {
-  transform: scale(0.95);
-}
-
-.preset-item.active {
-  background-color: #1E1E1E;  /* 保持背景色不变 */
-  border: 2rpx solid #FFD100;  /* 黄色边框 */
-}
-
-.preset-icon {
-  font-size: 64rpx;
-  margin-bottom: 16rpx;
-  filter: brightness(1);  /* 默认状态 */
-}
-
-.preset-item.active .preset-icon {
-  filter: brightness(1.2) saturate(1.2);  /* 选中时图标更亮 */
-}
-
-.preset-name {
-  font-size: 24rpx;
-  color: #9E9E9E;  /* 默认灰色 */
-}
-
-.preset-item.active .preset-name {
-  color: #FFD100;  /* 选中时文字黄色 */
-  font-weight: 500;
 }

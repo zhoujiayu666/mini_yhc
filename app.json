@@ -8,10 +8,10 @@
     "pages/settings/settings"
   ],
   "window": {
-    "navigationBarTextStyle": "white",
+    "navigationBarTextStyle": "black",
     "navigationStyle": "custom",
-    "backgroundColor": "#121212",
-    "backgroundTextStyle": "light"
+    "backgroundColor": "#FFFFFF",
+    "backgroundTextStyle": "dark"
   },
   "style": "v2",
   "renderer": "skyline",

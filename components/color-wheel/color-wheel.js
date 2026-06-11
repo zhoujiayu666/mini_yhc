@@ -18,6 +18,10 @@ Component({
       type: Number,
       value: 100,
       observer: 'updatePreviewColor'
+    },
+    showPreview: {
+      type: Boolean,
+      value: true
     }
   },
 

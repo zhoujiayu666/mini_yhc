@@ -16,7 +16,11 @@ Page({
     isScanning: false,
     deviceList: [],
     showDeviceList: false,
-    currentDevice: null
+    currentDevice: null,
+    previewHue: 45,
+    previewSaturation: 95,
+    previewBrightness: 100,
+    brandLogoSrc: './images/brand-logo.png'
   },
 
   /**
@@ -49,6 +53,7 @@ Page({
   onShow() {
     // 更新连接状态
     this.updateConnectionStatus();
+    this.syncColorPreview();
     // 从连接引导页「连接」进入：等同点击「搜索设备」
     if (app.globalData.openDeviceSearchOnIndexShow) {
       app.globalData.openDeviceSearchOnIndexShow = false;
@@ -122,6 +127,19 @@ Page({
   /**
    * 更新连接状态
    */
+  syncColorPreview() {
+    const cc = app.globalData.colorControlState;
+    if (!cc) return;
+    const patch = {};
+    if (typeof cc.hue === 'number') patch.previewHue = cc.hue;
+    if (typeof cc.saturation === 'number') patch.previewSaturation = cc.saturation;
+    if (typeof cc.brightness === 'number') {
+      patch.previewBrightness = cc.brightness;
+      patch.brightness = cc.brightness;
+    }
+    if (Object.keys(patch).length) this.setData(patch);
+  },
+
   updateConnectionStatus() {
     const isConnected = app.globalData.isConnected || bleController.isConnected;
     const patch = {
@@ -132,6 +150,11 @@ Page({
     const cc = app.globalData.colorControlState;
     if (cc && typeof cc.brightness === 'number') {
       patch.brightness = cc.brightness;
+    }
+    if (cc && typeof cc.hue === 'number') {
+      patch.previewHue = cc.hue;
+      patch.previewSaturation = typeof cc.saturation === 'number' ? cc.saturation : 95;
+      patch.previewBrightness = typeof cc.brightness === 'number' ? cc.brightness : 100;
     }
     if (this.data.deviceList && this.data.deviceList.length > 0) {
       patch.deviceList = this.annotateDeviceConnection(this.data.deviceList);

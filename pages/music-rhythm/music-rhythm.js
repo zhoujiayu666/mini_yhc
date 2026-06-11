@@ -29,7 +29,8 @@ Page({
     recordingPending: false, // 已调用 start、尚未收到 onStart（用于避免未录音时 stop 报错）
     showHelpPopup: false,
     /** 帮助弹窗一行展示版本（避免 Android 上连续两个 text 第二行不渲染） */
-    helpVersionLine: '小程序版本：V1.0.2'
+    helpVersionLine: '小程序版本：V1.0.2',
+    spectrumBars: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
   },
 
   /**
@@ -553,7 +554,8 @@ Page({
       this.setData({
         audioLevel: volumeLevel,
         volumeHistory: history,
-        audioHistory: audioHistory
+        audioHistory: audioHistory,
+        spectrumBars: this.buildSpectrumBars(volumeLevel)
       });
     } catch (error) {
       console.error('处理音频帧失败', error);
@@ -867,6 +869,22 @@ Page({
   /**
    * 灵敏度改变
    */
+  buildSpectrumBars(level) {
+    const base = Math.max(0.12, Math.min(1, level / 100));
+    const factors = [0.45, 0.62, 0.78, 0.95, 1, 0.92, 0.85, 0.72, 0.58, 0.48, 0.55, 0.68];
+    return factors.map((f, i) => {
+      const wobble = 0.08 * Math.sin(Date.now() / 120 + i * 0.9);
+      return Math.max(0.1, Math.min(1, base * f + wobble));
+    });
+  },
+
+  setSensitivityPreset(e) {
+    const value = Number(e.currentTarget.dataset.value);
+    if (!Number.isFinite(value)) return;
+    this.setData({ sensitivity: value });
+    this.sendSensitivityToDevice();
+  },
+
   onSensitivityChange(e) {
     const sensitivity = e.detail.value;
     this.setData({ sensitivity });
