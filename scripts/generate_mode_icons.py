@@ -75,12 +75,14 @@ def draw_party(draw, color):
 
 
 def draw_rainbow(draw, color):
-    for i, (rw, rh) in enumerate([(52, 52), (38, 38), (24, 24)]):
+    # 与其他图标对齐：顶部约 y=20（同太阳/星星），底部约 y=54
+    base_y = CENTER + 6
+    for i, (rw, rh) in enumerate([(44, 34), (32, 24), (20, 14)]):
         box = (
             CENTER - rw // 2,
-            CENTER + 10 - rh,
+            base_y - rh,
             CENTER + rw // 2,
-            CENTER + 10
+            base_y
         )
         opacity = 255 - i * 50
         c = (*color[:3], opacity)
