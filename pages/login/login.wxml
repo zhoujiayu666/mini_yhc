@@ -1,0 +1,22 @@
+<page-nav-bar></page-nav-bar>
+<view class="login-page">
+  <view class="login-header">
+    <text class="login-title">欢迎使用</text>
+    <text class="login-subtitle">请使用手机号注册/登录</text>
+  </view>
+
+  <view class="login-form">
+    <view class="input-row">
+      <text class="input-prefix">+86</text>
+      <input
+        class="phone-input"
+        type="number"
+        maxlength="11"
+        placeholder="请输入手机号"
+        value="{{phone}}"
+        bindinput="onPhoneInput"
+      />
+    </view>
+    <button class="login-btn" loading="{{loading}}" disabled="{{loading}}" bindtap="onLogin">注册 / 登录</button>
+  </view>
+</view>

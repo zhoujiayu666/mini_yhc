@@ -1,0 +1,7 @@
+{
+  "disableScroll": true,
+  "usingComponents": {
+    "main-tab-bar": "/components/main-tab-bar/main-tab-bar",
+    "color-wheel": "/components/color-wheel/color-wheel"
+  }
+}

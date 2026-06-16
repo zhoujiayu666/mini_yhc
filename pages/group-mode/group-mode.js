@@ -2,6 +2,25 @@ const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
 const app = getApp();
 
+const MODE_TO_EFFECT = {
+  white: '常亮',
+  flash: '快闪',
+  breath: '呼吸',
+  party: '聚会',
+  rainbow: '彩虹'
+};
+
+const EFFECT_TO_MODE_ID = {
+  常亮: 'white',
+  快闪: 'flash',
+  呼吸: 'breath',
+  聚会: 'party',
+  彩虹: 'rainbow',
+  随机: 'white',
+  眨眼: 'breath',
+  星空: 'party'
+};
+
 Page({
   data: {
     deviceStatus: '未连接',
@@ -41,7 +60,19 @@ Page({
       password: ''
     },
     groupControlEffect: '常亮',
-    groupControlBrightness: 80
+    groupControlBrightness: 80,
+    powerOn: true,
+    lastMode: 'white',
+    selectedModeId: 'white',
+    effectSpeed: 50,
+    sliderTint: '#D8E8D0',
+    displayModes: [
+      { id: 'white', name: 'ON', icon: './images/modes/white.png', iconActive: './images/modes/white-active.png' },
+      { id: 'flash', name: 'Flash', icon: './images/modes/flash.png', iconActive: './images/modes/flash-active.png' },
+      { id: 'breath', name: 'Dimming', icon: './images/modes/breath.png', iconActive: './images/modes/breath-active.png' },
+      { id: 'party', name: 'Party', icon: './images/modes/party.png', iconActive: './images/modes/party-active.png' },
+      { id: 'rainbow', name: 'Rainbow', icon: './images/modes/rainbow.png', iconActive: './images/modes/rainbow-active.png' }
+    ]
   },
 
   onLoad() {
@@ -872,18 +903,20 @@ Page({
     this._memberDispatchBaselineSignature = isMemberDetail
       ? this.buildControlSignature(id, gcs)
       : '';
+    const savedEffect = group.controlState ? group.controlState.effect : '常亮';
+    const uiPatch = this.getControlUiPatchFromEffect(savedEffect, 'white');
     this.setData({
       groupDetailMode: true,
       activeGroup: group,
       activeUserRole: group.activeUserRole || '',
       activeUserNickname: group.activeUserNickname || '',
       memberAwaitingNewDispatch: isMemberDetail,
-      groupControlEffect: group.controlState ? group.controlState.effect : '常亮',
       groupControlBrightness: br,
       previewHue,
       previewSaturation,
-      previewBrightness: br
-    });
+      previewBrightness: br,
+      ...uiPatch
+    }, () => this.updateSliderTint());
     this.applyGroupTab();
     if (group.activeUserRole === 'admin') {
       this.startAdminPresenceHeartbeat(id);
@@ -1072,14 +1105,112 @@ Page({
     }
   },
 
+  getControlUiPatchFromEffect(effect, lastMode) {
+    const e = (effect || '常亮').trim();
+    const prevLast = lastMode || this.data.lastMode || 'white';
+    if (e === '黑场') {
+      return {
+        powerOn: false,
+        selectedModeId: '',
+        lastMode: EFFECT_TO_MODE_ID[prevLast] ? prevLast : 'white',
+        groupControlEffect: '黑场'
+      };
+    }
+    const modeId = EFFECT_TO_MODE_ID[e] || 'white';
+    return {
+      powerOn: true,
+      selectedModeId: modeId,
+      lastMode: modeId,
+      groupControlEffect: e
+    };
+  },
+
+  updateSliderTint() {
+    const { previewHue, previewSaturation } = this.data;
+    const tint = `hsl(${previewHue}, ${Math.round(previewSaturation * 0.35)}%, 78%)`;
+    if (tint !== this.data.sliderTint) {
+      this.setData({ sliderTint: tint });
+    }
+  },
+
+  getStepMsFromSpeed(speed) {
+    const ratio = (typeof speed === 'number' ? speed : 50) / 100;
+    return Math.max(120, Math.round(420 - ratio * 300));
+  },
+
+  onAdminPowerChange(e) {
+    const powerOn = !!e.detail.value;
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+      this._autoApplyTimer = null;
+    }
+    if (!powerOn) {
+      const lastMode = this.data.selectedModeId || this.data.lastMode || 'white';
+      this.setData({
+        powerOn: false,
+        lastMode,
+        selectedModeId: '',
+        groupControlEffect: '黑场'
+      }, () => {
+        this.applyGroupControl({ silent: true }).catch(() => {});
+      });
+      return;
+    }
+    const modeId = this.data.lastMode || 'white';
+    const effect = MODE_TO_EFFECT[modeId] || '常亮';
+    this.setData({
+      powerOn: true,
+      selectedModeId: modeId,
+      groupControlEffect: effect
+    }, () => {
+      this.applyGroupControl({ silent: true }).catch(() => {});
+    });
+  },
+
+  onAdminModeChange(e) {
+    if (!this.data.powerOn) {
+      wx.showToast({ title: '请先开启电源', icon: 'none' });
+      return;
+    }
+    const modeId = e.currentTarget.dataset.mode;
+    if (!modeId || modeId === this.data.selectedModeId) {
+      return;
+    }
+    const effect = MODE_TO_EFFECT[modeId];
+    if (!effect) {
+      return;
+    }
+    if (this._autoApplyTimer) {
+      clearTimeout(this._autoApplyTimer);
+      this._autoApplyTimer = null;
+    }
+    this.setData({
+      selectedModeId: modeId,
+      lastMode: modeId,
+      groupControlEffect: effect
+    });
+    this.applyGroupControl({ silent: true }).catch(() => {});
+  },
+
+  onAdminSpeedChange(e) {
+    if (!this.data.powerOn) {
+      return;
+    }
+    this.setData({ effectSpeed: Number(e.detail.value || 0) });
+    this.applyGroupControl({ silent: true }).catch(() => {});
+  },
+
   onPreviewColorChange(e) {
+    if (!this.data.powerOn) {
+      return;
+    }
     const { hue, saturation, brightness } = e.detail;
     this.setData({
       previewHue: hue,
       previewSaturation: saturation,
       previewBrightness: brightness,
       groupControlBrightness: brightness
-    });
+    }, () => this.updateSliderTint());
     if (this.data.groupControlEffect === '随机') {
       if (this._autoApplyTimer) {
         clearTimeout(this._autoApplyTimer);
@@ -1096,18 +1227,10 @@ Page({
     }, 160);
   },
 
-  onControlEffectChange(e) {
-    if (this._autoApplyTimer) {
-      clearTimeout(this._autoApplyTimer);
-      this._autoApplyTimer = null;
-    }
-    this.setData({
-      groupControlEffect: e.currentTarget.dataset.effect
-    });
-    this.applyGroupControl({ silent: true }).catch(() => {});
-  },
-
   onControlBrightnessChange(e) {
+    if (!this.data.powerOn) {
+      return;
+    }
     const v = Number(e.detail.value || 0);
     this.setData({
       groupControlBrightness: v,
@@ -1147,7 +1270,7 @@ Page({
         });
       }
       const dynamicSeed = Math.floor(Math.random() * 256);
-      const dynamicStepMs = 200;
+      const dynamicStepMs = this.getStepMsFromSpeed(this.data.effectSpeed);
       if (!silent) {
         wx.showLoading({ title: '下发中...', mask: true });
       }

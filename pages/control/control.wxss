@@ -1,0 +1,401 @@
+/**color-control.wxss**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+}
+
+.scrollarea {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+}
+
+.container {
+  padding: 24rpx 40rpx calc(100rpx + env(safe-area-inset-bottom) + 40rpx);
+  box-sizing: border-box;
+}
+
+.section {
+  margin-bottom: 40rpx;
+}
+
+.section-label,
+.slider-label {
+  display: block;
+  font-size: 26rpx;
+  color: #9E9E9E;
+  margin-bottom: 16rpx;
+  letter-spacing: 1rpx;
+}
+
+/* 电源卡片 */
+.power-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx 36rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.06);
+}
+
+.power-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.power-status {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 6rpx;
+}
+
+.power-desc {
+  font-size: 26rpx;
+  color: #9E9E9E;
+}
+
+.power-switch {
+  transform: scale(0.92);
+}
+
+/* 模式行 */
+.mode-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8rpx 0;
+}
+
+.mode-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10rpx;
+}
+
+/* 模式图标 PNG */
+.mode-icon-img {
+  width: 48rpx;
+  height: 48rpx;
+  display: block;
+}
+
+.mode-icon-img.is-dim {
+  opacity: 0.4;
+}
+
+.mode-name {
+  font-size: 22rpx;
+  color: #757575;
+  text-align: center;
+}
+
+.mode-item.disabled .mode-name {
+  color: #BDBDBD;
+}
+
+.mode-item.active .mode-name {
+  color: #1A1A1A;
+  font-weight: 600;
+}
+
+/* 色轮 */
+.color-wheel-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16rpx 0 8rpx;
+}
+
+.is-powered-off .color-wheel-section {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* 滑块 */
+.slider-section {
+  padding-right: 8rpx;
+}
+
+.plain-slider {
+  margin: 0;
+  width: 100%;
+}
+
+/* 音乐律动 */
+.rhythm-divider {
+  padding-top: 16rpx;
+  border-top: 1rpx solid #F0F0F0;
+}
+
+.rhythm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.rhythm-label {
+  margin-bottom: 0;
+}
+
+.rhythm-help-btn {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #F7F7F8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rhythm-help-q {
+  font-size: 28rpx;
+  color: #9E9E9E;
+  font-weight: 600;
+}
+
+.rhythm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.06);
+}
+
+.rhythm-mic {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background: #F7F7F8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+
+.rhythm-mic.listening {
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+}
+
+.rhythm-mic-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rhythm-mic-head {
+  width: 48rpx;
+  height: 64rpx;
+  border-radius: 24rpx 24rpx 12rpx 12rpx;
+  background: #9E9E9E;
+}
+
+.rhythm-mic-stem {
+  width: 8rpx;
+  height: 24rpx;
+  background: #9E9E9E;
+  margin-top: 4rpx;
+}
+
+.rhythm-mic-base {
+  width: 56rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: #9E9E9E;
+  margin-top: 4rpx;
+}
+
+.rhythm-stop-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rhythm-stop-dot {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  background: #1A1A1A;
+  margin-bottom: 8rpx;
+}
+
+.rhythm-stop-text {
+  font-size: 24rpx;
+  color: #1A1A1A;
+  font-weight: 600;
+}
+
+.rhythm-hint {
+  font-size: 26rpx;
+  color: #9E9E9E;
+  margin-bottom: 16rpx;
+}
+
+.rhythm-spectrum {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8rpx;
+  height: 80rpx;
+  width: 100%;
+}
+
+.rhythm-spectrum-bar {
+  width: 12rpx;
+  height: 80rpx;
+  border-radius: 6rpx;
+  background: linear-gradient(180deg, #FFD100 0%, #FFC400 100%);
+  transform-origin: bottom center;
+}
+
+.rhythm-sens-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.rhythm-sens-value {
+  font-size: 26rpx;
+  color: #9E9E9E;
+}
+
+.rhythm-presets {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.rhythm-preset {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #9E9E9E;
+  background: #F7F7F8;
+}
+
+.rhythm-preset.active {
+  background: #FFD100;
+  color: #1A1A1A;
+  font-weight: 600;
+}
+
+.help-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 2000;
+}
+
+.help-modal {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 36rpx 36rpx calc(36rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.help-title {
+  font-size: 36rpx;
+  color: #1A1A1A;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.help-content text {
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: #757575;
+}
+
+.help-version {
+  color: #9E9E9E;
+  margin-top: 8rpx;
+}
+
+.help-confirm {
+  margin-top: 32rpx;
+  height: 88rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+  color: #1A1A1A;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.device-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background-color: var(--card-bg);
+  border-radius: var(--radius-md);
+}
+
+.device-item:active {
+  background: var(--brand-yellow-light);
+}
+
+.device-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.device-item-name {
+  font-size: 28rpx;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.device-connected-tag {
+  font-size: 22rpx;
+  color: var(--brand-yellow-text);
+  background: var(--brand-yellow-soft);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.rssi-text {
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+}

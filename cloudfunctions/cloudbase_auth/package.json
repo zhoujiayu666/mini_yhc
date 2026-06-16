@@ -1,0 +1,9 @@
+{
+  "name": "cloudbase_auth",
+  "version": "1.0.0",
+  "description": "环境共享鉴权（资源方有米必须部署）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

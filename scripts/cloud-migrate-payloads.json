@@ -1,0 +1,21 @@
+{
+  "_说明": "云开发控制台 → 云函数 migrate-app-scope → 测试，逐条粘贴执行",
+  "1_status_统计待补标": {
+    "action": "status",
+    "secret": "topuyi-migrate-app-scope-change-me"
+  },
+  "2_backfill_试跑不写库": {
+    "action": "backfill",
+    "secret": "topuyi-migrate-app-scope-change-me",
+    "dryRun": true
+  },
+  "3_backfill_正式写入": {
+    "action": "backfill",
+    "secret": "topuyi-migrate-app-scope-change-me",
+    "dryRun": false
+  },
+  "4_verify_补标后校验": {
+    "action": "verify",
+    "secret": "topuyi-migrate-app-scope-change-me"
+  }
+}

@@ -1,27 +1,12 @@
 <!--pages/index/index.wxml-->
 
-<navigation-bar title="" back="{{false}}" color="#212121" background="#FFFFFF">
-
-  <view slot="center" class="logo-container">
-    <image
-      class="brand-logo"
-      src="{{brandLogoSrc}}"
-      mode="aspectFit"
-      show-menu-by-longpress="{{false}}"
-    />
-  </view>
-
+<page-nav-bar>
   <view slot="right" class="help-btn" bindtap="showHelp">
-
     <view class="help-btn-icon">
-
       <text class="help-q">?</text>
-
     </view>
-
   </view>
-
-</navigation-bar>
+</page-nav-bar>
 
 
 

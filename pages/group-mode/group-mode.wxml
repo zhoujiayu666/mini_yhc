@@ -84,38 +84,89 @@
           <text class="detail-group-id">ID: {{activeGroup.id}}</text>
         </view>
 
-        <!-- 管理员：缩小版调光 + 统一下发 -->
+        <!-- 管理员：统一下发（与调光页一致） -->
         <block wx:if="{{activeUserRole === 'admin'}}">
-          <text class="section-label">调光预览（下发参数）</text>
-          <view class="mini-wheel-wrap">
-            <color-wheel
-              hue="{{previewHue}}"
-              saturation="{{previewSaturation}}"
-              brightness="{{previewBrightness}}"
-              size="{{360}}"
-              bindchange="onPreviewColorChange"
-            ></color-wheel>
-          </view>
+          <view class="admin-lighting {{powerOn ? '' : 'is-powered-off'}}">
+            <text class="admin-lighting-title">统一下发</text>
 
-          <view class="admin-panel detail-admin-control">
-            <text class="admin-title">统一下发（成员灯光）</text>
-            <view class="effect-row">
-              <text class="effect-label">效果</text>
-              <view class="effect-grid">
-                <view class="effect-chip {{groupControlEffect === '黑场' ? 'active' : ''}}" data-effect="黑场" bindtap="onControlEffectChange">黑场</view>
-                <view class="effect-chip {{groupControlEffect === '常亮' ? 'active' : ''}}" data-effect="常亮" bindtap="onControlEffectChange">常亮</view>
-                <view class="effect-chip {{groupControlEffect === '随机' ? 'active' : ''}}" data-effect="随机" bindtap="onControlEffectChange">随机</view>
-                <view class="effect-chip {{groupControlEffect === '快闪' ? 'active' : ''}}" data-effect="快闪" bindtap="onControlEffectChange">快闪</view>
-                <view class="effect-chip {{groupControlEffect === '眨眼' ? 'active' : ''}}" data-effect="眨眼" bindtap="onControlEffectChange">眨眼</view>
-                <view class="effect-chip {{groupControlEffect === '呼吸' ? 'active' : ''}}" data-effect="呼吸" bindtap="onControlEffectChange">呼吸</view>
-                <view class="effect-chip {{groupControlEffect === '聚会' ? 'active' : ''}}" data-effect="聚会" bindtap="onControlEffectChange">聚会</view>
-                <view class="effect-chip {{groupControlEffect === '彩虹' ? 'active' : ''}}" data-effect="彩虹" bindtap="onControlEffectChange">彩虹</view>
-                <view class="effect-chip {{groupControlEffect === '星空' ? 'active' : ''}}" data-effect="星空" bindtap="onControlEffectChange">星空</view>
+            <view class="lighting-section">
+              <text class="lighting-label">电源</text>
+              <view class="power-card">
+                <view class="power-info">
+                  <text class="power-status">{{powerOn ? 'Power ON' : 'Power OFF'}}</text>
+                  <text class="power-desc">{{powerOn ? '统一下发已开启' : '统一下发已关闭'}}</text>
+                </view>
+                <switch class="power-switch" checked="{{powerOn}}" color="#34C759" bindchange="onAdminPowerChange" />
               </view>
             </view>
-            <view class="brightness-row">
-              <text class="effect-label">下发亮度 {{groupControlBrightness}}%</text>
-              <slider min="1" max="100" step="1" value="{{groupControlBrightness}}" activeColor="#FFD100" backgroundColor="#E0E0E0" bindchange="onControlBrightnessChange" />
+
+            <view class="lighting-section">
+              <text class="lighting-label">模式</text>
+              <view class="mode-row">
+                <view
+                  class="mode-item {{selectedModeId === item.id ? 'active' : ''}} {{powerOn ? '' : 'disabled'}}"
+                  wx:for="{{displayModes}}"
+                  wx:key="id"
+                  data-mode="{{item.id}}"
+                  bindtap="onAdminModeChange"
+                >
+                  <view class="mode-icon-wrap">
+                    <image
+                      class="mode-icon-img {{powerOn ? '' : 'is-dim'}}"
+                      src="{{selectedModeId === item.id ? item.iconActive : item.icon}}"
+                      mode="aspectFit"
+                    />
+                  </view>
+                  <text class="mode-name">{{item.name}}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="lighting-section">
+              <text class="lighting-label">颜色</text>
+              <view class="color-wheel-section">
+                <color-wheel
+                  hue="{{previewHue}}"
+                  saturation="{{previewSaturation}}"
+                  brightness="{{previewBrightness}}"
+                  showPreview="{{false}}"
+                  bindchange="onPreviewColorChange"
+                ></color-wheel>
+              </view>
+            </view>
+
+            <view class="lighting-section slider-section">
+              <text class="slider-label">调节速度</text>
+              <slider
+                class="plain-slider"
+                value="{{effectSpeed}}"
+                min="0"
+                max="100"
+                step="1"
+                activeColor="{{sliderTint}}"
+                backgroundColor="#EBEBEB"
+                block-color="#FFFFFF"
+                block-size="22"
+                disabled="{{!powerOn}}"
+                bindchange="onAdminSpeedChange"
+              />
+            </view>
+
+            <view class="lighting-section slider-section">
+              <text class="slider-label">调节亮度</text>
+              <slider
+                class="plain-slider"
+                value="{{groupControlBrightness}}"
+                min="1"
+                max="100"
+                step="1"
+                activeColor="{{sliderTint}}"
+                backgroundColor="#EBEBEB"
+                block-color="#FFFFFF"
+                block-size="22"
+                disabled="{{!powerOn}}"
+                bindchange="onControlBrightnessChange"
+              />
             </view>
           </view>
         </block>

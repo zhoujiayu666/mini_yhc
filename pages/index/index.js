@@ -54,13 +54,6 @@ Page({
     // 更新连接状态
     this.updateConnectionStatus();
     this.syncColorPreview();
-    // 从连接引导页「连接」进入：等同点击「搜索设备」
-    if (app.globalData.openDeviceSearchOnIndexShow) {
-      app.globalData.openDeviceSearchOnIndexShow = false;
-      setTimeout(() => {
-        this.searchDevices();
-      }, 0);
-    }
   },
 
   /**

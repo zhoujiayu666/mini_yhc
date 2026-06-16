@@ -1,9 +1,16 @@
 {
   "pages": [
+    "pages/login/login",
+    "pages/control/control",
+    "pages/room/room",
+    "pages/product/product",
+    "pages/show/show",
+    "pages/around/around",
+    "pages/mine/mine",
+    "pages/connect-guide/connect-guide",
     "pages/index/index",
     "pages/group-mode/group-mode",
     "pages/color-control/color-control",
-    "pages/connect-guide/connect-guide",
     "pages/music-rhythm/music-rhythm",
     "pages/settings/settings"
   ],
@@ -29,7 +36,8 @@
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents",
   "usingComponents": {
-    "bottom-nav": "/components/bottom-nav/bottom-nav"
+    "main-tab-bar": "/components/main-tab-bar/main-tab-bar",
+    "page-nav-bar": "/components/page-nav-bar/page-nav-bar"
   },
   "permission": {
     "scope.bluetooth": {

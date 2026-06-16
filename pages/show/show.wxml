@@ -1,0 +1,9 @@
+<page-nav-bar></page-nav-bar>
+<view class="placeholder-page">
+  <view class="placeholder-body">
+    <text class="placeholder-icon">◎</text>
+    <text class="placeholder-title">演出</text>
+    <text class="placeholder-desc">敬请期待</text>
+  </view>
+</view>
+<main-tab-bar current="show"></main-tab-bar>

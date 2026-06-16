@@ -1,5 +1,6 @@
-// app.js
 const bleController = require('./utils/ble.js');
+const { getUserInfo } = require('./utils/auth.js');
+const { initCloud: initCloudEnv } = require('./utils/cloud-config.js');
 
 /** 进入后台后延迟断开蓝牙，便于用户去系统设置授权后返回仍保持连接 */
 const BG_BLE_DISCONNECT_DELAY_MS = 30000;
@@ -10,14 +11,19 @@ App({
     currentDevice: null,
     isConnected: false,
     deviceHistory: [], // 连接历史记录
-    /** 从连接引导页进入首页时自动打开搜索设备 */
-    openDeviceSearchOnIndexShow: false,
-    /** 调光页：切到首页/律动后保留亮度、预设、色轮 */
-    colorControlState: null
+    /** 从连接引导页进入控制页时自动打开搜索设备 */
+    openDeviceSearchOnControlShow: false,
+    /** 调光页：切页后保留亮度、预设、色轮 */
+    colorControlState: null,
+    userInfo: null
   },
 
   onLaunch() {
     console.log('小程序启动');
+    const userInfo = getUserInfo();
+    if (userInfo) {
+      this.globalData.userInfo = userInfo;
+    }
     this.initCloud();
     // 初始化蓝牙适配器
     this.initBluetooth();
@@ -53,18 +59,11 @@ App({
   },
 
   initCloud() {
-    if (!wx.cloud) {
-      console.warn('当前基础库不支持云开发');
-      return;
-    }
-    try {
-      wx.cloud.init({
-        env: 'cloud1-3g4lff0x2b1fbba7',
-        traceUser: true
-      });
-      console.log('云开发初始化完成');
-    } catch (error) {
-      console.error('云开发初始化失败', error);
+    const result = initCloudEnv();
+    if (result.ok) {
+      console.log('云开发初始化完成，环境:', result.env);
+    } else {
+      console.warn('云开发不可用:', result.reason);
     }
   },
 

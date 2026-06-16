@@ -1,0 +1,256 @@
+<page-nav-bar></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="container page-ambient">
+    <!-- 列表模式 -->
+    <block wx:if="{{!groupDetailMode}}">
+      <view class="group-card card">
+        <view class="owner-entry" bindtap="openCreateGroupModal">
+          <text class="owner-entry-text">创建群组</text>
+          <text class="owner-entry-arrow">›</text>
+        </view>
+
+        <view class="group-header">
+          <text class="group-title">群组控制</text>
+        </view>
+
+        <view class="group-tabs">
+          <view class="group-tab {{groupTab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchGroupTab">我的群组</view>
+          <view class="group-tab {{groupTab === 'all' ? 'active' : ''}}" data-tab="all" bindtap="switchGroupTab">可加入的群组</view>
+        </view>
+
+        <view class="group-list" wx:if="{{filteredGroups.length > 0}}">
+          <view
+          class="group-item"
+            wx:for="{{filteredGroups}}"
+            wx:key="id"
+            data-id="{{item.id}}"
+            bindtap="openGroupDetail"
+          >
+            <text class="group-item-name">{{item.name}}</text>
+            <text class="group-item-id">ID: {{item.id}}</text>
+            <text class="group-item-enter">进入 ›</text>
+          </view>
+        </view>
+        <view class="empty-state inline-empty" wx:if="{{filteredGroups.length === 0}}">
+          <view class="empty-state-icon">👥</view>
+          <text class="empty-state-title">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无可加入群组'}}</text>
+          <text class="empty-state-desc" wx:if="{{groupTab === 'mine'}}">点击上方「创建群组」开始群控</text>
+          <text class="empty-state-desc" wx:else>稍后再来看看，或请管理员分享群组 ID</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 群组详情 -->
+    <block wx:else>
+      <view class="group-card card">
+        <view class="detail-toolbar">
+          <view class="detail-back" bindtap="exitGroupDetail">返回列表</view>
+          <view
+            class="detail-danger"
+            wx:if="{{activeUserRole === 'admin'}}"
+            bindtap="confirmDismissGroup"
+          >解散群组</view>
+          <view
+            class="detail-danger"
+            wx:elif="{{activeUserRole === 'member'}}"
+            bindtap="confirmLeaveGroup"
+          >退出群组</view>
+        </view>
+        <view class="status-card card">
+          <view class="status-header">
+            <view class="status-indicator">
+              <view class="status-dot {{isConnected ? 'connected' : ''}}"></view>
+              <block wx:if="{{isConnected}}">
+                <text class="status-text">已连接</text>
+                <text class="status-device-inline" wx:if="{{currentDevice}}">
+                  {{currentDevice.name || currentDevice.deviceId}}
+                </text>
+              </block>
+              <text class="status-text" wx:else>未连接设备</text>
+            </view>
+            <view class="status-action" bindtap="openDeviceConnectPanel">
+              <text class="action-text">连接</text>
+            </view>
+          </view>
+        </view>
+        <view class="detail-title-block">
+          <text class="detail-group-name">{{activeGroup.name}}</text>
+          <text class="detail-group-id">ID: {{activeGroup.id}}</text>
+        </view>
+
+        <!-- 管理员：统一下发（与调光页一致） -->
+        <block wx:if="{{activeUserRole === 'admin'}}">
+          <view class="admin-lighting {{powerOn ? '' : 'is-powered-off'}}">
+            <text class="admin-lighting-title">统一下发</text>
+
+            <view class="lighting-section">
+              <text class="lighting-label">电源</text>
+              <view class="power-card">
+                <view class="power-info">
+                  <text class="power-status">{{powerOn ? 'Power ON' : 'Power OFF'}}</text>
+                  <text class="power-desc">{{powerOn ? '统一下发已开启' : '统一下发已关闭'}}</text>
+                </view>
+                <switch class="power-switch" checked="{{powerOn}}" color="#34C759" bindchange="onAdminPowerChange" />
+              </view>
+            </view>
+
+            <view class="lighting-section">
+              <text class="lighting-label">模式</text>
+              <view class="mode-row">
+                <view
+                  class="mode-item {{selectedModeId === item.id ? 'active' : ''}} {{powerOn ? '' : 'disabled'}}"
+                  wx:for="{{displayModes}}"
+                  wx:key="id"
+                  data-mode="{{item.id}}"
+                  bindtap="onAdminModeChange"
+                >
+                  <view class="mode-icon-wrap">
+                    <image
+                      class="mode-icon-img {{powerOn ? '' : 'is-dim'}}"
+                      src="{{selectedModeId === item.id ? item.iconActive : item.icon}}"
+                      mode="aspectFit"
+                    />
+                  </view>
+                  <text class="mode-name">{{item.name}}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="lighting-section">
+              <text class="lighting-label">颜色</text>
+              <view class="color-wheel-section">
+                <color-wheel
+                  hue="{{previewHue}}"
+                  saturation="{{previewSaturation}}"
+                  brightness="{{previewBrightness}}"
+                  showPreview="{{false}}"
+                  bindchange="onPreviewColorChange"
+                ></color-wheel>
+              </view>
+            </view>
+
+            <view class="lighting-section slider-section">
+              <text class="slider-label">调节速度</text>
+              <slider
+                class="plain-slider"
+                value="{{effectSpeed}}"
+                min="0"
+                max="100"
+                step="1"
+                activeColor="{{sliderTint}}"
+                backgroundColor="#EBEBEB"
+                block-color="#FFFFFF"
+                block-size="22"
+                disabled="{{!powerOn}}"
+                bindchange="onAdminSpeedChange"
+              />
+            </view>
+
+            <view class="lighting-section slider-section">
+              <text class="slider-label">调节亮度</text>
+              <slider
+                class="plain-slider"
+                value="{{groupControlBrightness}}"
+                min="1"
+                max="100"
+                step="1"
+                activeColor="{{sliderTint}}"
+                backgroundColor="#EBEBEB"
+                block-color="#FFFFFF"
+                block-size="22"
+                disabled="{{!powerOn}}"
+                bindchange="onControlBrightnessChange"
+              />
+            </view>
+          </view>
+        </block>
+
+        <!-- 成员：管理员是否在本群详情页 -->
+        <block wx:else>
+          <view class="member-presence card">
+            <text class="presence-title">管理员状态</text>
+            <text class="presence-hint" wx:if="{{memberAwaitingNewDispatch}}">已进入群组，等待管理员下发</text>
+            <text class="presence-value {{activeGroup.adminIsInGroupDetail ? 'online' : ''}}">
+              {{activeGroup.adminIsInGroupDetail ? '管理员已进入本群' : '管理员当前未进入本群'}}
+            </text>
+            <text class="presence-hint">说明：该状态基于管理员进入/退出群详情及统一下发操作更新，不保证异常退出时绝对实时。</text>
+          </view>
+        </block>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<view class="sheet-modal {{showCreateGroupModal ? 'show' : ''}}" bindtap="closeCreateGroupModal">
+  <view class="sheet-content" catchtap="stopPropagation">
+    <view class="sheet-header">
+      <text class="sheet-title">创建新群组</text>
+      <view class="sheet-close" bindtap="closeCreateGroupModal">×</view>
+    </view>
+    <view class="sheet-body">
+      <input class="group-input" placeholder="请输入群组名称" data-field="name" value="{{createGroupForm.name}}" bindinput="onCreateGroupInput" />
+      <input class="group-input" placeholder="请输入群组ID（仅数字）" type="number" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
+      <view class="password-switch-row">
+        <text class="password-switch-label">需要密码</text>
+        <switch color="#FFD100" checked="{{createGroupForm.needPassword}}" bindchange="onCreateNeedPasswordChange" />
+      </view>
+      <input
+        wx:if="{{createGroupForm.needPassword}}"
+        class="group-input"
+        placeholder="请输入4位数字密码"
+        type="number"
+        maxlength="4"
+        data-field="password"
+        value="{{createGroupForm.password}}"
+        bindinput="onCreateGroupInput"
+      />
+      <button class="group-btn apply" bindtap="createGroup">确认创建</button>
+    </view>
+  </view>
+</view>
+
+<view class="sheet-modal {{showDeviceList ? 'show' : ''}}" bindtap="closeDeviceList">
+  <view class="sheet-content" catchtap="stopPropagation">
+    <view class="sheet-header">
+      <text class="sheet-title">选择设备</text>
+      <view class="sheet-close" bindtap="closeDeviceList">×</view>
+    </view>
+    <view class="sheet-body">
+      <view class="device-item" wx:for="{{deviceList}}" wx:key="deviceId" data-deviceid="{{item.deviceId}}" bindtap="connectDevice">
+        <view class="device-info">
+          <view class="device-name-row">
+            <text class="device-item-name">{{item.name || item.deviceId || '未知设备'}}</text>
+            <text class="device-connected-tag" wx:if="{{item.isConnectedDevice}}">已连接</text>
+          </view>
+        </view>
+        <view class="device-rssi">
+          <text class="rssi-text">信号: {{item.RSSI || '未知'}}</text>
+        </view>
+      </view>
+      <view class="empty-state" wx:if="{{deviceList.length === 0 && !isScanning}}">
+        <view class="empty-state-icon">📡</view>
+        <text class="empty-state-title">未发现设备</text>
+        <text class="empty-state-desc">请确保蓝牙已开启，且设备在附近</text>
+      </view>
+      <view class="empty-state" wx:if="{{isScanning}}">
+        <view class="empty-state-icon scanning-pulse">🔍</view>
+        <text class="empty-state-title">正在搜索设备...</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="sheet-modal {{showEnterPasswordModal ? 'show' : ''}}" bindtap="closeEnterPasswordModal">
+  <view class="sheet-content" catchtap="stopPropagation">
+    <view class="sheet-header">
+      <text class="sheet-title">输入群组密码</text>
+      <view class="sheet-close" bindtap="closeEnterPasswordModal">×</view>
+    </view>
+    <view class="sheet-body">
+      <input class="group-input" placeholder="请输入4位数字密码" type="number" maxlength="4" value="{{enterPassword}}" bindinput="onEnterPasswordInput" />
+      <button class="group-btn apply" bindtap="confirmEnterWithPassword">确认进入</button>
+    </view>
+  </view>
+</view>
+
+<main-tab-bar current="room"></main-tab-bar>

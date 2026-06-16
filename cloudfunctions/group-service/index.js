@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const _ = db.command;
+const { scopeFilter, withScope, filterDocsInScope } = require('./app-scope');
 const ADMIN_ACTIVE_WINDOW_MS = 6 * 60 * 60 * 1000;
 
 function isFourDigitPassword(password) {
@@ -64,27 +65,43 @@ function normalizeStepMs(v) {
   return Math.min(1000, Math.max(100, Math.round(n)));
 }
 
-exports.main = async (event, context) => {
-  const wxContext = cloud.getWXContext();
+function resolveCaller(wxContext) {
   const openid = wxContext.OPENID;
+  const appId = wxContext.APPID;
+  if (!openid) {
+    return { error: '无法获取用户身份' };
+  }
+  if (!appId) {
+    return { error: '无法识别小程序身份' };
+  }
+  return { openid, appId };
+}
+
+exports.main = async (event) => {
+  const wxContext = cloud.getWXContext();
+  const caller = resolveCaller(wxContext);
+  if (caller.error) {
+    return { success: false, message: caller.error };
+  }
+  const { openid, appId } = caller;
   const action = event.action;
 
   try {
     switch (action) {
       case 'createGroup':
-        return await createGroup(openid, event);
+        return await createGroup(openid, appId, event);
       case 'joinGroup':
-        return await joinGroup(openid, event);
+        return await joinGroup(openid, appId, event);
       case 'listGroups':
-        return await listGroups(openid);
+        return await listGroups(openid, appId);
       case 'applyControl':
-        return await applyControl(openid, event);
+        return await applyControl(openid, appId, event);
       case 'adminDetailPresence':
-        return await adminDetailPresence(openid, event);
+        return await adminDetailPresence(openid, appId, event);
       case 'dismissGroup':
-        return await dismissGroup(openid, event);
+        return await dismissGroup(openid, appId, event);
       case 'leaveGroup':
-        return await leaveGroup(openid, event);
+        return await leaveGroup(openid, appId, event);
       default:
         return { success: false, message: '未知操作' };
     }
@@ -97,7 +114,21 @@ exports.main = async (event, context) => {
   }
 };
 
-async function createGroup(openid, payload) {
+async function findGroupInScope(groupId, appId) {
+  const res = await db.collection('groups').where(withScope(appId, { groupId })).limit(1).get();
+  return res.data.length > 0 ? res.data[0] : null;
+}
+
+async function findMemberInScope(groupId, openid, appId) {
+  const res = await db
+    .collection('group_members')
+    .where(withScope(appId, { groupId, openid }))
+    .limit(1)
+    .get();
+  return res.data.length > 0 ? res.data[0] : null;
+}
+
+async function createGroup(openid, appId, payload) {
   const name = (payload.name || '').trim();
   const groupId = (payload.groupId || '').trim();
   const password = (payload.password || '').trim();
@@ -113,7 +144,7 @@ async function createGroup(openid, payload) {
     return { success: false, message: '密码需为4位数字' };
   }
 
-  const exists = await db.collection('groups').where({ groupId }).limit(1).get();
+  const exists = await db.collection('groups').where(withScope(appId, { groupId })).limit(1).get();
   if (exists.data.length > 0) {
     return { success: false, message: '群组ID已存在' };
   }
@@ -122,6 +153,7 @@ async function createGroup(openid, payload) {
   await db.collection('groups').add({
     data: {
       groupId,
+      sourceAppId: appId,
       name,
       password: needPassword ? password : '',
       needPassword,
@@ -146,6 +178,7 @@ async function createGroup(openid, payload) {
   await db.collection('group_members').add({
     data: {
       groupId,
+      sourceAppId: appId,
       openid,
       nickname: '管理员',
       role: 'admin',
@@ -160,7 +193,7 @@ async function createGroup(openid, payload) {
   return { success: true, message: '群组创建成功' };
 }
 
-async function joinGroup(openid, payload) {
+async function joinGroup(openid, appId, payload) {
   const groupId = (payload.groupId || '').trim();
   const nicknameInput = (payload.nickname || '').trim();
   const password = (payload.password || '').trim();
@@ -169,12 +202,11 @@ async function joinGroup(openid, payload) {
     return { success: false, message: '请填写群组ID' };
   }
 
-  const groupsRes = await db.collection('groups').where({ groupId }).limit(1).get();
-  if (groupsRes.data.length === 0) {
+  const group = await findGroupInScope(groupId, appId);
+  if (!group) {
     return { success: false, message: '群组不存在' };
   }
 
-  const group = groupsRes.data[0];
   const needPassword = group.needPassword !== false;
   if (needPassword) {
     if (!isFourDigitPassword(password)) {
@@ -184,16 +216,18 @@ async function joinGroup(openid, payload) {
   if (needPassword && group.password !== password) {
     return { success: false, message: '密码错误' };
   }
-  const selfExists = await db.collection('group_members').where({
-    groupId,
-    openid
-  }).limit(1).get();
+
+  const selfMember = await findMemberInScope(groupId, openid, appId);
 
   let nickname = nicknameInput;
   if (!nickname) {
     let trial = `成员${openid.slice(-4)}`;
     for (let i = 0; i < 5; i += 1) {
-      const exists = await db.collection('group_members').where({ groupId, nickname: trial }).limit(1).get();
+      const exists = await db
+        .collection('group_members')
+        .where(withScope(appId, { groupId, nickname: trial }))
+        .limit(1)
+        .get();
       if (exists.data.length === 0) {
         nickname = trial;
         break;
@@ -204,20 +238,22 @@ async function joinGroup(openid, payload) {
       nickname = `成员${Date.now() % 10000}`;
     }
   } else {
-    const memberExists = await db.collection('group_members').where({
-      groupId,
-      nickname
-    }).limit(1).get();
+    const memberExists = await db
+      .collection('group_members')
+      .where(withScope(appId, { groupId, nickname }))
+      .limit(1)
+      .get();
     if (memberExists.data.length > 0) {
       return { success: false, message: '昵称已被占用' };
     }
   }
 
-  if (selfExists.data.length === 0) {
+  if (!selfMember) {
     const cs = group.controlState || {};
     await db.collection('group_members').add({
       data: {
         groupId,
+        sourceAppId: appId,
         openid,
         nickname,
         role: 'member',
@@ -233,18 +269,22 @@ async function joinGroup(openid, payload) {
   return { success: true, message: '已加入群组' };
 }
 
-async function listGroups(openid) {
-  const memberships = await db.collection('group_members').where({ openid }).get();
-  const groupIds = memberships.data.map((m) => m.groupId);
-  const allGroupsRes = await db.collection('groups').get();
+async function listGroups(openid, appId) {
+  const membershipsRes = await db.collection('group_members').where({ openid }).get();
+  const memberships = filterDocsInScope(membershipsRes.data, appId);
+  const groupIds = memberships.map((m) => m.groupId);
 
-  const mineGroupsRes = groupIds.length > 0
-    ? await db.collection('groups').where({ groupId: _.in(groupIds) }).get()
-    : { data: [] };
-  const mineMembersRes = groupIds.length > 0
-    ? await db.collection('group_members').where({ groupId: _.in(groupIds) }).get()
-    : { data: [] };
-  const allMembersRes = await db.collection('group_members').get();
+  const allGroupsRes = await db.collection('groups').where(scopeFilter(appId)).get();
+
+  const mineGroupsRes =
+    groupIds.length > 0
+      ? await db.collection('groups').where(withScope(appId, { groupId: _.in(groupIds) })).get()
+      : { data: [] };
+  const mineMembersRes =
+    groupIds.length > 0
+      ? await db.collection('group_members').where(withScope(appId, { groupId: _.in(groupIds) })).get()
+      : { data: [] };
+  const allMembersRes = await db.collection('group_members').where(scopeFilter(appId)).get();
 
   const memberMap = {};
   mineMembersRes.data.forEach((m) => {
@@ -263,7 +303,7 @@ async function listGroups(openid) {
   });
 
   const selfRoleMap = {};
-  memberships.data.forEach((m) => {
+  memberships.forEach((m) => {
     selfRoleMap[m.groupId] = { role: m.role, nickname: m.nickname };
   });
 
@@ -315,7 +355,7 @@ async function listGroups(openid) {
   };
 }
 
-async function adminDetailPresence(openid, payload) {
+async function adminDetailPresence(openid, appId, payload) {
   const groupId = (payload.groupId || '').trim();
   const inDetail = !!payload.inDetail;
 
@@ -323,8 +363,8 @@ async function adminDetailPresence(openid, payload) {
     return { success: false, message: '参数无效' };
   }
 
-  const roleRes = await db.collection('group_members').where({ groupId, openid }).limit(1).get();
-  if (roleRes.data.length === 0 || roleRes.data[0].role !== 'admin') {
+  const member = await findMemberInScope(groupId, openid, appId);
+  if (!member || member.role !== 'admin') {
     return { success: false, message: '仅管理员可上报' };
   }
 
@@ -332,12 +372,12 @@ async function adminDetailPresence(openid, payload) {
   const data = inDetail
     ? { adminInDetailAt: ts, lastAdminActiveAt: ts, updatedAt: ts }
     : { adminInDetailAt: 0, updatedAt: ts };
-  await db.collection('groups').where({ groupId }).update({ data });
+  await db.collection('groups').where(withScope(appId, { groupId })).update({ data });
 
   return { success: true, message: inDetail ? '已进入' : '已离开' };
 }
 
-async function applyControl(openid, payload) {
+async function applyControl(openid, appId, payload) {
   const groupId = (payload.groupId || '').trim();
   const effect = (payload.effect || '').trim();
   const brightness = Number(payload.brightness || 0);
@@ -346,24 +386,21 @@ async function applyControl(openid, payload) {
     return { success: false, message: '控制参数无效' };
   }
 
-  const roleRes = await db.collection('group_members').where({
-    groupId,
-    openid
-  }).limit(1).get();
-  if (roleRes.data.length === 0 || roleRes.data[0].role !== 'admin') {
+  const member = await findMemberInScope(groupId, openid, appId);
+  if (!member || member.role !== 'admin') {
     return { success: false, message: '当前用户不是管理员' };
   }
 
-  const groupDoc = await db.collection('groups').where({ groupId }).limit(1).get();
-  if (groupDoc.data.length === 0) {
+  const group = await findGroupInScope(groupId, appId);
+  if (!group) {
     return { success: false, message: '群组不存在' };
   }
-  const { hue, saturation } = resolveHueSat(payload, groupDoc.data[0].controlState);
+
+  const { hue, saturation } = resolveHueSat(payload, group.controlState);
   const dispatchIdRaw = Number(payload.dispatchId);
   const dispatchId = Number.isFinite(dispatchIdRaw) && dispatchIdRaw > 0 ? dispatchIdRaw : Date.now();
   const ts = Date.now();
   const isDyn = isDynamicLoopEffect(effect);
-  /** 平铺字段，避免部分环境下嵌套对象写入触发校验/写入失败（如 -502001） */
   const syncSeed = isDyn
     ? Number.isFinite(Number(payload.seed))
       ? (Math.round(Number(payload.seed)) % 256 + 256) % 256
@@ -372,7 +409,7 @@ async function applyControl(openid, payload) {
   const syncStartAt = isDyn ? ts : null;
   const syncStepMs = isDyn ? normalizeStepMs(payload.stepMs) : null;
 
-  await db.collection('groups').where({ groupId }).update({
+  await db.collection('groups').where(withScope(appId, { groupId })).update({
     data: {
       controlState: {
         effect,
@@ -384,16 +421,13 @@ async function applyControl(openid, payload) {
         syncStartAt,
         syncStepMs
       },
-      /** 统一下发成功即视为管理员正在操作本群，成员端可显示「正在本群组页面」 */
       adminInDetailAt: ts,
       lastAdminActiveAt: ts,
       updatedAt: ts
     }
   });
 
-  await db.collection('group_members').where({
-    groupId
-  }).update({
+  await db.collection('group_members').where(withScope(appId, { groupId })).update({
     data: {
       effect,
       brightness,
@@ -405,42 +439,36 @@ async function applyControl(openid, payload) {
   return { success: true, message: '已统一下发灯光效果' };
 }
 
-async function dismissGroup(openid, payload) {
+async function dismissGroup(openid, appId, payload) {
   const groupId = (payload.groupId || '').trim();
   if (!groupId) {
     return { success: false, message: '参数无效' };
   }
 
-  const roleRes = await db.collection('group_members').where({
-    groupId,
-    openid
-  }).limit(1).get();
-  if (roleRes.data.length === 0 || roleRes.data[0].role !== 'admin') {
+  const member = await findMemberInScope(groupId, openid, appId);
+  if (!member || member.role !== 'admin') {
     return { success: false, message: '仅管理员可解散群组' };
   }
 
-  await db.collection('groups').where({ groupId }).remove();
-  await db.collection('group_members').where({ groupId }).remove();
+  await db.collection('groups').where(withScope(appId, { groupId })).remove();
+  await db.collection('group_members').where(withScope(appId, { groupId })).remove();
   return { success: true, message: '群组已解散' };
 }
 
-async function leaveGroup(openid, payload) {
+async function leaveGroup(openid, appId, payload) {
   const groupId = (payload.groupId || '').trim();
   if (!groupId) {
     return { success: false, message: '参数无效' };
   }
 
-  const roleRes = await db.collection('group_members').where({
-    groupId,
-    openid
-  }).limit(1).get();
-  if (roleRes.data.length === 0) {
+  const member = await findMemberInScope(groupId, openid, appId);
+  if (!member) {
     return { success: true, message: '已退出群组' };
   }
-  if (roleRes.data[0].role === 'admin') {
+  if (member.role === 'admin') {
     return { success: false, message: '管理员请使用解散群组' };
   }
 
-  await db.collection('group_members').where({ groupId, openid }).remove();
+  await db.collection('group_members').where(withScope(appId, { groupId, openid })).remove();
   return { success: true, message: '已退出群组' };
 }
