@@ -24,8 +24,19 @@ page {
   display: block;
   font-size: 26rpx;
   color: #9E9E9E;
-  margin-bottom: 16rpx;
   letter-spacing: 1rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.section-hint {
+  font-size: 22rpx;
+  color: #BDBDBD;
 }
 
 .device-list {
@@ -88,6 +99,15 @@ page {
   font-weight: 600;
   color: #1A1A1A;
   margin-bottom: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-ble-name {
+  font-size: 22rpx;
+  color: #757575;
+  margin-bottom: 4rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

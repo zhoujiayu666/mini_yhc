@@ -247,6 +247,10 @@ function attachDeviceConnect(page) {
         content: '确定要断开当前手灯吗？',
         success: (res) => {
           if (!res.confirm) return;
+          const device = app.globalData.currentDevice;
+          if (device && device.deviceId) {
+            app.saveDeviceHistory(device);
+          }
           bleController.disconnect();
           app.globalData.currentDevice = null;
           app.globalData.isConnected = false;

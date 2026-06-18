@@ -505,6 +505,7 @@ Page({
       
       // 保存设备信息
       app.globalData.currentDevice = device;
+      app.globalData.isConnected = true;
       app.saveDeviceHistory(device);
       
       this.setData({

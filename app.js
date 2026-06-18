@@ -25,8 +25,22 @@ App({
       this.globalData.userInfo = userInfo;
     }
     this.initCloud();
+    this.getDeviceHistory();
+    this._wrapBleDisconnectForHistory();
     // 初始化蓝牙适配器
     this.initBluetooth();
+  },
+
+  /** 任意路径断开蓝牙前，确保当前设备写入连接历史 */
+  _wrapBleDisconnectForHistory() {
+    const originalDisconnect = bleController.disconnect.bind(bleController);
+    bleController.disconnect = () => {
+      const device = this.globalData.currentDevice;
+      if (device && device.deviceId) {
+        this.saveDeviceHistory(device);
+      }
+      return originalDisconnect();
+    };
   },
 
   onHide() {
@@ -37,6 +51,10 @@ App({
     }
     if (!this.globalData.isConnected) {
       return;
+    }
+    const device = this.globalData.currentDevice;
+    if (device && device.deviceId) {
+      this.saveDeviceHistory(device);
     }
     this._bgBleDisconnectTimer = setTimeout(() => {
       this._bgBleDisconnectTimer = null;
@@ -86,35 +104,37 @@ App({
   },
 
   /**
-   * 保存设备连接历史
+   * 保存设备连接历史（先合并本地已存记录，避免冷启动后覆盖丢失）
    */
   saveDeviceHistory(device) {
-    const history = this.globalData.deviceHistory;
-    const index = history.findIndex(d => d.deviceId === device.deviceId);
-    
-    if (index >= 0) {
-      // 更新现有记录
-      history[index] = {
-        ...device,
-        lastConnectTime: Date.now()
-      };
-    } else {
-      // 添加新记录
-      history.push({
-        ...device,
-        lastConnectTime: Date.now()
-      });
+    if (!device || !device.deviceId) {
+      return;
     }
-    
-    // 按连接时间排序
-    history.sort((a, b) => b.lastConnectTime - a.lastConnectTime);
-    
-    // 最多保存10条记录
+
+    const stored = this.getDeviceHistory() || [];
+    const history = stored.slice();
+    const index = history.findIndex((d) => d.deviceId === device.deviceId);
+
+    const record = {
+      deviceId: device.deviceId,
+      name: device.name || device.localName || '',
+      localName: device.localName || device.name || '',
+      lastConnectTime: Date.now()
+    };
+
+    if (index >= 0) {
+      history[index] = { ...history[index], ...record };
+    } else {
+      history.push(record);
+    }
+
+    history.sort((a, b) => (b.lastConnectTime || 0) - (a.lastConnectTime || 0));
+
     if (history.length > 10) {
       history.splice(10);
     }
-    
-    // 保存到本地存储
+
+    this.globalData.deviceHistory = history;
     wx.setStorageSync('deviceHistory', history);
   },
 

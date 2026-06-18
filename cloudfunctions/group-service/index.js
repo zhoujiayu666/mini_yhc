@@ -107,9 +107,16 @@ exports.main = async (event) => {
     }
   } catch (error) {
     console.error('group-service error:', error);
+    const msg = error.message || '服务异常';
+    if (msg.includes('collection not exists') || msg.includes('Db or Table not exist') || msg.includes('-502005')) {
+      return {
+        success: false,
+        message: '请先在云开发控制台创建 groups、group_members 集合'
+      };
+    }
     return {
       success: false,
-      message: error.message || '服务异常'
+      message: msg
     };
   }
 };

@@ -1,6 +1,8 @@
 const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
 const { requireLogin } = require('../../utils/auth.js');
+const { initCloud } = require('../../utils/cloud-config.js');
+const { callGroupService: invokeGroupService, showGroupError } = require('../../utils/group-cloud.js');
 const app = getApp();
 
 const MODE_TO_EFFECT = {
@@ -77,6 +79,7 @@ Page({
   },
 
   onLoad() {
+    initCloud();
     this.updateConnectionStatus();
     bleController.onConnectionStateChange = (connected) => {
       app.globalData.isConnected = connected;
@@ -314,6 +317,7 @@ Page({
     try {
       await bleController.connectDevice(deviceid);
       app.globalData.currentDevice = device;
+      app.globalData.isConnected = true;
       app.saveDeviceHistory(device);
       this.setData({
         showDeviceList: false,
@@ -582,18 +586,7 @@ Page({
   },
 
   async callGroupService(payload) {
-    const functionName = this.data.groupServiceFunctionName;
-    console.log('[group] call function request', {
-      name: functionName,
-      data: payload
-    });
-    const res = await wx.cloud.callFunction({
-      name: functionName,
-      data: payload
-    });
-    const result = res.result || {};
-    console.log('[group] call function response', result);
-    return result;
+    return invokeGroupService(payload);
   },
 
   async loadGroups() {
@@ -811,7 +804,7 @@ Page({
       });
       wx.hideLoading();
       if (!result.success) {
-        wx.showToast({ title: result.message || '创建失败', icon: 'none' });
+        showGroupError('创建群组失败', result.message || '创建失败');
         return;
       }
       this.setData({ showCreateGroupModal: false });
@@ -821,7 +814,8 @@ Page({
       wx.showToast({ title: '群组创建成功', icon: 'success' });
     } catch (error) {
       wx.hideLoading();
-      wx.showToast({ title: '创建失败', icon: 'none' });
+      const { parseCloudError } = require('../../utils/group-cloud.js');
+      showGroupError('创建群组失败', parseCloudError(error));
       console.error('创建群组失败', error);
     }
   },

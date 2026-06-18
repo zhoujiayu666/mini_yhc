@@ -75,16 +75,16 @@
   border-radius: 50%;
 
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 8%),
+    radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 6.6%),
     conic-gradient(
       from 0deg,
-      #7FD4E8 0deg,
-      #8EE0A8 60deg,
-      #F5E06A 120deg,
-      #F5A86A 180deg,
-      #F58AB8 240deg,
-      #A88AF5 300deg,
-      #7FD4E8 360deg
+      #ff0000 0deg,
+      #ffff00 60deg,
+      #00ff00 120deg,
+      #00ffff 180deg,
+      #0000ff 240deg,
+      #ff00ff 300deg,
+      #ff0000 360deg
     );
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.08);
 

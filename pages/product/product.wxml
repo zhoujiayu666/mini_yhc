@@ -2,14 +2,24 @@
 <scroll-view class="scrollarea" scroll-y>
   <view class="product-page">
     <view class="section">
-      <text class="section-label">我的手灯</text>
+      <view class="section-head">
+        <text class="section-label">我的手灯</text>
+        <text class="section-hint">长按可重命名</text>
+      </view>
       <view class="device-list" wx:if="{{myDevices.length > 0}}">
-        <view class="device-card connected" wx:for="{{myDevices}}" wx:key="deviceId">
+        <view
+          class="device-card connected"
+          wx:for="{{myDevices}}"
+          wx:key="deviceId"
+          data-deviceid="{{item.deviceId}}"
+          bindlongpress="onDeviceLongPress"
+        >
           <view class="device-icon-wrap on">
             <view class="device-icon-light"></view>
           </view>
           <view class="device-info">
             <text class="device-name">{{item.displayName}}</text>
+            <text class="device-ble-name" wx:if="{{item.customName}}">蓝牙名：{{item.bleName}}</text>
             <text class="device-id">{{item.deviceId}}</text>
             <text class="device-status connected">{{item.statusText}}</text>
           </view>
@@ -24,7 +34,10 @@
     </view>
 
     <view class="section">
-      <text class="section-label">连接过的设备</text>
+      <view class="section-head">
+        <text class="section-label">连接过的设备</text>
+        <text class="section-hint">长按可重命名</text>
+      </view>
       <view class="device-list" wx:if="{{historyDevices.length > 0}}">
         <view
           class="device-card"
@@ -32,12 +45,14 @@
           wx:key="deviceId"
           data-deviceid="{{item.deviceId}}"
           bindtap="onReconnectHistory"
+          bindlongpress="onDeviceLongPress"
         >
           <view class="device-icon-wrap">
             <view class="device-icon-light dim"></view>
           </view>
           <view class="device-info">
             <text class="device-name">{{item.displayName}}</text>
+            <text class="device-ble-name" wx:if="{{item.customName}}">蓝牙名：{{item.bleName}}</text>
             <text class="device-id">{{item.deviceId}}</text>
             <text class="device-status">{{item.lastConnectText}}</text>
           </view>

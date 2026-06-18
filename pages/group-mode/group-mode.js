@@ -312,6 +312,7 @@ Page({
     try {
       await bleController.connectDevice(deviceid);
       app.globalData.currentDevice = device;
+      app.globalData.isConnected = true;
       app.saveDeviceHistory(device);
       this.setData({
         showDeviceList: false,
