@@ -1,0 +1,40 @@
+<page-nav-bar back="{{true}}" title="{{id ? '编辑地址' : '新增地址'}}"></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="shop-page">
+    <view class="form-card">
+      <view class="form-row">
+        <text class="form-label">收货人</text>
+        <input class="form-input" placeholder="姓名" value="{{name}}" data-field="name" bindinput="onInput" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">手机号</text>
+        <input class="form-input" type="number" maxlength="11" placeholder="11位手机号" value="{{phone}}" data-field="phone" bindinput="onInput" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">省份</text>
+        <input class="form-input" placeholder="如：广东省" value="{{province}}" data-field="province" bindinput="onInput" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">城市</text>
+        <input class="form-input" placeholder="如：深圳市" value="{{city}}" data-field="city" bindinput="onInput" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">区县</text>
+        <input class="form-input" placeholder="如：南山区" value="{{district}}" data-field="district" bindinput="onInput" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">详细地址</text>
+        <input class="form-input" placeholder="街道门牌" value="{{detail}}" data-field="detail" bindinput="onInput" />
+      </view>
+    </view>
+
+    <view class="form-card default-row">
+      <text class="form-label">设为默认</text>
+      <switch checked="{{isDefault}}" color="#FFD100" bindchange="onDefaultChange" />
+    </view>
+  </view>
+</scroll-view>
+
+<view class="bottom-bar single">
+  <button class="submit-btn full" loading="{{saving}}" bindtap="onSave">保存</button>
+</view>

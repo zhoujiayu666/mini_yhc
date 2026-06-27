@@ -1,0 +1,47 @@
+<page-nav-bar back="{{true}}" title="订单详情"></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="shop-page" wx:if="{{order}}">
+    <view class="section-card status-card">
+      <text class="status-title">{{order.statusLabel}}</text>
+      <text class="status-sub" wx:if="{{order.status === 'pending_pay'}}">请尽快完成支付</text>
+      <text class="status-sub" wx:elif="{{order.status === 'paid'}}">商家备货中，请耐心等待发货</text>
+      <text class="status-sub" wx:elif="{{order.status === 'shipped'}}">商品已发出，请注意查收</text>
+    </view>
+
+    <view class="section-card" wx:if="{{order.addressText}}">
+      <text class="section-title">收货信息</text>
+      <text class="addr-line">{{order.contactText}}</text>
+      <text class="addr-line muted">{{order.addressText}}</text>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">商品明细</text>
+      <view class="line-item" wx:for="{{order.itemLines}}" wx:key="sku">
+        <view class="line-main">
+          <text class="line-name">{{item.name}}</text>
+          <text class="line-qty">×{{item.qty}}</text>
+        </view>
+        <text class="line-price">¥{{item.lineYuan}}</text>
+      </view>
+      <view class="summary-row total">
+        <text>实付</text>
+        <text class="pay-amount">¥{{order.payYuan}}</text>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">订单信息</text>
+      <view class="info-row"><text>订单号</text><text>{{order.orderNo}}</text></view>
+      <view class="info-row"><text>下单时间</text><text>{{order.createdText}}</text></view>
+      <view class="info-row" wx:if="{{order.paidText}}"><text>支付时间</text><text>{{order.paidText}}</text></view>
+      <view class="info-row" wx:if="{{order.trackingNo}}"><text>快递</text><text>{{order.expressCompany}} {{order.trackingNo}}</text></view>
+      <view class="info-row" wx:if="{{order.remark}}"><text>备注</text><text>{{order.remark}}</text></view>
+    </view>
+  </view>
+</scroll-view>
+
+<view class="bottom-bar" wx:if="{{order}}">
+  <button class="btn-outline" wx:if="{{order.status === 'pending_pay'}}" bindtap="onCancel">取消订单</button>
+  <button class="btn-primary" wx:if="{{order.status === 'pending_pay'}}" loading="{{acting}}" disabled="{{acting}}" bindtap="onPayTap">去支付</button>
+  <button class="btn-primary" wx:if="{{order.status === 'shipped'}}" bindtap="onConfirmReceive">确认收货</button>
+</view>

@@ -1,0 +1,98 @@
+@import "../shop-common/shop-common.wxss";
+
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: #FFFFFF;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+}
+
+.bottom-total {
+  flex: 1;
+}
+
+.bottom-label {
+  font-size: 24rpx;
+  color: #9E9E9E;
+  margin-right: 8rpx;
+}
+
+.bottom-amount {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #F44336;
+}
+
+.submit-btn {
+  min-width: 240rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  margin: 0;
+  padding: 0 40rpx;
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+  color: #1A1A1A;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+.pay-hint {
+  display: block;
+  font-size: 24rpx;
+  color: #9E9E9E;
+  line-height: 1.5;
+  padding-bottom: 160rpx;
+}
+
+.line-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+
+.line-item:last-child {
+  border-bottom: none;
+}
+
+.line-main {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
+}
+
+.line-name {
+  display: block;
+  font-size: 28rpx;
+  color: #1A1A1A;
+}
+
+.line-qty {
+  font-size: 24rpx;
+  color: #9E9E9E;
+}
+
+.line-price {
+  font-size: 28rpx;
+  color: #1A1A1A;
+  font-weight: 600;
+}
+
+.remark-input {
+  width: 100%;
+  min-height: 120rpx;
+  font-size: 28rpx;
+  color: #1A1A1A;
+  box-sizing: border-box;
+}

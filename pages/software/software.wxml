@@ -1,0 +1,17 @@
+<page-nav-bar back="{{true}}"></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="software-page" wx:if="{{software}}">
+    <view class="hero-card">
+      <text class="hero-badge">TOPUYI</text>
+      <text class="hero-title">{{software.name}}</text>
+      <text class="hero-subtitle">{{software.title}}</text>
+    </view>
+    <view class="info-card">
+      <text class="info-label">软件说明</text>
+      <text class="info-desc">{{software.desc}}</text>
+    </view>
+    <view class="tip-card">
+      <text class="tip-text">更多下载与使用说明即将上线，敬请期待。</text>
+    </view>
+  </view>
+</scroll-view>

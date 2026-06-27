@@ -25,7 +25,8 @@ Page({
     ...DEVICE_CONNECT_DATA,
     isConnected: false,
     myDevices: [],
-    historyDevices: []
+    historyDevices: [],
+    latestFirmwareVersion: 'TOPUYI.01'
   },
 
   onLoad() {
@@ -153,6 +154,15 @@ Page({
         }
         this.refreshDeviceLists();
       }
+    });
+  },
+
+  onFirmwareUpgradeTap() {
+    wx.showModal({
+      title: '固件版本升级',
+      content: `最新固件版本 ${this.data.latestFirmwareVersion}\n\n请连接手灯后检查更新。当前版本暂不支持在线升级。`,
+      showCancel: false,
+      confirmText: '知道了'
     });
   }
 });

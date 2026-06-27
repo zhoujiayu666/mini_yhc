@@ -1,0 +1,31 @@
+<page-nav-bar back="{{true}}" title="收货地址"></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="shop-page">
+    <view class="empty-wrap" wx:if="{{!loading && !addresses.length}}">
+      <text class="empty-text">暂无收货地址</text>
+    </view>
+
+    <view
+      class="section-card addr-card"
+      wx:for="{{addresses}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onSelect"
+    >
+      <view class="addr-row">
+        <text class="addr-name">{{item.name}}</text>
+        <text class="addr-phone">{{item.phone}}</text>
+        <text class="addr-default" wx:if="{{item.isDefault}}">默认</text>
+      </view>
+      <text class="addr-detail">{{item.province}}{{item.city}}{{item.district}}{{item.detail}}</text>
+      <view class="addr-actions" catchtap="stopPropagation">
+        <text class="addr-action" data-id="{{item.id}}" catchtap="onEdit">编辑</text>
+        <text class="addr-action danger" data-id="{{item.id}}" catchtap="onDelete">删除</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<view class="bottom-bar single">
+  <button class="submit-btn full" bindtap="onAdd">新增地址</button>
+</view>

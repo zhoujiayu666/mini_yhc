@@ -108,9 +108,16 @@ page {
   background: #FAFAFA;
 }
 
+.menu-item + .menu-item {
+  border-top: 1rpx solid #F0F0F0;
+}
+
 .menu-title {
+  flex: 1;
+  min-width: 0;
   font-size: 30rpx;
   color: #1A1A1A;
+  line-height: 1.4;
 }
 
 .menu-arrow {

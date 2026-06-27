@@ -1,0 +1,35 @@
+<page-nav-bar back="{{true}}" title="我的订单"></page-nav-bar>
+<view class="tabs-row">
+  <view
+    class="tab-chip {{activeTab === item.id ? 'active' : ''}}"
+    wx:for="{{tabs}}"
+    wx:key="id"
+    data-id="{{item.id}}"
+    bindtap="onTabTap"
+  >{{item.label}}</view>
+</view>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="shop-page">
+    <view class="empty-wrap" wx:if="{{!loading && !orders.length}}">
+      <text class="empty-text">暂无订单</text>
+    </view>
+
+    <view
+      class="order-card"
+      wx:for="{{orders}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onOrderTap"
+    >
+      <view class="order-head">
+        <text class="order-no">订单号 {{item.orderNo}}</text>
+        <text class="order-status {{item.status === 'completed' ? 'done' : ''}} {{item.status === 'cancelled' ? 'cancel' : ''}}">{{item.statusLabel}}</text>
+      </view>
+      <text class="order-item-line">{{item.itemSummary}}</text>
+      <view class="order-foot">
+        <text class="order-amount">¥{{item.payYuan}}</text>
+        <text class="order-time">{{item.createdText}}</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>

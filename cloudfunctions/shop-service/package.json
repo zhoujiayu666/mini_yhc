@@ -1,0 +1,10 @@
+{
+  "name": "shop-service",
+  "version": "1.0.0",
+  "description": "TOPUYI shop cloud function",
+  "main": "index.js",
+  "dependencies": {
+    "wechatpay-node-v3": "^2.2.1",
+    "wx-server-sdk": "~2.6.3"
+  }
+}

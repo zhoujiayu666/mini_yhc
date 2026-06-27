@@ -1,11 +1,14 @@
 const app = getApp();
 const { requireLogin, getUserInfo, formatPhone, logout } = require('../../utils/auth.js');
 
+const { SOFTWARE_LIST } = require('../../utils/software-center.js');
+
 Page({
   data: {
     phoneDisplay: '',
     avatarLetter: '我',
-    localOnly: false
+    localOnly: false,
+    softwareList: SOFTWARE_LIST
   },
 
   onShow() {
@@ -26,6 +29,20 @@ Page({
 
   onGoConnectGuide() {
     wx.navigateTo({ url: '/pages/connect-guide/connect-guide' });
+  },
+
+  onGoOrders() {
+    wx.navigateTo({ url: '/pages/orders/orders' });
+  },
+
+  onGoAddresses() {
+    wx.navigateTo({ url: '/pages/address-list/address-list' });
+  },
+
+  onGoSoftware(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    wx.navigateTo({ url: `/pages/software/software?id=${id}` });
   },
 
   onLogoutTap() {

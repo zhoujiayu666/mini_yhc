@@ -14,10 +14,40 @@
     </view>
 
     <view class="section">
+      <text class="section-label">商城</text>
+      <view class="menu-card">
+        <view class="menu-item" bindtap="onGoOrders">
+          <text class="menu-title">我的订单</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" bindtap="onGoAddresses">
+          <text class="menu-title">收货地址</text>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
       <text class="section-label">账号</text>
       <view class="menu-card">
         <view class="menu-item" bindtap="onGoConnectGuide">
           <text class="menu-title">设备连接引导</text>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-label">软件中心</text>
+      <view class="menu-card">
+        <view
+          class="menu-item"
+          wx:for="{{softwareList}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onGoSoftware"
+        >
+          <text class="menu-title">{{item.name}}</text>
           <text class="menu-arrow">›</text>
         </view>
       </view>

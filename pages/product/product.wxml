@@ -34,6 +34,19 @@
     </view>
 
     <view class="section">
+      <view class="firmware-card" bindtap="onFirmwareUpgradeTap">
+        <view class="firmware-icon-wrap">
+          <text class="firmware-icon">⬆</text>
+        </view>
+        <view class="firmware-info">
+          <text class="firmware-title">固件版本升级</text>
+          <text class="firmware-version">最新固件版本 {{latestFirmwareVersion}}</text>
+        </view>
+        <text class="firmware-action">检查更新</text>
+      </view>
+    </view>
+
+    <view class="section">
       <view class="section-head">
         <text class="section-label">连接过的设备</text>
         <text class="section-hint">长按可重命名</text>

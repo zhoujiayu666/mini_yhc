@@ -39,6 +39,63 @@ page {
   color: #BDBDBD;
 }
 
+.firmware-card {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 32rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.06);
+  border: 2rpx solid rgba(255, 209, 0, 0.2);
+}
+
+.firmware-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 209, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 24rpx;
+}
+
+.firmware-icon {
+  font-size: 36rpx;
+  color: #C89600;
+  font-weight: 700;
+}
+
+.firmware-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.firmware-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 8rpx;
+}
+
+.firmware-version {
+  font-size: 24rpx;
+  color: #757575;
+}
+
+.firmware-action {
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: #1A1A1A;
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+  padding: 12rpx 24rpx;
+  border-radius: 999rpx;
+  font-weight: 600;
+}
+
 .device-list {
   display: flex;
   flex-direction: column;

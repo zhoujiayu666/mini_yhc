@@ -1,0 +1,6 @@
+@import "../shop-common/shop-common.wxss";
+
+.order-time {
+  font-size: 24rpx;
+  color: #9E9E9E;
+}

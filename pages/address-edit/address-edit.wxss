@@ -1,0 +1,50 @@
+@import "../shop-common/shop-common.wxss";
+
+.default-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 28rpx;
+}
+
+.wx-addr-btn {
+  margin-top: 8rpx;
+  background: #FFFFFF;
+  color: #424242;
+  font-size: 28rpx;
+  border-radius: 20rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+}
+
+.wx-addr-btn::after {
+  border: none;
+}
+
+.shop-page {
+  padding-bottom: 160rpx;
+}
+
+.bottom-bar.single {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: #FFFFFF;
+}
+
+.submit-btn.full {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  margin: 0;
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+  color: #1A1A1A;
+  font-weight: 600;
+  border-radius: 44rpx;
+}
+
+.submit-btn.full::after {
+  border: none;
+}

@@ -1,0 +1,10 @@
+{
+  "name": "pay-notify",
+  "version": "1.0.0",
+  "description": "TOPUYI shop payment notify",
+  "main": "index.js",
+  "dependencies": {
+    "wechatpay-node-v3": "^2.2.1",
+    "wx-server-sdk": "~2.6.3"
+  }
+}

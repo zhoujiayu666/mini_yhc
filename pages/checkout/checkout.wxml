@@ -1,0 +1,65 @@
+<page-nav-bar back="{{true}}" title="确认订单"></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="shop-page" wx:if="{{!loading}}">
+    <view class="section-card" bindtap="onChooseAddress">
+      <block wx:if="{{address}}">
+        <view class="addr-row">
+          <text class="addr-name">{{address.name}}</text>
+          <text class="addr-phone">{{address.phone}}</text>
+        </view>
+        <text class="addr-detail">{{address.province}}{{address.city}}{{address.district}}{{address.detail}}</text>
+      </block>
+      <block wx:else>
+        <text class="addr-empty">请添加收货地址</text>
+      </block>
+      <text class="addr-arrow">›</text>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">商品明细</text>
+      <view class="line-item" wx:for="{{previewItems}}" wx:key="sku">
+        <view class="line-main">
+          <text class="line-name">{{item.name}}</text>
+          <text class="line-qty">×{{item.qty}}</text>
+        </view>
+        <text class="line-price">¥{{item.lineYuan}}</text>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">备注</text>
+      <textarea
+        class="remark-input"
+        placeholder="选填：配送备注"
+        maxlength="200"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+      />
+    </view>
+
+    <view class="section-card summary">
+      <view class="summary-row">
+        <text>商品金额</text>
+        <text>¥{{totalYuan}}</text>
+      </view>
+      <view class="summary-row">
+        <text>运费</text>
+        <text>¥{{freightYuan}}</text>
+      </view>
+      <view class="summary-row total">
+        <text>应付</text>
+        <text class="pay-amount">¥{{payYuan}}</text>
+      </view>
+    </view>
+
+    <text class="pay-hint">提交订单后可在订单详情使用微信支付。</text>
+  </view>
+</scroll-view>
+
+<view class="bottom-bar" wx:if="{{!loading}}">
+  <view class="bottom-total">
+  <text class="bottom-label">合计</text>
+  <text class="bottom-amount">¥{{payYuan}}</text>
+  </view>
+  <button class="submit-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">提交订单并支付</button>
+</view>
