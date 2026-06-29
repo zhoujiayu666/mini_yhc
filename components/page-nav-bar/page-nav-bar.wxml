@@ -1,7 +1,4 @@
 <navigation-bar title="" back="{{back}}" color="#212121" background="#FFFFFF">
-  <view slot="center" class="logo-wrap">
-    <image class="brand-logo" src="{{logoSrc}}" mode="aspectFit" />
-  </view>
   <view slot="right" class="nav-right">
     <slot name="right"></slot>
   </view>

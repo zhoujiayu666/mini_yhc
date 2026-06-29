@@ -1,1 +1,151 @@
-@import "../product/product.wxss";
+@import "../shop-common/shop-common.wxss";
+
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #F7F7F8;
+}
+
+.show-page {
+  padding: 24rpx 32rpx calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
+  box-sizing: border-box;
+}
+
+.empty-show {
+  min-height: 200rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FAFAFA;
+  border-radius: 16rpx;
+  border: 1rpx dashed #E0E0E0;
+}
+
+.empty-show-text {
+  font-size: 28rpx;
+  color: #9E9E9E;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88rpx;
+  padding: 0 24rpx;
+  background: #FAFAFA;
+  border-radius: 16rpx;
+}
+
+.picker-value {
+  font-size: 28rpx;
+  color: #1A1A1A;
+}
+
+.picker-arrow {
+  font-size: 36rpx;
+  color: #BDBDBD;
+}
+
+.seat-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  min-height: 96rpx;
+  padding: 20rpx 16rpx;
+  background: #FAFAFA;
+  border-radius: 16rpx;
+}
+
+.seat-inline.is-disabled {
+  background: #F3F3F3;
+}
+
+.section-card.is-disabled {
+  opacity: 0.92;
+}
+
+.section-title.is-disabled {
+  color: #BDBDBD;
+}
+
+.seat-val {
+  min-width: 56rpx;
+  padding: 8rpx 16rpx;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+  text-align: center;
+  background: #FFFFFF;
+  border-radius: 12rpx;
+  border: 1rpx solid #E8E8E8;
+}
+
+.seat-val.is-disabled {
+  color: #BDBDBD;
+  background: #EBEBEB;
+  border-color: #E0E0E0;
+  font-weight: 500;
+}
+
+.seat-unit.is-disabled {
+  color: #CFCFCF;
+}
+
+.seat-picker-hint.is-disabled {
+  color: #CFCFCF;
+}
+
+.seat-note.is-disabled {
+  color: #CFCFCF;
+}
+
+.seat-unit {
+  font-size: 28rpx;
+  color: #757575;
+  flex-shrink: 0;
+}
+
+.seat-picker-hint {
+  width: 100%;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #BDBDBD;
+  text-align: center;
+}
+
+.seat-note {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--brand-yellow-text);
+  padding-top: 16rpx;
+}
+
+.bind-wrap {
+  margin-top: 8rpx;
+  padding-bottom: 16rpx;
+}
+
+.bind-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  margin: 0;
+  background: linear-gradient(135deg, #FFD100 0%, #FFC400 100%);
+  color: #1A1A1A;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+}
+
+.bind-btn::after {
+  border: none;
+}
+
+.bind-btn.is-disabled {
+  background: #E8E8E8;
+  color: #BDBDBD;
+}

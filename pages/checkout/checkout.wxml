@@ -1,4 +1,4 @@
-<page-nav-bar back="{{true}}" title="确认订单"></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="shop-page" wx:if="{{!loading}}">
     <view class="section-card" bindtap="onChooseAddress">

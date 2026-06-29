@@ -1,4 +1,4 @@
-<page-nav-bar back="{{true}}" title="收货地址"></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="shop-page">
     <view class="empty-wrap" wx:if="{{!loading && !addresses.length}}">

@@ -1,4 +1,4 @@
-<page-nav-bar back="{{true}}" title="{{id ? '编辑地址' : '新增地址'}}"></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="shop-page">
     <view class="form-card">

@@ -1,17 +1,3 @@
-.logo-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.brand-logo {
-  width: 300rpx;
-  height: 68rpx;
-  display: block;
-}
-
 .nav-right {
   display: flex;
   align-items: center;

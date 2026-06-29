@@ -1,4 +1,4 @@
-<page-nav-bar back="{{true}}" title="我的订单"></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <view class="tabs-row">
   <view
     class="tab-chip {{activeTab === item.id ? 'active' : ''}}"

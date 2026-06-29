@@ -1,9 +1,61 @@
 <page-nav-bar></page-nav-bar>
-<view class="placeholder-page">
-  <view class="placeholder-body">
-    <text class="placeholder-icon">◎</text>
-    <text class="placeholder-title">演出</text>
-    <text class="placeholder-desc">敬请期待</text>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="show-page">
+    <view class="section-card">
+      <text class="section-title">请选择演出</text>
+      <block wx:if="{{performances.length}}">
+        <picker mode="selector" range="{{performances}}" range-key="name" value="{{selectedIndex}}" bindchange="onPerformanceChange">
+          <view class="picker-row">
+            <text class="picker-value">{{performances[selectedIndex].name}}</text>
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </block>
+      <view class="empty-show" wx:else>
+        <text class="empty-show-text">暂无演出，敬请期待...</text>
+      </view>
+    </view>
+
+    <view class="section-card {{seatEnabled ? '' : 'is-disabled'}}">
+      <text class="section-title {{seatEnabled ? '' : 'is-disabled'}}">请绑定座位号</text>
+      <picker
+        wx:if="{{seatEnabled}}"
+        mode="multiSelector"
+        range="{{seatRange}}"
+        value="{{seatPickerIndex}}"
+        bindchange="onSeatPickerChange"
+      >
+        <view class="seat-inline">
+          <text class="seat-val">{{zone}}</text>
+          <text class="seat-unit">区</text>
+          <text class="seat-val">{{row}}</text>
+          <text class="seat-unit">排</text>
+          <text class="seat-val">{{seat}}</text>
+          <text class="seat-unit">号</text>
+          <text class="seat-picker-hint">点击选择</text>
+        </view>
+      </picker>
+      <view class="seat-inline is-disabled" wx:else>
+        <text class="seat-val is-disabled">—</text>
+        <text class="seat-unit is-disabled">区</text>
+        <text class="seat-val is-disabled">—</text>
+        <text class="seat-unit is-disabled">排</text>
+        <text class="seat-val is-disabled">—</text>
+        <text class="seat-unit is-disabled">号</text>
+        <text class="seat-picker-hint is-disabled">请先选择演出</text>
+      </view>
+      <text class="seat-note {{seatEnabled ? '' : 'is-disabled'}}">备注：手灯请先连接，再绑定应援座位</text>
+    </view>
+
+    <view class="bind-wrap">
+      <button
+        class="bind-btn {{seatEnabled ? '' : 'is-disabled'}}"
+        loading="{{binding}}"
+        disabled="{{!seatEnabled || binding}}"
+        bindtap="onBindSeat"
+      >确认绑定</button>
+    </view>
   </view>
-</view>
+</scroll-view>
+
 <main-tab-bar current="show"></main-tab-bar>

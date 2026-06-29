@@ -1,4 +1,4 @@
-<page-nav-bar back="{{true}}" title="订单详情"></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="shop-page" wx:if="{{order}}">
     <view class="section-card status-card">
