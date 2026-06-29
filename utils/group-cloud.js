@@ -1,4 +1,5 @@
 const { initCloud, CLOUD_ENV_ID } = require('./cloud-config.js');
+const { formatErrorMessage } = require('./error-format.js');
 
 const GROUP_SERVICE_NAME = 'group-service';
 
@@ -14,7 +15,7 @@ function ensureCloud() {
 }
 
 function parseCloudError(error) {
-  const errMsg = (error && (error.errMsg || error.message)) || String(error || '');
+  const errMsg = formatErrorMessage(error, '');
 
   if (
     errMsg.includes('FunctionName') ||
@@ -79,6 +80,9 @@ async function callGroupService(payload) {
       data: payload
     });
     const result = res.result || { success: false, message: '云函数无返回数据' };
+    if (result.message != null) {
+      result.message = formatErrorMessage(result.message);
+    }
     console.log('[group-cloud] response', result);
     return result;
   } catch (error) {
@@ -88,7 +92,7 @@ async function callGroupService(payload) {
 }
 
 function showGroupError(title, message) {
-  const text = message || '操作失败';
+  const text = formatErrorMessage(message);
   if (text.length > 28 || text.includes('\n')) {
     wx.showModal({
       title,

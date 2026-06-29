@@ -1,5 +1,6 @@
 const app = getApp();
 const { TOPUYI_APP_ID } = require('./cloud-config.js');
+const { formatErrorMessage } = require('./error-format.js');
 
 function saveLocalUser(phone, extra = {}) {
   const userInfo = { phone, ...extra };
@@ -49,7 +50,7 @@ async function loginViaCloudFunction(phone) {
   });
   const result = res.result || {};
   if (!result.success) {
-    throw new Error(result.message || '登录失败');
+    throw new Error(formatErrorMessage(result.message, '登录失败'));
   }
   return {
     phone: result.user.phone,
@@ -92,7 +93,7 @@ async function loginWithPhone(phone) {
   }
 
   const local = loginViaLocal(phone);
-  const errMsg = lastError && (lastError.message || lastError.errMsg || String(lastError));
+  let errMsg = formatErrorMessage(lastError, '');
   local.fallbackError = errMsg;
   if (errMsg && (errMsg.includes('not exist') || errMsg.includes('不存在') || errMsg.includes('-502005'))) {
     local.fallbackError = '数据库 users 集合不存在，请在云开发控制台创建';

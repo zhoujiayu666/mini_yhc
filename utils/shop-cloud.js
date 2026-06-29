@@ -1,4 +1,5 @@
 const { initCloud, CLOUD_ENV_ID } = require('./cloud-config.js');
+const { formatErrorMessage } = require('./error-format.js');
 
 const SHOP_SERVICE_NAME = 'shop-service';
 
@@ -14,7 +15,7 @@ function ensureCloud() {
 }
 
 function parseShopError(error) {
-  const errMsg = (error && (error.errMsg || error.message)) || String(error || '');
+  const errMsg = formatErrorMessage(error, '');
 
   if (
     errMsg.includes('FunctionName') ||
@@ -58,7 +59,11 @@ async function callShopService(payload) {
       config: { env: CLOUD_ENV_ID },
       data: payload
     });
-    return res.result || { success: false, message: '云函数无返回数据' };
+    const result = res.result || { success: false, message: '云函数无返回数据' };
+    if (result.message != null) {
+      result.message = formatErrorMessage(result.message);
+    }
+    return result;
   } catch (error) {
     console.error('[shop-cloud] failed', error);
     return { success: false, message: parseShopError(error) };
@@ -66,7 +71,7 @@ async function callShopService(payload) {
 }
 
 function showShopError(title, message) {
-  const text = message || '操作失败';
+  const text = formatErrorMessage(message);
   if (text.length > 28 || text.includes('\n')) {
     wx.showModal({ title, content: text, showCancel: false, confirmText: '知道了' });
     return;

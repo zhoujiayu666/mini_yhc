@@ -15,6 +15,7 @@ const { SEED_PRODUCTS } = require('./seed-products');
 const { notifyPaidOrder } = require('./notify-wecom');
 const { createJsapiOrder, queryOrderByOutTradeNo } = require('./pay-wx-v3');
 const { markOrderPaid } = require('./order-paid');
+const { formatErrorMessage } = require('./format-error');
 
 function resolveCaller(wxContext) {
   const openid = wxContext.OPENID;
@@ -539,7 +540,7 @@ async function createPayment(openid, appId, event) {
     };
   } catch (err) {
     console.error('[shop-service] createPayment', err);
-    const msg = (err && err.message) || String(err);
+    const msg = formatErrorMessage(err, '支付下单失败');
     if (err && err.code === 'PAY_CONFIG_MISSING') {
       return {
         success: false,
@@ -593,7 +594,7 @@ async function syncPayment(openid, appId, event) {
     };
   } catch (err) {
     console.error('[shop-service] syncPayment', err);
-    const msg = (err && err.message) || String(err);
+    const msg = formatErrorMessage(err, '支付同步失败');
     if (err && err.code === 'PAY_CONFIG_MISSING') {
       return { success: false, message: msg };
     }
@@ -742,7 +743,11 @@ exports.main = async (event) => {
         return {
           success: notify.ok,
           skipped: !!notify.skipped,
-          message: notify.skipped ? '未配置企业微信 Webhook' : notify.ok ? '已推送' : notify.error,
+          message: notify.skipped
+            ? '未配置企业微信 Webhook'
+            : notify.ok
+              ? '已推送'
+              : formatErrorMessage(notify.error, '推送失败'),
           notify
         };
       }
@@ -751,7 +756,7 @@ exports.main = async (event) => {
     }
   } catch (err) {
     console.error('[shop-service]', err);
-    const msg = (err && err.message) || '服务异常';
+    const msg = formatErrorMessage(err, '服务异常');
     if (msg.includes('collection not exists') || msg.includes('Db or Table not exist')) {
       return {
         success: false,

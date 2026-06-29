@@ -1,6 +1,7 @@
 const app = getApp();
 const { loginWithPhone, saveLocalUser } = require('../../utils/user-login.js');
 const { initCloud, CLOUD_ENV_ID } = require('../../utils/cloud-config.js');
+const { formatErrorMessage } = require('../../utils/error-format.js');
 
 Page({
   data: {
@@ -63,9 +64,7 @@ Page({
       }
     } catch (err) {
       console.error('[login] 登录失败', err);
-      const msg =
-        (err && (err.message || err.errMsg)) ||
-        '登录失败，请检查云开发环境或网络';
+      const msg = formatErrorMessage(err, '登录失败，请检查云开发环境或网络');
       wx.showToast({
         title: msg.length > 20 ? '登录失败，请重试' : msg,
         icon: 'none',
