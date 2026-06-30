@@ -6,6 +6,7 @@ const db = cloud.database();
 const _ = db.command;
 const { withScope, docInScope } = require('./app-scope');
 const {
+  TOPUYI_APP_ID,
   TEST_PAY_ENABLED,
   TEST_PAY_SKU,
   TEST_PAY_PRICE_FEN,
@@ -13,21 +14,49 @@ const {
 } = require('./app-config');
 const { SEED_PRODUCTS } = require('./seed-products');
 const { notifyPaidOrder } = require('./notify-wecom');
-const { createJsapiOrder, queryOrderByOutTradeNo } = require('./pay-wx-v3');
 const { markOrderPaid } = require('./order-paid');
 const { formatErrorMessage } = require('./format-error');
 
-function resolveCaller(wxContext) {
-  const openid = wxContext.OPENID;
-  const appId = wxContext.APPID;
-  if (!openid) {
-    return { error: '无法获取用户身份' };
+/** 支付 SDK 仅在下单/查单时加载，避免 listProducts 因依赖未装而整体崩溃 */
+let payWxV3Module = null;
+function getPayWxV3() {
+  if (!payWxV3Module) {
+    payWxV3Module = require('./pay-wx-v3');
   }
+  return payWxV3Module;
+}
+
+function resolveAppIdFromContext(wxContext, event) {
+  const appId =
+    wxContext.APPID ||
+    (event && event.appId) ||
+    TOPUYI_APP_ID ||
+    process.env.WX_PAY_APP_ID ||
+    '';
   if (!appId) {
     return { error: '无法识别小程序身份' };
   }
-  return { openid, appId };
+  return { appId };
 }
+
+function resolveCaller(wxContext, event) {
+  const openid = wxContext.OPENID;
+  const ctx = resolveAppIdFromContext(wxContext, event);
+  if (ctx.error) {
+    return ctx;
+  }
+  if (!openid) {
+    return { error: '无法获取用户身份' };
+  }
+  return { openid, appId: ctx.appId };
+}
+
+/** 商品列表等只读接口：仅需 AppID（控制台测试无登录态时用配置兜底） */
+function resolveAppId(wxContext, event) {
+  return resolveAppIdFromContext(wxContext, event);
+}
+
+const READ_ONLY_ACTIONS = new Set(['listProducts', 'getProduct', 'seedProducts']);
 
 function fenToYuan(fen) {
   const n = Number(fen);
@@ -185,6 +214,7 @@ async function ensureSeedProducts(appId) {
       }
     });
   }
+  await applyTestPayPrice(appId);
   return { seeded: true, count: SEED_PRODUCTS.length };
 }
 
@@ -231,7 +261,6 @@ async function listProducts(appId, event) {
   if (autoSeed) {
     await ensureSeedProducts(appId);
   }
-  await applyTestPayPrice(appId);
   let query = withScope(appId, { status: 'on_sale' });
   if (category && category !== 'all') {
     query = withScope(appId, { status: 'on_sale', category });
@@ -239,7 +268,14 @@ async function listProducts(appId, event) {
   const res = await db.collection('products').where(query).get();
   const products = (res.data || [])
     .sort((a, b) => (b.sort || 0) - (a.sort || 0))
-    .map(formatProduct);
+    .map(formatProduct)
+    .filter(Boolean);
+  if (!products.length) {
+    return {
+      success: false,
+      message: '云端暂无商品，请在云开发控制台对 shop-service 执行 seedProducts'
+    };
+  }
   return { success: true, products };
 }
 
@@ -525,6 +561,7 @@ async function createPayment(openid, appId, event) {
   const description = (`TOPUYI-${names.join('、')}` || 'TOPUYI周边商品').slice(0, 127);
 
   try {
+    const { createJsapiOrder } = getPayWxV3();
     const { payment } = await createJsapiOrder({
       openid,
       outTradeNo: doc.orderNo,
@@ -568,6 +605,7 @@ async function syncPayment(openid, appId, event) {
   }
 
   try {
+    const { queryOrderByOutTradeNo } = getPayWxV3();
     const wxOrder = await queryOrderByOutTradeNo(doc.orderNo);
     const tradeState = wxOrder.trade_state || '';
     if (tradeState !== 'SUCCESS') {
@@ -695,12 +733,24 @@ async function confirmReceive(openid, appId, event) {
 exports.main = async (event) => {
   try {
     const wxContext = cloud.getWXContext();
-    const caller = resolveCaller(wxContext);
-    if (caller.error) {
-      return { success: false, message: caller.error };
-    }
-    const { openid, appId } = caller;
     const action = event.action || '';
+    let openid;
+    let appId;
+
+    if (READ_ONLY_ACTIONS.has(action)) {
+      const ctx = resolveAppId(wxContext, event);
+      if (ctx.error) {
+        return { success: false, message: ctx.error };
+      }
+      appId = ctx.appId;
+      openid = wxContext.OPENID;
+    } else {
+      const caller = resolveCaller(wxContext, event);
+      if (caller.error) {
+        return { success: false, message: caller.error };
+      }
+      ({ openid, appId } = caller);
+    }
 
     switch (action) {
       case 'seedProducts':

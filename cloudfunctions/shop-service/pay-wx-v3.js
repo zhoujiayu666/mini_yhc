@@ -1,5 +1,4 @@
 const WxPay = require('wechatpay-node-v3');
-const { formatErrorMessage } = require('./error-format');
 
 const { PAY_NOTIFY_URL_PLACEHOLDER } = require('./app-config');
 const DEFAULT_APP_ID = 'wx3610c3ef05d1131e';

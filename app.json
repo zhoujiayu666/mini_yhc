@@ -26,6 +26,7 @@
     "backgroundColor": "#FFFFFF",
     "backgroundTextStyle": "dark"
   },
+  "cloud": true,
   "style": "v2",
   "renderer": "skyline",
   "rendererOptions": {

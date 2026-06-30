@@ -2,6 +2,33 @@ const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
 const { FALLBACK_PRODUCTS, addToCart } = require('../../utils/shop.js');
 
+const PRODUCT_CACHE_KEY = 'topuyi_shop_products_v1';
+const PRODUCT_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
+const SKELETON_ITEMS = [1, 2, 3, 4];
+
+function readProductCache() {
+  try {
+    const cached = wx.getStorageSync(PRODUCT_CACHE_KEY);
+    if (!cached || !Array.isArray(cached.products) || !cached.products.length) {
+      return null;
+    }
+    return {
+      products: cached.products,
+      stale: Date.now() - (cached.at || 0) > PRODUCT_CACHE_MAX_AGE_MS
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveProductCache(products) {
+  try {
+    wx.setStorageSync(PRODUCT_CACHE_KEY, { products, at: Date.now() });
+  } catch (e) {
+    console.warn('[around] 缓存商品失败', e);
+  }
+}
+
 Page({
   data: {
     categories: [
@@ -15,12 +42,30 @@ Page({
     showDetail: false,
     detailProduct: null,
     loading: true,
+    refreshing: false,
     cloudReady: false,
-    useFallback: false
+    useFallback: false,
+    cloudError: '',
+    skeletonItems: SKELETON_ITEMS
   },
 
   onShow() {
     if (!requireLogin()) return;
+    const cached = readProductCache();
+    if (cached) {
+      const displayProducts = this.filterByCategory(cached.products, this.data.activeCategory);
+      this.setData({
+        products: cached.products,
+        displayProducts,
+        loading: false,
+        refreshing: true,
+        cloudReady: true,
+        useFallback: false,
+        cloudError: ''
+      });
+      this.loadProducts({ silent: true, skipSeed: true });
+      return;
+    }
     this.loadProducts();
   },
 
@@ -29,48 +74,74 @@ Page({
     return products.filter((p) => p.category === categoryId);
   },
 
-  async loadProducts(categoryId) {
-    this.setData({ loading: true });
+  applyProductList(products, categoryId) {
     const category = categoryId != null ? categoryId : this.data.activeCategory;
+    const displayProducts = this.filterByCategory(products, category);
+    this.setData({
+      products,
+      displayProducts,
+      loading: false,
+      refreshing: false,
+      cloudReady: true,
+      useFallback: false,
+      cloudError: ''
+    });
+    saveProductCache(products);
+  },
+
+  async loadProducts(options = {}) {
+    const { silent = false, skipSeed = false } = options;
+    if (!silent) {
+      this.setData({ loading: true, refreshing: false });
+    } else {
+      this.setData({ refreshing: true });
+    }
+
     const result = await callShopService({
       action: 'listProducts',
-      category: category === 'all' ? undefined : category
+      autoSeed: !skipSeed
     });
 
     if (result.success && Array.isArray(result.products) && result.products.length) {
-      const products = result.products;
-      this.setData({
-        products,
-        displayProducts: products,
-        loading: false,
-        cloudReady: true,
-        useFallback: false
-      });
+      this.applyProductList(result.products);
       return;
     }
 
+    const cloudError =
+      result.message ||
+      (result.success ? '云端商品列表为空' : '云函数 shop-service 调用失败');
+
+    if (silent && this.data.products.length) {
+      this.setData({ refreshing: false, cloudError });
+      console.warn('[around] 后台刷新失败，继续展示缓存', cloudError);
+      return;
+    }
+
+    const category = this.data.activeCategory;
     const fallback = this.filterByCategory(FALLBACK_PRODUCTS, category);
     this.setData({
       products: FALLBACK_PRODUCTS,
       displayProducts: fallback,
       loading: false,
+      refreshing: false,
       cloudReady: false,
-      useFallback: true
+      useFallback: true,
+      cloudError
     });
-    if (result.message && !result.success) {
-      console.warn('[around] 云商品加载失败，使用本地数据', result.message);
-    }
+    console.warn('[around] 云商品加载失败，使用本地数据', cloudError);
+  },
+
+  onRetryCloud() {
+    this.loadProducts();
   },
 
   onCategoryTap(e) {
     const id = e.currentTarget.dataset.id;
-    this.setData({ activeCategory: id });
-    if (this.data.cloudReady) {
-      this.loadProducts(id);
-      return;
-    }
     const products = this.data.products.length ? this.data.products : FALLBACK_PRODUCTS;
-    this.setData({ displayProducts: this.filterByCategory(products, id) });
+    this.setData({
+      activeCategory: id,
+      displayProducts: this.filterByCategory(products, id)
+    });
   },
 
   findProduct(id) {
@@ -99,7 +170,7 @@ Page({
     const product = this.findProduct(id) || this.data.detailProduct;
     if (!product) return;
     if (this.data.useFallback) {
-      showShopError('提示', '商城云服务未就绪，暂无法加入购物车');
+      showShopError('商城云服务未就绪', this.data.cloudError || '暂无法加入购物车');
       return;
     }
     addToCart(product, 1);
@@ -109,7 +180,7 @@ Page({
   onBuyNow() {
     const product = this.data.detailProduct;
     if (!product || this.data.useFallback) {
-      showShopError('提示', '商城云服务未就绪');
+      showShopError('商城云服务未就绪', this.data.cloudError || '暂无法购买');
       return;
     }
     const sku = product.sku || product.id;

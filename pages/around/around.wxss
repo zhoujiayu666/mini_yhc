@@ -22,18 +22,58 @@ page {
   margin-bottom: 28rpx;
 }
 
+.page-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.refresh-hint {
+  font-size: 22rpx;
+  color: #B0B0B0;
+  flex-shrink: 0;
+}
+
 .page-title {
   display: block;
   font-size: 40rpx;
   font-weight: 700;
   color: #1A1A1A;
   letter-spacing: 1rpx;
-  margin-bottom: 8rpx;
 }
 
 .page-subtitle {
   font-size: 26rpx;
   color: #9E9E9E;
+}
+
+.cloud-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  padding: 20rpx 24rpx;
+  background: #FFF8E6;
+  border: 1rpx solid #FFE0A3;
+  border-radius: 16rpx;
+}
+
+.cloud-error-text {
+  flex: 1;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: #8A5A00;
+}
+
+.cloud-error-retry {
+  flex-shrink: 0;
+  padding: 8rpx 20rpx;
+  font-size: 24rpx;
+  color: #FFFFFF;
+  background: #FF9800;
+  border-radius: 999rpx;
 }
 
 .category-section {
@@ -502,4 +542,61 @@ page {
 .detail-cart::after,
 .detail-buy::after {
   border: none;
+}
+
+.skeleton-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 24rpx 0;
+}
+
+.skeleton-card {
+  width: calc(50% - 12rpx);
+  padding: 20rpx;
+  border-radius: 24rpx;
+  background: #FAFAFA;
+  box-sizing: border-box;
+}
+
+.skeleton-visual {
+  width: 100%;
+  height: 220rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(90deg, #F0F0F0 25%, #E8E8E8 50%, #F0F0F0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  margin-bottom: 20rpx;
+}
+
+.skeleton-line {
+  height: 24rpx;
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #F0F0F0 25%, #E8E8E8 50%, #F0F0F0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  margin-bottom: 12rpx;
+}
+
+.skeleton-line-title {
+  width: 80%;
+  height: 28rpx;
+}
+
+.skeleton-line-desc {
+  width: 60%;
+}
+
+.skeleton-line-price {
+  width: 40%;
+  margin-bottom: 0;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

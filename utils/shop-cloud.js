@@ -44,6 +44,19 @@ function parseShopError(error) {
     return '请先在云开发控制台创建 products、orders、addresses 集合';
   }
 
+  if (errMsg.includes('-504002') || errMsg.includes('functions execute fail')) {
+    const detailMatch = errMsg.match(/errMsg:\s*([^|]+)/);
+    const detail = detailMatch ? detailMatch[1].trim() : '';
+    if (detail && !detail.startsWith('...')) {
+      return detail.length > 120 ? `${detail.slice(0, 120)}…` : detail;
+    }
+    return [
+      '云函数 shop-service 执行失败。',
+      '请右键 shop-service → 上传并部署：云端安装依赖',
+      '并在云开发控制台查看云函数日志'
+    ].join('\n');
+  }
+
   return errMsg.length > 80 ? `${errMsg.slice(0, 80)}…` : errMsg || '网络或服务异常';
 }
 

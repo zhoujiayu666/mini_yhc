@@ -2,8 +2,16 @@
 <scroll-view class="scrollarea" scroll-y>
   <view class="shop-page">
     <view class="page-header">
-      <text class="page-title">周边商城</text>
+      <view class="page-header-row">
+        <text class="page-title">周边商城</text>
+        <text class="refresh-hint" wx:if="{{refreshing}}">更新中…</text>
+      </view>
       <text class="page-subtitle">荧光棒 · 发光球 · 精选周边</text>
+    </view>
+
+    <view class="cloud-error-banner" wx:if="{{cloudError}}">
+      <text class="cloud-error-text">{{cloudError}}</text>
+      <view class="cloud-error-retry" bindtap="onRetryCloud">重试</view>
     </view>
 
     <view class="category-section">
@@ -18,7 +26,7 @@
       </view>
     </view>
 
-    <view class="product-grid">
+    <view class="product-grid" wx:if="{{!loading || displayProducts.length}}">
       <view
         class="product-card"
         wx:for="{{displayProducts}}"
@@ -62,6 +70,15 @@
             <view class="add-btn" catchtap="onAddToCart" data-id="{{item.id}}">+</view>
           </view>
         </view>
+      </view>
+    </view>
+
+    <view class="skeleton-grid" wx:if="{{loading && !displayProducts.length}}">
+      <view class="skeleton-card" wx:for="{{skeletonItems}}" wx:key="*this">
+        <view class="skeleton-visual"></view>
+        <view class="skeleton-line skeleton-line-title"></view>
+        <view class="skeleton-line skeleton-line-desc"></view>
+        <view class="skeleton-line skeleton-line-price"></view>
       </view>
     </view>
   </view>
