@@ -1,0 +1,92 @@
+<page-nav-bar></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y wx:if="{{!loading && product}}">
+  <view class="detail-page">
+    <view class="hero-section">
+      <swiper
+        wx:if="{{hasImages}}"
+        class="image-swiper"
+        indicator-dots
+        circular
+        autoplay="{{imageUrls.length > 1}}"
+        interval="4000"
+      >
+        <swiper-item wx:for="{{imageUrls}}" wx:key="*this">
+          <image
+            class="hero-image"
+            src="{{item}}"
+            mode="aspectFill"
+            data-index="{{index}}"
+            bindtap="onPreviewImage"
+          />
+        </swiper-item>
+      </swiper>
+      <view wx:else class="hero-placeholder {{product.category}}">
+        <view class="glow-bg" wx:if="{{product.category === 'ball'}}" style="background: {{product.color}};"></view>
+        <block wx:if="{{product.category === 'stick'}}">
+          <view class="stick-fig large" style="--c: {{product.color}};">
+            <view class="stick-bloom"></view>
+            <view class="stick-assembly">
+              <view class="stick-cap"></view>
+              <view class="stick-tube"><view class="stick-tube-glow"></view></view>
+              <view class="stick-handle"></view>
+            </view>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="ball-sphere large" style="background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, {{product.color}} 45%, rgba(0,0,0,0.15) 100%);"></view>
+        </block>
+      </view>
+      <text class="product-tag" wx:if="{{product.tag}}">{{product.tag}}</text>
+    </view>
+
+    <view class="info-card">
+      <text class="product-name">{{product.name}}</text>
+      <text class="product-desc">{{product.desc}}</text>
+      <view class="price-row">
+        <text class="product-price">¥{{product.price}}</text>
+        <text class="product-original" wx:if="{{product.originalPrice > 0}}">¥{{product.originalPrice}}</text>
+      </view>
+    </view>
+
+    <view class="section-card" wx:if="{{product.specs.length}}">
+      <text class="section-title">规格参数</text>
+      <view class="spec-row" wx:for="{{product.specs}}" wx:key="label">
+        <text class="spec-label">{{item.label}}</text>
+        <text class="spec-value">{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="section-card" wx:if="{{detailImageUrls.length}}">
+      <text class="section-title">图文详情</text>
+      <image
+        class="detail-image"
+        wx:for="{{detailImageUrls}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="widthFix"
+        data-index="{{index}}"
+        bindtap="onPreviewDetailImage"
+      />
+    </view>
+
+    <view class="section-card" wx:if="{{product.detailContent}}">
+      <text class="section-title">{{detailImageUrls.length ? '商品说明' : '商品详情'}}</text>
+      <rich-text class="detail-rich" nodes="{{product.detailContent}}"></rich-text>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </view>
+</scroll-view>
+
+<view class="loading-wrap" wx:if="{{loading}}">
+  <text class="loading-text">加载中…</text>
+</view>
+
+<view class="empty-wrap" wx:if="{{!loading && !product}}">
+  <text class="empty-text">{{cloudError || '商品不存在'}}</text>
+</view>
+
+<view class="bottom-bar" wx:if="{{product}}">
+  <button class="bar-cart" bindtap="onAddToCart">加入购物车</button>
+  <button class="bar-buy" bindtap="onBuyNow">立即购买</button>
+</view>

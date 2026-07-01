@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>TOPUYI 周边商品 · 运营上架手册</title>
+  <style>
+    @page { size: A4; margin: 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #222;
+      max-width: 180mm;
+      margin: 0 auto;
+      padding: 8mm 0;
+    }
+    h1 {
+      font-size: 20pt;
+      margin: 0 0 6px;
+      color: #1a1a1a;
+      border-bottom: 3px solid #FFD100;
+      padding-bottom: 8px;
+    }
+    .subtitle {
+      color: #555;
+      font-size: 10pt;
+      margin-bottom: 14px;
+      padding: 8px 10px;
+      background: #FFF9E0;
+      border-left: 4px solid #FFD100;
+    }
+    h2 {
+      font-size: 13pt;
+      margin: 16px 0 8px;
+      color: #1a1a1a;
+      page-break-after: avoid;
+    }
+    h3 { font-size: 11pt; margin: 10px 0 6px; page-break-after: avoid; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 10px;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 5px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f7f7f8; font-weight: 600; }
+    code {
+      font-family: Consolas, monospace;
+      background: #f3f3f4;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 9.5pt;
+    }
+    pre {
+      background: #f7f7f8;
+      border: 1px solid #e8e8e8;
+      padding: 8px 10px;
+      font-size: 10pt;
+      border-radius: 4px;
+      margin: 6px 0;
+    }
+    ul { margin: 6px 0; padding-left: 20px; }
+    li { margin: 3px 0; }
+    .checklist li { list-style: none; margin-left: -20px; }
+    .checklist li::before { content: "☐ "; }
+    .footer {
+      margin-top: 14px;
+      padding: 10px;
+      background: #FFF9E0;
+      border-radius: 6px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media print {
+      body { padding: 0; }
+      h2 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <h1>TOPUYI 周边商品 · 运营上架手册</h1>
+  <div class="subtitle">
+    在网页后台维护商品，<strong>无需找开发、无需重新发版小程序</strong>。<br>
+    环境：云开发 <code>cloud1-d4grfezxdaca540d6</code> · 小程序：TOPUYI拓普依
+  </div>
+
+  <h2>1. 怎么登录</h2>
+  <ol>
+    <li>向开发索取 <strong>云后台 / CMS</strong> 链接（微信开发者工具 → 云开发 → 云后台 → CMS 内容管理）</li>
+    <li>用 <strong>管理员微信扫码</strong> 登录</li>
+    <li>左侧菜单：<strong>内容管理</strong> → <strong>商品</strong></li>
+  </ol>
+
+  <h2>2. 上架新商品（5 步）</h2>
+  <table>
+    <tr><th>步骤</th><th>操作</th></tr>
+    <tr><td>①</td><td>商品列表 → <strong>新建</strong></td></tr>
+    <tr><td>②</td><td>填写下表必填项</td></tr>
+    <tr><td>③</td><td>上传商品图、编辑详情（建议做）</td></tr>
+    <tr><td>④</td><td><code>status</code> 选 <strong>上架</strong>（<code>on_sale</code>）</td></tr>
+    <tr><td>⑤</td><td>点 <strong>发布</strong> / <strong>保存</strong></td></tr>
+  </table>
+
+  <h3>必填字段速查</h3>
+  <table>
+    <tr><th>字段</th><th>填什么</th><th>示例</th></tr>
+    <tr><td><strong>sku</strong></td><td>商品编号（唯一）</td><td><code>stick-01</code></td></tr>
+    <tr><td><strong>name</strong></td><td>商品名称</td><td>七彩荧光棒</td></tr>
+    <tr><td><strong>price</strong></td><td>售价，单位：<strong>分</strong></td><td><code>1290</code> = ¥12.9</td></tr>
+    <tr><td><strong>stock</strong></td><td>库存</td><td><code>100</code></td></tr>
+    <tr><td><strong>category</strong></td><td>分类（英文）</td><td><code>stick</code> 荧光棒 / <code>ball</code> 发光球</td></tr>
+    <tr><td><strong>status</strong></td><td>上架状态（英文）</td><td><code>on_sale</code> 上架</td></tr>
+    <tr><td><strong>sourceAppId</strong></td><td>固定值，每条都要填</td><td><code>wx3610c3ef05d1131e</code></td></tr>
+  </table>
+
+  <h3>建议填写</h3>
+  <table>
+    <tr><th>字段</th><th>说明</th></tr>
+    <tr><td><code>desc</code></td><td>列表页短描述</td></tr>
+    <tr><td><code>images</code></td><td>商品轮播图（可多图）</td></tr>
+    <tr><td><code>detailContent</code></td><td>详情富文本</td></tr>
+    <tr><td><code>specs</code></td><td>规格，每行一条</td></tr>
+    <tr><td><code>tag</code> / <code>sort</code></td><td>角标 / 排序（越大越靠前）</td></tr>
+  </table>
+
+  <h2>3. 日常操作</h2>
+  <table>
+    <tr><th>要做的事</th><th>怎么操作</th></tr>
+    <tr><td><strong>改价</strong></td><td>编辑 → 改 <code>price</code>（分）→ 发布</td></tr>
+    <tr><td><strong>换图</strong></td><td>编辑 <code>images</code> → 发布</td></tr>
+    <tr><td><strong>下架</strong></td><td><code>status</code> 改为 <code>off_sale</code> → 发布</td></tr>
+    <tr><td><strong>重新上架</strong></td><td><code>status</code> 改为 <code>on_sale</code> → 发布</td></tr>
+    <tr><td><strong>置顶</strong></td><td>把 <code>sort</code> 调大 → 发布</td></tr>
+  </table>
+
+  <h2>4. 价格换算（重要）</h2>
+  <table>
+    <tr><th>想卖的价格</th><th>price 填</th></tr>
+    <tr><td>¥0.01</td><td><code>1</code></td></tr>
+    <tr><td>¥12.9</td><td><code>1290</code></td></tr>
+    <tr><td>¥99</td><td><code>9900</code></td></tr>
+    <tr><td>¥199</td><td><code>19900</code></td></tr>
+  </table>
+  <p><strong>公式：元 × 100 = price</strong></p>
+
+  <h2>5. 规格示例</h2>
+  <pre>尺寸:20cm
+材质:PC+LED
+电池:3节AAA</pre>
+
+  <h2>6. 验收 & 检查单</h2>
+  <p>手机打开小程序 → <strong>周边</strong> → 点商品看详情。刚改完没看到：关掉小程序重进（列表约 10 分钟缓存）。</p>
+  <ul class="checklist">
+    <li><code>status</code> = <strong>on_sale</strong></li>
+    <li><code>sourceAppId</code> = <strong>wx3610c3ef05d1131e</strong></li>
+    <li><code>price</code> 按<strong>分</strong>填写</li>
+    <li><code>category</code> 为 <strong>stick</strong> 或 <strong>ball</strong></li>
+    <li><code>sku</code> 未重复 · 已点<strong>发布</strong></li>
+  </ul>
+
+  <h2>7. 常见问题</h2>
+  <table>
+    <tr><th>问题</th><th>处理</th></tr>
+    <tr><td>看不到商品</td><td>确认 <code>status=on_sale</code>；重进小程序</td></tr>
+    <tr><td>图片不显示</td><td>确认图片已上传并发布</td></tr>
+    <tr><td>分类填错</td><td>只能用 <code>stick</code> / <code>ball</code></td></tr>
+    <tr><td>价格不对</td><td>检查是否按「分」填写</td></tr>
+  </table>
+
+  <div class="footer">日常流程：登录 CMS → 商品 → 编辑 → 发布 → 手机周边页验收</div>
+</body>
+</html>

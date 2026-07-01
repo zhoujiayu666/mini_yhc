@@ -1,8 +1,9 @@
 const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
 const { FALLBACK_PRODUCTS, addToCart } = require('../../utils/shop.js');
+const { enrichProductsForList } = require('../../utils/product-images.js');
 
-const PRODUCT_CACHE_KEY = 'topuyi_shop_products_v1';
+const PRODUCT_CACHE_KEY = 'topuyi_shop_products_v2';
 const PRODUCT_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
 const SKELETON_ITEMS = [1, 2, 3, 4];
 
@@ -39,8 +40,6 @@ Page({
     activeCategory: 'all',
     products: [],
     displayProducts: [],
-    showDetail: false,
-    detailProduct: null,
     loading: true,
     refreshing: false,
     cloudReady: false,
@@ -53,17 +52,19 @@ Page({
     if (!requireLogin()) return;
     const cached = readProductCache();
     if (cached) {
-      const displayProducts = this.filterByCategory(cached.products, this.data.activeCategory);
-      this.setData({
-        products: cached.products,
-        displayProducts,
-        loading: false,
-        refreshing: true,
-        cloudReady: true,
-        useFallback: false,
-        cloudError: ''
+      enrichProductsForList(cached.products).then((enriched) => {
+        const displayProducts = this.filterByCategory(enriched, this.data.activeCategory);
+        this.setData({
+          products: enriched,
+          displayProducts,
+          loading: false,
+          refreshing: true,
+          cloudReady: true,
+          useFallback: false,
+          cloudError: ''
+        });
+        this.loadProducts({ silent: true, skipSeed: true });
       });
-      this.loadProducts({ silent: true, skipSeed: true });
       return;
     }
     this.loadProducts();
@@ -76,17 +77,19 @@ Page({
 
   applyProductList(products, categoryId) {
     const category = categoryId != null ? categoryId : this.data.activeCategory;
-    const displayProducts = this.filterByCategory(products, category);
-    this.setData({
-      products,
-      displayProducts,
-      loading: false,
-      refreshing: false,
-      cloudReady: true,
-      useFallback: false,
-      cloudError: ''
+    enrichProductsForList(products).then((enriched) => {
+      const displayProducts = this.filterByCategory(enriched, category);
+      this.setData({
+        products: enriched,
+        displayProducts,
+        loading: false,
+        refreshing: false,
+        cloudReady: true,
+        useFallback: false,
+        cloudError: ''
+      });
+      saveProductCache(enriched);
     });
-    saveProductCache(products);
   },
 
   async loadProducts(options = {}) {
@@ -156,18 +159,15 @@ Page({
     const { id } = e.currentTarget.dataset;
     const product = this.findProduct(id);
     if (!product) return;
-    this.setData({ showDetail: true, detailProduct: product });
+    const sku = product.sku || product.id;
+    wx.navigateTo({
+      url: `/pages/product-detail/product-detail?sku=${sku}`
+    });
   },
-
-  closeDetail() {
-    this.setData({ showDetail: false, detailProduct: null });
-  },
-
-  stopPropagation() {},
 
   onAddToCart(e) {
     const id = (e.currentTarget.dataset && e.currentTarget.dataset.id) || '';
-    const product = this.findProduct(id) || this.data.detailProduct;
+    const product = this.findProduct(id);
     if (!product) return;
     if (this.data.useFallback) {
       showShopError('商城云服务未就绪', this.data.cloudError || '暂无法加入购物车');
@@ -175,17 +175,5 @@ Page({
     }
     addToCart(product, 1);
     wx.showToast({ title: '已加入购物车', icon: 'success' });
-  },
-
-  onBuyNow() {
-    const product = this.data.detailProduct;
-    if (!product || this.data.useFallback) {
-      showShopError('商城云服务未就绪', this.data.cloudError || '暂无法购买');
-      return;
-    }
-    const sku = product.sku || product.id;
-    wx.navigateTo({
-      url: `/pages/checkout/checkout?mode=buy&sku=${sku}&qty=1`
-    });
   }
 });

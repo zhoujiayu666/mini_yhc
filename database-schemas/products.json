@@ -1,0 +1,114 @@
+{
+  "title": "商品",
+  "name": "products",
+  "description": "TOPUYI 周边商城商品（关联集合 products）",
+  "type": "object",
+  "x-kind": "tcb",
+  "x-primary-column": "name",
+  "x-defaultMethods": [
+    "wedaCreate",
+    "wedaDelete",
+    "wedaUpdate",
+    "wedaGetItem",
+    "wedaGetList",
+    "wedaGetRecords",
+    "wedaBatchCreate",
+    "wedaBatchUpdate",
+    "wedaBatchDelete"
+  ],
+  "required": [
+    "sku",
+    "name",
+    "price",
+    "stock",
+    "status",
+    "category",
+    "sourceAppId"
+  ],
+  "properties": {
+    "sku": {
+      "title": "商品编号",
+      "type": "string",
+      "description": "如 stick-01，唯一",
+      "x-unique": true
+    },
+    "name": {
+      "title": "商品名称",
+      "type": "string",
+      "x-primary-column": true
+    },
+    "desc": {
+      "title": "短描述",
+      "type": "string",
+      "description": "列表页展示"
+    },
+    "price": {
+      "title": "售价",
+      "type": "number",
+      "description": "单位：分，1290=12.9元"
+    },
+    "originalPrice": {
+      "title": "划线价",
+      "type": "number",
+      "description": "单位：分，0或不填表示无划线价"
+    },
+    "category": {
+      "title": "分类",
+      "type": "string",
+      "format": "x-enum",
+      "enum": ["stick", "ball"],
+      "description": "stick=荧光棒 ball=发光球"
+    },
+    "color": {
+      "title": "展示色",
+      "type": "string",
+      "description": "无图时占位色，如 #39FF14"
+    },
+    "images": {
+      "title": "商品图",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "x-image"
+      },
+      "description": "云存储图片，可多图"
+    },
+    "specs": {
+      "title": "规格",
+      "type": "string",
+      "description": "每行一条，如 尺寸:20cm"
+    },
+    "detailContent": {
+      "title": "详情",
+      "type": "string",
+      "format": "x-rtf",
+      "description": "富文本详情"
+    },
+    "tag": {
+      "title": "角标",
+      "type": "string",
+      "description": "热销、新品等"
+    },
+    "stock": {
+      "title": "库存",
+      "type": "number"
+    },
+    "sort": {
+      "title": "排序",
+      "type": "number",
+      "description": "越大越靠前"
+    },
+    "status": {
+      "title": "状态",
+      "type": "string",
+      "format": "x-enum",
+      "enum": ["on_sale", "off_sale"],
+      "description": "on_sale=上架 off_sale=下架"
+    },
+    "sourceAppId": {
+      "title": "小程序ID",
+      "type": "string",
+      "default": "wx3610c3ef05d1131e"
+    }
+  }
+}

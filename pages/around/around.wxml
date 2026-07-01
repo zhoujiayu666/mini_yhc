@@ -35,6 +35,13 @@
         bindtap="onProductTap"
       >
         <view class="product-visual {{item.category}}">
+          <image
+            wx:if="{{item.listImage}}"
+            class="product-cover"
+            src="{{item.listImage}}"
+            mode="aspectFill"
+          />
+          <block wx:else>
           <view class="glow-bg" wx:if="{{item.category === 'ball'}}" style="background: {{item.color}};"></view>
           <block wx:if="{{item.category === 'stick'}}">
             <view class="stick-fig" style="--c: {{item.color}};">
@@ -60,6 +67,7 @@
             <view class="ball-sphere" style="background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, {{item.color}} 45%, rgba(0,0,0,0.15) 100%);"></view>
             <view class="ball-shine"></view>
           </block>
+          </block>
           <text class="product-tag" wx:if="{{item.tag}}">{{item.tag}}</text>
         </view>
         <view class="product-info">
@@ -83,48 +91,5 @@
     </view>
   </view>
 </scroll-view>
-
-<view class="detail-mask" wx:if="{{showDetail}}" bindtap="closeDetail">
-  <view class="detail-sheet" catchtap="stopPropagation">
-    <view class="detail-header">
-      <text class="detail-title">{{detailProduct.name}}</text>
-      <view class="detail-close" bindtap="closeDetail">×</view>
-    </view>
-    <view class="detail-visual {{detailProduct.category}}">
-      <view class="glow-bg large" wx:if="{{detailProduct.category === 'ball'}}" style="background: {{detailProduct.color}};"></view>
-      <block wx:if="{{detailProduct.category === 'stick'}}">
-        <view class="stick-fig large" style="--c: {{detailProduct.color}};">
-          <view class="stick-bloom"></view>
-          <view class="stick-bloom stick-bloom-soft"></view>
-          <view class="stick-assembly">
-            <view class="stick-hook"></view>
-            <view class="stick-cap"></view>
-            <view class="stick-tube">
-              <view class="stick-tube-glow"></view>
-              <view class="stick-tube-shine"></view>
-            </view>
-            <view class="stick-connector"></view>
-            <view class="stick-handle">
-              <view class="stick-grip-line"></view>
-              <view class="stick-grip-line"></view>
-              <view class="stick-grip-line"></view>
-            </view>
-          </view>
-        </view>
-      </block>
-      <block wx:else>
-        <view class="ball-sphere large" style="background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, {{detailProduct.color}} 45%, rgba(0,0,0,0.15) 100%);"></view>
-        <view class="ball-shine large"></view>
-      </block>
-    </view>
-    <text class="detail-desc">{{detailProduct.desc}}</text>
-    <text class="detail-price">¥{{detailProduct.price}}</text>
-    <text class="detail-note">支付功能开通后可在线付款；当前支持下单留单。</text>
-    <view class="detail-actions">
-      <button class="detail-cart" bindtap="onAddToCart" data-id="{{detailProduct.id}}">加入购物车</button>
-      <button class="detail-buy" bindtap="onBuyNow">立即购买</button>
-    </view>
-  </view>
-</view>
 
 <main-tab-bar current="around"></main-tab-bar>

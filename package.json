@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "@cloudbase/cloud-api": "^0.5.5",
+    "@cloudbase/node-sdk": "^3.18.3",
+    "@cloudbase/toolbox": "^0.8.1"
+  }
+}

@@ -1,0 +1,24 @@
+classDiagram
+    class products {
+        sku: string <<商品编号>>
+        name: string <<商品名称>>
+        desc: string <<短描述>>
+        price: number <<售价(分)>>
+        originalPrice: number <<划线价(分)>>
+        category: x-enum <<分类>>
+        color: string <<展示色>>
+        images: x-image <<商品图>>
+        specs: string <<规格>>
+        detailContent: x-rtf <<详情>>
+        tag: string <<角标>>
+        stock: number <<库存>>
+        sort: number <<排序>>
+        status: x-enum <<状态>>
+        sourceAppId: string <<小程序ID>>
+        required() ["sku", "name", "price", "stock", "status", "category", "sourceAppId"]
+        unique() ["sku"]
+        display_field() "name"
+        enum_category() ["stick", "ball"]
+        enum_status() ["on_sale", "off_sale"]
+    }
+    note for products "TOPUYI周边商品"

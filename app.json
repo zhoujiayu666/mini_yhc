@@ -6,6 +6,7 @@
     "pages/product/product",
     "pages/show/show",
     "pages/around/around",
+    "pages/product-detail/product-detail",
     "pages/mine/mine",
     "pages/checkout/checkout",
     "pages/orders/orders",

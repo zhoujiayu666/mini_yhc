@@ -66,6 +66,7 @@ function fenToYuan(fen) {
 
 function formatProduct(doc) {
   if (!doc) return null;
+  const images = normalizeImages(doc.images);
   return {
     id: doc.sku,
     productId: doc._id,
@@ -77,9 +78,66 @@ function formatProduct(doc) {
     tag: doc.tag || '',
     price: fenToYuan(doc.price),
     priceFen: doc.price,
+    originalPrice: doc.originalPrice ? fenToYuan(doc.originalPrice) : 0,
+    originalPriceFen: doc.originalPrice || 0,
     stock: doc.stock,
-    status: doc.status
+    status: doc.status,
+    images,
+    coverImage: images[0] || '',
+    detailImages: normalizeImages(doc.detailImages),
+    specs: normalizeSpecs(doc.specs),
+    detailContent: doc.detailContent || doc.detail || ''
   };
+}
+
+function normalizeImages(images) {
+  if (!images) return [];
+  const list = Array.isArray(images) ? images : [images];
+  return list
+    .map((item) => {
+      if (typeof item === 'string') return item.trim();
+      if (item && typeof item === 'object') {
+        return String(item.url || item.fileID || item.tempFileURL || '').trim();
+      }
+      return '';
+    })
+    .filter(Boolean);
+}
+
+function normalizeSpecs(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const label = item.label || item.name || item.key || '';
+        const val = item.value || item.val || '';
+        if (!label) return null;
+        return { label: String(label), value: String(val) };
+      })
+      .filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return normalizeSpecs(parsed);
+    } catch (e) {
+      // 运营可在 CMS 多行文本里用「尺寸:20cm」格式
+    }
+    return value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const idx = line.search(/[:|：]/);
+        if (idx <= 0) return null;
+        return {
+          label: line.slice(0, idx).trim(),
+          value: line.slice(idx + 1).trim()
+        };
+      })
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function formatAddress(doc) {

@@ -1,0 +1,33 @@
+# 依赖
+node_modules/
+
+# 微信小程序构建产物
+miniprogram_npm/
+
+# 开发者工具本地配置（含个人偏好，勿提交）
+project.private.config.json
+
+# 日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境变量 / 密钥
+.env
+.env.*
+!.env.example
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 本地临时笔记（按需取消注释）
+# 一些信息.txt

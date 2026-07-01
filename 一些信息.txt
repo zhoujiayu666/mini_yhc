@@ -1,0 +1,4 @@
+以后若需重新同步模型字段，在项目根目录执行：
+
+tcb.cmd db model push -n products
+（首次创建用 node scripts/create-products-model.js，之后改字段用 push 更新。）
