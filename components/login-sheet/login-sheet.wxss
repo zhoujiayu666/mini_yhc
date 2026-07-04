@@ -27,6 +27,30 @@
   animation: sheet-up 0.25s ease-out;
 }
 
+.sheet-close {
+  position: absolute;
+  top: 20rpx;
+  right: 24rpx;
+  z-index: 2;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #f7f7f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sheet-close-hover {
+  opacity: 0.72;
+}
+
+.sheet-close-icon {
+  font-size: 40rpx;
+  line-height: 1;
+  color: #757575;
+}
+
 @keyframes sheet-up {
   from {
     transform: translateY(100%);

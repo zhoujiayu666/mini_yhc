@@ -1,6 +1,9 @@
 <view class="sheet-root" wx:if="{{visible}}">
   <view class="sheet-mask" bindtap="onClose" catchtouchmove="noop"></view>
   <view class="sheet-panel" catchtap="noop">
+    <view class="sheet-close" catchtap="onClose" hover-class="sheet-close-hover">
+      <text class="sheet-close-icon">×</text>
+    </view>
     <view class="sheet-handle"></view>
     <view class="sheet-header">
       <text class="sheet-title">登录 TOPUYI</text>
