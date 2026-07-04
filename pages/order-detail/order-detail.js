@@ -24,7 +24,7 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
+    if (!requireLogin({ message: '查看订单需要登录', backOnCancel: true })) return;
     this.loadOrder();
   },
 

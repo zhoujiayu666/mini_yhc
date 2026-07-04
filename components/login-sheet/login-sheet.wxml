@@ -1,11 +1,12 @@
-<page-nav-bar back="{{true}}"></page-nav-bar>
-<view class="login-page">
-  <view class="login-header">
-    <text class="login-title">欢迎使用</text>
-    <text class="login-subtitle">{{hint}}</text>
-  </view>
+<view class="sheet-root" wx:if="{{visible}}">
+  <view class="sheet-mask" bindtap="onClose" catchtouchmove="noop"></view>
+  <view class="sheet-panel" catchtap="noop">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <text class="sheet-title">登录 TOPUYI</text>
+      <text class="sheet-subtitle">{{hint}}</text>
+    </view>
 
-  <view class="login-form">
     <view class="wx-login-wrap">
       <text class="wx-login-text">微信一键登录</text>
       <button
@@ -33,7 +34,9 @@
           bindinput="onPhoneInput"
         />
       </view>
-      <button class="login-btn" loading="{{loading}}" disabled="{{loading}}" bindtap="onLogin">登录</button>
+      <button class="manual-btn" loading="{{loading}}" disabled="{{loading}}" bindtap="onManualLogin">
+        登录
+      </button>
     </view>
 
     <view class="agreement-block">
@@ -49,6 +52,6 @@
       <text class="agree-tip">若您的手机号未注册，将为您直接注册 TOPUYI 账号</text>
     </view>
 
-    <button class="skip-btn" bindtap="onSkipLogin">暂不登录，先去逛逛</button>
+    <button class="skip-btn" bindtap="onClose">暂不登录</button>
   </view>
 </view>

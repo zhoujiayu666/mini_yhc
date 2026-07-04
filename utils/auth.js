@@ -11,9 +11,31 @@ function isLoggedIn() {
   return !!(user && user.phone);
 }
 
-function requireLogin() {
+const { showLoginSheet } = require('./login-sheet-host.js');
+
+/** 主动登录：跳转全屏登录页，避免与「我的」页内容叠在一起 */
+function goLoginPage(message) {
+  const query = message ? `?hint=${encodeURIComponent(message)}` : '';
+  wx.navigateTo({ url: `/pages/login/login${query}` });
+}
+
+/** 需要登录时调用：半屏弹层（用于下单、结算等场景） */
+function requireLogin(options = {}) {
   if (isLoggedIn()) return true;
-  wx.reLaunch({ url: '/pages/login/login' });
+
+  const { message = '登录后可使用完整功能', silent = false, backOnCancel = false } = options;
+  if (silent) return false;
+
+  showLoginSheet({
+    message,
+    onCancel: backOnCancel
+      ? () => {
+          wx.navigateBack({
+            fail: () => wx.reLaunch({ url: '/pages/control/control' })
+          });
+        }
+      : null
+  });
   return false;
 }
 
@@ -41,6 +63,7 @@ module.exports = {
   getUserInfo,
   isLoggedIn,
   requireLogin,
+  goLoginPage,
   formatPhone,
   logout
 };

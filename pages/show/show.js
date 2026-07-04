@@ -1,5 +1,3 @@
-const { requireLogin } = require('../../utils/auth.js');
-
 const STORAGE_KEY = 'topuyi_show_seat';
 const ZONE_LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 const SEAT_NUMBERS = Array.from({ length: 99 }, (_, i) => String(i + 1));
@@ -45,7 +43,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
     this.syncSeatEnabled();
     this.loadSeat();
   },

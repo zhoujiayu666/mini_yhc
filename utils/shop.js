@@ -152,6 +152,24 @@ function clearCart() {
   wx.removeStorageSync(CART_STORAGE_KEY);
 }
 
+function updateCartQty(sku, qty) {
+  const cart = getCart();
+  const idx = cart.findIndex((item) => (item.sku || item.id) === sku);
+  if (idx < 0) return cart;
+  const nextQty = Math.max(0, parseInt(qty, 10) || 0);
+  if (nextQty <= 0) {
+    cart.splice(idx, 1);
+  } else {
+    cart[idx].qty = nextQty;
+  }
+  setCart(cart);
+  return cart;
+}
+
+function removeFromCart(sku) {
+  return updateCartQty(sku, 0);
+}
+
 function cartToOrderItems(cart) {
   return (cart || []).map((item) => ({
     sku: item.sku || item.id,
@@ -170,5 +188,7 @@ module.exports = {
   getCartCount,
   addToCart,
   clearCart,
+  updateCartQty,
+  removeFromCart,
   cartToOrderItems
 };

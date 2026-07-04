@@ -26,6 +26,18 @@ page {
   margin-bottom: 40rpx;
 }
 
+.profile-card-tap:active {
+  background: #fafafa;
+}
+
+.profile-arrow {
+  font-size: 40rpx;
+  color: #c4c4c4;
+  line-height: 1;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
 .avatar-wrap {
   width: 112rpx;
   height: 112rpx;
@@ -76,6 +88,12 @@ page {
 .profile-tag.cloud {
   color: #C89600;
   background: rgba(255, 209, 0, 0.15);
+}
+
+.profile-hint {
+  font-size: 24rpx;
+  color: #9E9E9E;
+  line-height: 1.5;
 }
 
 .section {

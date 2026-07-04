@@ -1,7 +1,7 @@
 {
   "pages": [
-    "pages/login/login",
     "pages/control/control",
+    "pages/login/login",
     "pages/room/room",
     "pages/product/product",
     "pages/show/show",
@@ -13,6 +13,7 @@
     "pages/order-detail/order-detail",
     "pages/address-list/address-list",
     "pages/address-edit/address-edit",
+    "pages/user-agreement/user-agreement",
     "pages/software/software",
     "pages/connect-guide/connect-guide",
     "pages/index/index",

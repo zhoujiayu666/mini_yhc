@@ -1,5 +1,4 @@
 const bleController = require('../../utils/ble.js');
-const { requireLogin } = require('../../utils/auth.js');
 const { DEVICE_CONNECT_DATA, attachDeviceConnect } = require('../../utils/device-connect.js');
 const {
   MAX_NAME_LEN,
@@ -48,7 +47,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
     this.refreshDeviceLists();
   },
 

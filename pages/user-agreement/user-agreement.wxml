@@ -1,0 +1,25 @@
+<page-nav-bar back="{{true}}"></page-nav-bar>
+<scroll-view class="scrollarea" scroll-y>
+  <view class="legal-page">
+    <text class="legal-title">TOPUYI 用户协议</text>
+    <text class="legal-updated">更新日期：2026年7月</text>
+
+    <text class="legal-section">一、服务说明</text>
+    <text class="legal-p">TOPUYI 小程序为您提供智能灯光设备控制、演出座位绑定、周边商城及相关软件信息服务。使用本服务即表示您已阅读并理解本协议。</text>
+
+    <text class="legal-section">二、账号注册与登录</text>
+    <text class="legal-p">您可通过微信授权手机号或手动输入手机号注册/登录。若您的手机号尚未注册，我们将为您创建 TOPUYI 账号。您应保证所提供信息真实、准确。</text>
+
+    <text class="legal-section">三、用户行为规范</text>
+    <text class="legal-p">您不得利用本服务从事违法违规活动，不得干扰设备连接、群组控制或商城交易的正常秩序。</text>
+
+    <text class="legal-section">四、订单与支付</text>
+    <text class="legal-p">您在商城下单即视为同意商品信息、价格及收货信息。订单支付、发货、售后等事项以页面展示及平台规则为准。</text>
+
+    <text class="legal-section">五、协议变更</text>
+    <text class="legal-p">我们可能根据业务需要更新本协议，更新后将通过小程序内适当方式提示。若您继续使用服务，即视为接受更新后的协议。</text>
+
+    <text class="legal-section">六、联系我们</text>
+    <text class="legal-p">如对本协议有疑问，请通过小程序内客服或官方渠道与我们联系。</text>
+  </view>
+</scroll-view>

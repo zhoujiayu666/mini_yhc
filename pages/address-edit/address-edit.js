@@ -29,7 +29,7 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
+    if (!requireLogin({ message: '编辑地址需要登录', backOnCancel: true })) return;
     if (this.data.id) {
       this.loadAddress();
     }

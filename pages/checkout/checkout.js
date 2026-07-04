@@ -30,7 +30,7 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
+    if (!requireLogin({ message: '结算需要登录', backOnCancel: true })) return;
     const selectedId = wx.getStorageSync('checkoutSelectedAddressId');
     if (selectedId) {
       wx.removeStorageSync('checkoutSelectedAddressId');

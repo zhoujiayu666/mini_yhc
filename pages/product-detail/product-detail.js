@@ -18,7 +18,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
     if (!this._sku) {
       showShopError('提示', '缺少商品编号');
       this.setData({ loading: false, cloudError: '缺少商品编号' });
@@ -62,6 +61,7 @@ Page({
   },
 
   onBuyNow() {
+    if (!requireLogin({ message: '下单购买需要登录' })) return;
     const product = this.data.product;
     if (!product) return;
     const sku = product.sku || product.id;

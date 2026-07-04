@@ -91,7 +91,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
     this.updateConnectionStatus();
     if (this._skipOnShowLoadOnce) {
       this._skipOnShowLoadOnce = false;
@@ -732,6 +731,7 @@ Page({
   },
 
   openCreateGroupModal() {
+    if (!requireLogin({ message: '创建群组需要登录' })) return;
     this.setData({
       showCreateGroupModal: true,
       createGroupForm: { name: '', id: '', password: '', needPassword: true }
@@ -739,6 +739,7 @@ Page({
   },
 
   openJoinGroupModal() {
+    if (!requireLogin({ message: '加入群组需要登录' })) return;
     this.setData({
       showJoinGroupModal: true,
       joinGroupForm: { id: '', nickname: '', password: '' }
@@ -779,6 +780,7 @@ Page({
   },
 
   async createGroup() {
+    if (!requireLogin({ message: '创建群组需要登录', silent: true })) return;
     const form = this.data.createGroupForm;
     if (!form.name || !form.id) {
       wx.showToast({ title: '请完整填写信息', icon: 'none' });
@@ -821,6 +823,7 @@ Page({
   },
 
   async joinGroup() {
+    if (!requireLogin({ message: '加入群组需要登录', silent: true })) return;
     const form = this.data.joinGroupForm;
     if (!form.id || !form.nickname || !form.password) {
       wx.showToast({ title: '请完整填写信息', icon: 'none' });

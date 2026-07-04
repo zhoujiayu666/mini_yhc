@@ -1,95 +1,152 @@
-<page-nav-bar></page-nav-bar>
-<scroll-view class="scrollarea" scroll-y>
-  <view class="shop-page">
-    <view class="page-header">
-      <view class="page-header-row">
-        <text class="page-title">周边商城</text>
-        <text class="refresh-hint" wx:if="{{refreshing}}">更新中…</text>
+<view class="around-shell {{showCartPanel ? 'around-shell--panel-open' : ''}}">
+  <page-nav-bar></page-nav-bar>
+  <view class="scrollarea" style="height: {{scrollHeight}}px;">
+    <view class="shop-page">
+      <view class="page-header">
+        <view class="page-header-row">
+          <text class="page-title">周边商城</text>
+          <text class="refresh-hint" wx:if="{{refreshing}}">更新中…</text>
+        </view>
+        <text class="page-subtitle">荧光棒 · 发光球 · 精选周边</text>
       </view>
-      <text class="page-subtitle">荧光棒 · 发光球 · 精选周边</text>
-    </view>
 
-    <view class="cloud-error-banner" wx:if="{{cloudError}}">
-      <text class="cloud-error-text">{{cloudError}}</text>
-      <view class="cloud-error-retry" bindtap="onRetryCloud">重试</view>
-    </view>
+      <view class="cloud-error-banner" wx:if="{{cloudError}}">
+        <text class="cloud-error-text">{{cloudError}}</text>
+        <view class="cloud-error-retry" bindtap="onRetryCloud">重试</view>
+      </view>
 
-    <view class="category-section">
-      <view class="category-row">
+      <view class="category-section">
+        <view class="category-row">
+          <view
+            class="category-chip {{activeCategory === item.id ? 'active' : ''}}"
+            wx:for="{{categories}}"
+            wx:key="id"
+            data-id="{{item.id}}"
+            bindtap="onCategoryTap"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="product-grid" wx:if="{{!loading || displayProducts.length}}">
         <view
-          class="category-chip {{activeCategory === item.id ? 'active' : ''}}"
-          wx:for="{{categories}}"
+          class="product-card"
+          wx:for="{{displayProducts}}"
           wx:key="id"
           data-id="{{item.id}}"
-          bindtap="onCategoryTap"
-        >{{item.label}}</view>
-      </view>
-    </view>
-
-    <view class="product-grid" wx:if="{{!loading || displayProducts.length}}">
-      <view
-        class="product-card"
-        wx:for="{{displayProducts}}"
-        wx:key="id"
-        data-id="{{item.id}}"
-        bindtap="onProductTap"
-      >
-        <view class="product-visual {{item.category}}">
-          <image
-            wx:if="{{item.listImage}}"
-            class="product-cover"
-            src="{{item.listImage}}"
-            mode="aspectFill"
-          />
-          <block wx:else>
-          <view class="glow-bg" wx:if="{{item.category === 'ball'}}" style="background: {{item.color}};"></view>
-          <block wx:if="{{item.category === 'stick'}}">
-            <view class="stick-fig" style="--c: {{item.color}};">
-              <view class="stick-bloom"></view>
-              <view class="stick-bloom stick-bloom-soft"></view>
-              <view class="stick-assembly">
-                <view class="stick-hook"></view>
-                <view class="stick-cap"></view>
-                <view class="stick-tube">
-                  <view class="stick-tube-glow"></view>
-                  <view class="stick-tube-shine"></view>
-                </view>
-                <view class="stick-connector"></view>
-                <view class="stick-handle">
-                  <view class="stick-grip-line"></view>
-                  <view class="stick-grip-line"></view>
-                  <view class="stick-grip-line"></view>
+          bindtap="onProductTap"
+        >
+          <view class="product-visual {{item.category}}">
+            <image
+              wx:if="{{item.listImage}}"
+              class="product-cover"
+              src="{{item.listImage}}"
+              mode="aspectFill"
+            />
+            <block wx:else>
+            <view class="glow-bg" wx:if="{{item.category === 'ball'}}" style="background: {{item.color}};"></view>
+            <block wx:if="{{item.category === 'stick'}}">
+              <view class="stick-fig" style="--c: {{item.color}};">
+                <view class="stick-bloom"></view>
+                <view class="stick-bloom stick-bloom-soft"></view>
+                <view class="stick-assembly">
+                  <view class="stick-hook"></view>
+                  <view class="stick-cap"></view>
+                  <view class="stick-tube">
+                    <view class="stick-tube-glow"></view>
+                    <view class="stick-tube-shine"></view>
+                  </view>
+                  <view class="stick-connector"></view>
+                  <view class="stick-handle">
+                    <view class="stick-grip-line"></view>
+                    <view class="stick-grip-line"></view>
+                    <view class="stick-grip-line"></view>
+                  </view>
                 </view>
               </view>
+            </block>
+            <block wx:else>
+              <view class="ball-sphere" style="background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, {{item.color}} 45%, rgba(0,0,0,0.15) 100%);"></view>
+              <view class="ball-shine"></view>
+            </block>
+            </block>
+            <text class="product-tag" wx:if="{{item.tag}}">{{item.tag}}</text>
+          </view>
+          <view class="product-info">
+            <text class="product-name">{{item.name}}</text>
+            <text class="product-desc">{{item.desc}}</text>
+            <view class="product-bottom">
+              <text class="product-price">¥{{item.price}}</text>
+              <view class="add-btn" catchtap="onAddToCart" data-id="{{item.id}}">+</view>
             </view>
-          </block>
-          <block wx:else>
-            <view class="ball-sphere" style="background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, {{item.color}} 45%, rgba(0,0,0,0.15) 100%);"></view>
-            <view class="ball-shine"></view>
-          </block>
-          </block>
-          <text class="product-tag" wx:if="{{item.tag}}">{{item.tag}}</text>
-        </view>
-        <view class="product-info">
-          <text class="product-name">{{item.name}}</text>
-          <text class="product-desc">{{item.desc}}</text>
-          <view class="product-bottom">
-            <text class="product-price">¥{{item.price}}</text>
-            <view class="add-btn" catchtap="onAddToCart" data-id="{{item.id}}">+</view>
           </view>
         </view>
       </view>
-    </view>
 
-    <view class="skeleton-grid" wx:if="{{loading && !displayProducts.length}}">
-      <view class="skeleton-card" wx:for="{{skeletonItems}}" wx:key="*this">
-        <view class="skeleton-visual"></view>
-        <view class="skeleton-line skeleton-line-title"></view>
-        <view class="skeleton-line skeleton-line-desc"></view>
-        <view class="skeleton-line skeleton-line-price"></view>
+      <view class="skeleton-grid" wx:if="{{loading && !displayProducts.length}}">
+        <view class="skeleton-card" wx:for="{{skeletonItems}}" wx:key="*this">
+          <view class="skeleton-visual"></view>
+          <view class="skeleton-line skeleton-line-title"></view>
+          <view class="skeleton-line skeleton-line-desc"></view>
+          <view class="skeleton-line skeleton-line-price"></view>
+        </view>
       </view>
     </view>
   </view>
-</scroll-view>
+</view>
+
+<view
+  class="cart-bar"
+  wx:if="{{!showCartPanel}}"
+  style="bottom: {{panelBottomPx}}px;"
+>
+    <view class="cart-bar-left" bindtap="onOpenCart" hover-class="cart-bar-left-hover">
+      <view class="cart-icon-wrap">
+        <image class="cart-icon-img" src="/images/icon-cart.svg" mode="aspectFit" />
+        <text class="cart-badge" wx:if="{{cartCount > 0}}">{{cartBadgeText}}</text>
+      </view>
+      <view class="cart-price-wrap">
+        <text class="cart-price" wx:if="{{cartCount > 0}}">¥{{cartTotalYuan}}</text>
+        <text class="cart-empty-hint" wx:else>购物车为空</text>
+      </view>
+    </view>
+    <view
+      class="cart-checkout {{cartCount > 0 ? '' : 'disabled'}}"
+      bindtap="onGoCheckout"
+      hover-class="cart-checkout-hover"
+    >去结算</view>
+</view>
 
 <main-tab-bar current="around"></main-tab-bar>
+
+<view class="cart-panel-root" wx:if="{{showCartPanel}}" catchtouchmove="noop">
+  <view class="cart-panel-mask" bindtap="onCloseCartPanel"></view>
+  <view class="cart-panel" style="bottom: {{panelBottomPx}}px;">
+    <view class="cart-panel-header">
+      <text class="cart-panel-title">购物车</text>
+      <text class="cart-panel-close" bindtap="onCloseCartPanel">关闭</text>
+    </view>
+    <view class="cart-panel-list" wx:if="{{cartItems.length}}">
+      <view class="cart-line" wx:for="{{cartItems}}" wx:key="sku">
+        <view class="cart-line-info">
+          <text class="cart-line-name">{{item.name}}</text>
+          <text class="cart-line-price">¥{{item.price}} × {{item.qty}}</text>
+        </view>
+        <view class="cart-line-actions">
+          <view class="qty-btn" data-sku="{{item.sku}}" bindtap="onCartQtyMinus">−</view>
+          <text class="qty-num">{{item.qty}}</text>
+          <view class="qty-btn" data-sku="{{item.sku}}" bindtap="onCartQtyPlus">+</view>
+          <text class="cart-line-remove" data-sku="{{item.sku}}" bindtap="onCartRemove">删除</text>
+        </view>
+      </view>
+    </view>
+    <view class="cart-panel-empty" wx:else>
+      <text class="cart-panel-empty-text">购物车还是空的</text>
+      <text class="cart-panel-empty-hint">去挑几件喜欢的周边吧</text>
+    </view>
+    <view class="cart-panel-footer">
+      <text class="cart-panel-total" wx:if="{{cartCount > 0}}">合计 ¥{{cartTotalYuan}}</text>
+      <text class="cart-panel-total empty" wx:else>合计 ¥0.00</text>
+      <view class="cart-panel-checkout {{cartCount > 0 ? '' : 'disabled'}}" bindtap="onGoCheckout">去结算</view>
+    </view>
+  </view>
+</view>

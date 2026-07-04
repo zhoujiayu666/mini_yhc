@@ -1,24 +1,49 @@
-const app = getApp();
-const { loginWithPhone, saveLocalUser } = require('../../utils/user-login.js');
-const { initCloud, CLOUD_ENV_ID } = require('../../utils/cloud-config.js');
-const { formatErrorMessage } = require('../../utils/error-format.js');
+const { initCloud } = require('../../utils/cloud-config.js');
+const { runLoginFlow } = require('../../utils/login-flow.js');
+const {
+  ensureAgreed,
+  openPrivacyPolicy,
+  openUserAgreement
+} = require('../../utils/login-agreement.js');
 
 Page({
   data: {
     phone: '',
-    loading: false
+    loading: false,
+    hint: '登录后可同步订单与群组，也可先体验功能',
+    showManual: false,
+    agreed: false
   },
 
-  onLoad() {
-    this.ensureCloudReady();
+  onLoad(options) {
+    initCloud();
+    if (options && options.hint) {
+      this.setData({ hint: decodeURIComponent(options.hint) });
+    }
     const user = wx.getStorageSync('userInfo');
     if (user && user.phone) {
       this.goMain();
     }
   },
 
-  ensureCloudReady() {
-    initCloud();
+  onToggleManual() {
+    this.setData({ showManual: !this.data.showManual });
+  },
+
+  onToggleAgree() {
+    this.setData({ agreed: !this.data.agreed });
+  },
+
+  onNeedAgree() {
+    ensureAgreed(false);
+  },
+
+  onOpenPrivacy() {
+    openPrivacyPolicy();
+  },
+
+  onOpenUserAgreement() {
+    openUserAgreement();
   },
 
   onPhoneInput(e) {
@@ -26,53 +51,47 @@ Page({
   },
 
   async onLogin() {
+    if (!ensureAgreed(this.data.agreed)) return;
     const phone = this.data.phone;
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '请输入正确手机号', icon: 'none' });
       return;
     }
-    await this.registerPhone(phone);
+    await this.doLogin({ phone });
   },
 
-  async registerPhone(phone) {
-    this.setData({ loading: true });
-    try {
-      const result = await loginWithPhone(phone);
-      saveLocalUser(result.phone, {
-        openid: result.openid,
-        localOnly: result.localOnly
-      });
-
-      let toastTitle = result.isNew ? '注册成功' : '登录成功';
-      if (result.localOnly) {
-        const hint = result.fallbackError || '';
-        console.warn('[login] 云端登录失败，已本地登录。环境ID:', CLOUD_ENV_ID, hint);
-        wx.showModal({
-          title: '已本地登录',
-          content:
-            '云数据库/云函数未就绪，本次仅保存在本机。\n\n请检查：\n1. utils/cloud-config.js 环境ID是否与云开发控制台一致\n2. 数据库已建 users 集合（仅创建者可读写）\n3. 已部署 user-service 云函数',
-          showCancel: false,
-          confirmText: '知道了'
-        });
-      } else {
-        wx.showToast({ title: toastTitle, icon: 'success' });
+  async onGetPhoneNumber(e) {
+    if (!ensureAgreed(this.data.agreed)) return;
+    const detail = e.detail || {};
+    if (detail.errMsg && !detail.errMsg.includes(':ok')) {
+      if (detail.errMsg.includes('deny') || detail.errMsg.includes('cancel')) {
+        return;
       }
-      if (!result.localOnly) {
-        setTimeout(() => this.goMain(), 500);
-      } else {
-        setTimeout(() => this.goMain(), 300);
-      }
-    } catch (err) {
-      console.error('[login] 登录失败', err);
-      const msg = formatErrorMessage(err, '登录失败，请检查云开发环境或网络');
-      wx.showToast({
-        title: msg.length > 20 ? '登录失败，请重试' : msg,
-        icon: 'none',
-        duration: 2500
-      });
-    } finally {
-      this.setData({ loading: false });
+      wx.showToast({ title: '微信授权失败', icon: 'none' });
+      return;
     }
+    const code = detail.code;
+    if (!code) {
+      wx.showToast({ title: '未获取授权，请重试', icon: 'none' });
+      return;
+    }
+    await this.doLogin({ code });
+  },
+
+  async doLogin(payload) {
+    if (this.data.loading) return;
+    this.setData({ loading: true });
+    const ok = await runLoginFlow({ ...payload });
+    this.setData({ loading: false });
+    if (ok) {
+      setTimeout(() => this.goMain(), 400);
+    }
+  },
+
+  onSkipLogin() {
+    wx.navigateBack({
+      fail: () => this.goMain()
+    });
   },
 
   goMain() {

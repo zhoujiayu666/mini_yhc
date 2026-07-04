@@ -1,6 +1,5 @@
 const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
-const { requireLogin } = require('../../utils/auth.js');
 const {
   RHYTHM_INITIAL_DATA,
   attachRhythm,
@@ -146,7 +145,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin()) return;
     this.setData(
       this.mergeScrollTop({
         isConnected: app.globalData.isConnected || bleController.isConnected

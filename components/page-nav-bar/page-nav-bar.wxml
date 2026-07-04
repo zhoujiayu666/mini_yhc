@@ -3,3 +3,4 @@
     <slot name="right"></slot>
   </view>
 </navigation-bar>
+<login-sheet id="login-sheet"></login-sheet>
