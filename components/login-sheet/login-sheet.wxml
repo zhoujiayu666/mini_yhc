@@ -11,7 +11,7 @@
     </view>
 
     <view class="wx-login-wrap">
-      <text class="wx-login-text">微信一键登录</text>
+      <text class="wx-login-text">手机号快捷登录</text>
       <button
         wx:if="{{agreed}}"
         class="wx-login-cover"

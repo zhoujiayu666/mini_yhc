@@ -83,7 +83,7 @@ exports.main = async (event) => {
     if (action === 'loginByCode') {
       const code = String(event.code || '').trim();
       if (!code) {
-        return { success: false, message: '缺少手机号授权凭证' };
+        return { success: false, message: '缺少手机号验证凭证' };
       }
 
       let phone;
@@ -91,9 +91,9 @@ exports.main = async (event) => {
         phone = await resolvePhoneFromCode(code);
       } catch (err) {
         console.error('[user-service] loginByCode', err);
-        const msg = (err && err.message) || '微信手机号授权失败';
+        const msg = (err && err.message) || '手机号验证失败';
         if (msg.includes('40029') || msg.includes('invalid code')) {
-          return { success: false, message: '授权已过期，请重新点击授权' };
+          return { success: false, message: '验证已过期，请重新快捷登录' };
         }
         if (msg.includes('1400001')) {
           return { success: false, message: '手机号验证额度不足，请在公众平台付费管理充值' };

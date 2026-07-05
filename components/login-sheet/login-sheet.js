@@ -90,12 +90,12 @@ Component({
         if (detail.errMsg.includes('deny') || detail.errMsg.includes('cancel')) {
           return;
         }
-        wx.showToast({ title: '微信授权失败', icon: 'none' });
+        wx.showToast({ title: '手机号验证失败', icon: 'none' });
         return;
       }
       const code = detail.code;
       if (!code) {
-        wx.showToast({ title: '未获取授权，请重试', icon: 'none' });
+        wx.showToast({ title: '未获取手机号，请重试', icon: 'none' });
         return;
       }
       await this.doLogin({ code });

@@ -115,7 +115,7 @@ async function loginWithPhone(phone) {
 
 async function loginWithPhoneCode(code) {
   if (!wx.cloud) {
-    throw new Error('当前环境不支持微信手机号登录，请改用手动输入');
+    throw new Error('当前环境不支持手机号快捷登录，请改用手动输入');
   }
   return loginViaCloudFunctionCode(code);
 }
