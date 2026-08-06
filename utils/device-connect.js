@@ -1,5 +1,10 @@
 const bleController = require('./ble.js');
-const protocol = require('./protocol.js');
+const {
+  isTargetBleDevice,
+  enrichDeviceIdentity,
+  dedupeDevicesByBindId,
+  getDeviceBindId
+} = require('./ble-device-id.js');
 const app = getApp();
 
 const DEVICE_CONNECT_DATA = {
@@ -23,121 +28,30 @@ function attachDeviceConnect(page) {
         (app.globalData.currentDevice && app.globalData.currentDevice.deviceId) ||
         ''
       ).toUpperCase();
-      return devices.map((d) => ({
-        ...d,
-        isConnectedDevice: !!(
-          isLinked &&
-          connectedId &&
-          (d.deviceId || '').toUpperCase() === connectedId
-        )
-      }));
+      const connectedBind = (
+        (app.globalData.currentDevice && app.globalData.currentDevice.bindId) ||
+        ''
+      ).toUpperCase();
+      return devices.map((d) => {
+        const enriched = enrichDeviceIdentity(d);
+        const sameDeviceId =
+          connectedId && (enriched.deviceId || '').toUpperCase() === connectedId;
+        const sameBind =
+          connectedBind &&
+          (enriched.bindId || '').toUpperCase() === connectedBind;
+        return {
+          ...enriched,
+          isConnectedDevice: !!(isLinked && (sameDeviceId || sameBind))
+        };
+      });
     },
 
     dedupeDevicesById(devices) {
-      const map = {};
-      (devices || []).forEach((d) => {
-        const id = (d.deviceId || '').toUpperCase();
-        if (!id) return;
-        const prev = map[id];
-        if (!prev) {
-          map[id] = d;
-          return;
-        }
-        const prevRssi = typeof prev.RSSI === 'number' ? prev.RSSI : -999;
-        const nextRssi = typeof d.RSSI === 'number' ? d.RSSI : -999;
-        const prevScore =
-          (prev.name ? 1 : 0) + (prev.localName ? 1 : 0) + (prev.advertisData ? 1 : 0);
-        const nextScore =
-          (d.name ? 1 : 0) + (d.localName ? 1 : 0) + (d.advertisData ? 1 : 0);
-        if (nextRssi > prevRssi || (nextRssi === prevRssi && nextScore > prevScore)) {
-          map[id] = { ...prev, ...d };
-        } else {
-          map[id] = { ...d, ...prev };
-        }
-      });
-      return Object.values(map);
-    },
-
-    normalizeUuid(uuid) {
-      return String(uuid || '').replace(/-/g, '').toUpperCase();
-    },
-
-    arrayBufferToBytes(buffer) {
-      if (!buffer) return [];
-      if (buffer instanceof ArrayBuffer) return Array.from(new Uint8Array(buffer));
-      if (buffer.buffer instanceof ArrayBuffer) {
-        return Array.from(new Uint8Array(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength));
-      }
-      return [];
-    },
-
-    advertisDataHasTargetService(advertisData) {
-      const bytes = this.arrayBufferToBytes(advertisData);
-      let index = 0;
-
-      while (index < bytes.length) {
-        const len = bytes[index];
-        if (!len) break;
-        const typeIndex = index + 1;
-        const dataIndex = index + 2;
-        const nextIndex = index + len + 1;
-        if (typeIndex >= bytes.length || nextIndex > bytes.length) break;
-
-        const type = bytes[typeIndex];
-        const dataLen = len - 1;
-
-        // Incomplete/complete list of 16-bit Service UUIDs.
-        if ((type === 0x02 || type === 0x03) && dataLen >= 2) {
-          for (let i = dataIndex; i + 1 < dataIndex + dataLen; i += 2) {
-            if (bytes[i] === 0xe0 && bytes[i + 1] === 0xff) {
-              return true;
-            }
-          }
-        }
-
-        // Incomplete/complete list of 128-bit Service UUIDs.
-        if ((type === 0x06 || type === 0x07) && dataLen >= 16) {
-          for (let i = dataIndex; i + 15 < dataIndex + dataLen; i += 16) {
-            const isBaseUuid =
-              bytes[i] === 0xfb &&
-              bytes[i + 1] === 0x34 &&
-              bytes[i + 2] === 0x9b &&
-              bytes[i + 3] === 0x5f &&
-              bytes[i + 4] === 0x80 &&
-              bytes[i + 5] === 0x00 &&
-              bytes[i + 6] === 0x00 &&
-              bytes[i + 7] === 0x80 &&
-              bytes[i + 8] === 0x00 &&
-              bytes[i + 9] === 0x10 &&
-              bytes[i + 10] === 0x00 &&
-              bytes[i + 11] === 0x00 &&
-              bytes[i + 12] === 0xe0 &&
-              bytes[i + 13] === 0xff &&
-              bytes[i + 14] === 0x00 &&
-              bytes[i + 15] === 0x00;
-            if (isBaseUuid) {
-              return true;
-            }
-          }
-        }
-
-        index = nextIndex;
-      }
-
-      return false;
+      return dedupeDevicesByBindId(devices);
     },
 
     isTargetBleDevice(device) {
-      const targetService = this.normalizeUuid(protocol.BLE_SERVICE_ID);
-      const serviceUuids = device.advertisServiceUUIDs || device.serviceUUIDs || [];
-      const hasServiceMatch = serviceUuids.some((u) => {
-        const nu = this.normalizeUuid(u);
-        return nu === targetService || nu.includes('FFE0');
-      });
-      if (hasServiceMatch) return true;
-      if (this.advertisDataHasTargetService(device.advertisData)) return true;
-      const deviceId = (device.deviceId || '').toUpperCase();
-      return deviceId.startsWith('84:AA:A4');
+      return isTargetBleDevice(device);
     },
 
     async searchDevices() {
@@ -159,10 +73,10 @@ function attachDeviceConnect(page) {
 
         try {
           const existingDevices = (await bleController.getBluetoothDevices()).filter((d) =>
-            this.isTargetBleDevice(d)
+            isTargetBleDevice(d)
           );
           if (existingDevices.length > 0) {
-            const deduped = this.dedupeDevicesById(existingDevices);
+            const deduped = dedupeDevicesByBindId(existingDevices);
             this.setData({ deviceList: this.annotateDeviceConnection(deduped) });
           }
         } catch (err) {
@@ -172,22 +86,33 @@ function attachDeviceConnect(page) {
         await bleController.startBluetoothDevicesDiscovery();
 
         wx.onBluetoothDeviceFound((res) => {
-          const foundDevices = (res.devices || []).filter((d) => this.isTargetBleDevice(d));
-          const currentList = this.data.deviceList;
-          const newList = [...currentList];
-          foundDevices.forEach((device) => {
-            const index = newList.findIndex((d) => d.deviceId === device.deviceId);
-            if (index >= 0) {
-              newList[index] = { ...newList[index], ...device };
-            } else {
-              newList.push(device);
+          const foundDevices = (res.devices || []).filter((d) => isTargetBleDevice(d));
+          // 调试：确认微信返回的厂商数据长度（新固件应为 >=8）
+          foundDevices.forEach((d) => {
+            const bytes =
+              d.advertisData instanceof ArrayBuffer
+                ? Array.from(new Uint8Array(d.advertisData))
+                : [];
+            if (bytes.length) {
+              console.log(
+                '[BLE] advertisData len=',
+                bytes.length,
+                'head=',
+                bytes
+                  .slice(0, 10)
+                  .map((b) => b.toString(16).padStart(2, '0'))
+                  .join(' ')
+              );
             }
           });
-          const uniqueList = this.dedupeDevicesById(newList);
+          const currentList = this.data.deviceList;
+          const newList = [...currentList, ...foundDevices];
+          const uniqueList = dedupeDevicesByBindId(newList);
+          // RSSI 越大（越接近 0）信号越强，排前面
           uniqueList.sort((a, b) => {
-            const rssiA = a.RSSI || -100;
-            const rssiB = b.RSSI || -100;
-            return rssiA - rssiB;
+            const rssiA = typeof a.RSSI === 'number' ? a.RSSI : -100;
+            const rssiB = typeof b.RSSI === 'number' ? b.RSSI : -100;
+            return rssiB - rssiA;
           });
           this.setData({ deviceList: this.annotateDeviceConnection(uniqueList) });
         });
@@ -236,15 +161,16 @@ function attachDeviceConnect(page) {
       const device = this.data.deviceList.find((d) => d.deviceId === deviceid);
       if (!device) return;
 
+      const enriched = enrichDeviceIdentity(device);
       wx.showLoading({ title: '连接中...', mask: true });
       try {
         await bleController.connectDevice(deviceid);
-        app.globalData.currentDevice = device;
+        app.globalData.currentDevice = enriched;
         app.globalData.isConnected = true;
-        app.saveDeviceHistory(device);
+        app.saveDeviceHistory(enriched);
         this.setData({
           showDeviceList: false,
-          currentDevice: device,
+          currentDevice: enriched,
           isConnected: true
         });
         wx.hideLoading();
@@ -273,15 +199,16 @@ function attachDeviceConnect(page) {
 
     async connectDeviceRecord(device) {
       if (!device || !device.deviceId) return;
+      const enriched = enrichDeviceIdentity(device);
       wx.showLoading({ title: '连接中...', mask: true });
       try {
         await bleController.connectDevice(device.deviceId);
-        app.globalData.currentDevice = device;
+        app.globalData.currentDevice = enriched;
         app.globalData.isConnected = true;
-        app.saveDeviceHistory(device);
+        app.saveDeviceHistory(enriched);
         this.setData({
           showDeviceList: false,
-          currentDevice: device,
+          currentDevice: enriched,
           isConnected: true
         });
         wx.hideLoading();
@@ -292,9 +219,12 @@ function attachDeviceConnect(page) {
       } catch (error) {
         console.error('连接设备失败', error);
         wx.hideLoading();
+        // iOS deviceId 可能已变：提示用户重新添加
         wx.showModal({
           title: '连接失败',
-          content: error.userMessage || '请确认设备已开启并靠近后重试',
+          content:
+            error.userMessage ||
+            '设备可能已更换系统标识，请点击「添加手灯」重新搜索连接',
           showCancel: false
         });
       }
@@ -302,7 +232,9 @@ function attachDeviceConnect(page) {
 
     onReconnectHistory(e) {
       const { deviceid } = e.currentTarget.dataset;
-      const device = (this.data.historyDevices || []).find((d) => d.deviceId === deviceid);
+      const device = (this.data.historyDevices || []).find(
+        (d) => d.deviceId === deviceid || d.bindId === deviceid
+      );
       if (!device) return;
       this.connectDeviceRecord(device);
     },
@@ -331,6 +263,23 @@ function attachDeviceConnect(page) {
 
     onAddDevice() {
       this.searchDevices();
+    },
+
+    onRemoveHistory(e) {
+      const { deviceid } = e.currentTarget.dataset;
+      if (!deviceid || typeof app.removeDeviceHistory !== 'function') return;
+      wx.showModal({
+        title: '删除记录',
+        content: '从连接历史中删除该设备？',
+        success: (res) => {
+          if (!res.confirm) return;
+          app.removeDeviceHistory(deviceid);
+          if (typeof this.refreshDeviceLists === 'function') {
+            this.refreshDeviceLists();
+          }
+          wx.showToast({ title: '已删除', icon: 'success' });
+        }
+      });
     }
   };
 
@@ -341,5 +290,6 @@ function attachDeviceConnect(page) {
 
 module.exports = {
   DEVICE_CONNECT_DATA,
-  attachDeviceConnect
+  attachDeviceConnect,
+  getDeviceBindId
 };

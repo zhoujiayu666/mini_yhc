@@ -7,6 +7,11 @@ const {
   getBleDefaultName,
   getDeviceDisplayName
 } = require('../../utils/device-name.js');
+const {
+  getDeviceBindId,
+  getShortDeviceId,
+  enrichDeviceIdentity
+} = require('../../utils/ble-device-id.js');
 const app = getApp();
 
 function formatLastConnect(time) {
@@ -59,20 +64,29 @@ Page({
   refreshDeviceLists() {
     const history = app.getDeviceHistory() || [];
     let isConnected = app.globalData.isConnected || bleController.isConnected;
-    let currentDevice = app.globalData.currentDevice;
+    let currentDevice = app.globalData.currentDevice
+      ? enrichDeviceIdentity(app.globalData.currentDevice)
+      : null;
 
     if (isConnected && !currentDevice && bleController.deviceId) {
-      const fromHistory = history.find((d) => d.deviceId === bleController.deviceId);
-      currentDevice = fromHistory || {
-        deviceId: bleController.deviceId,
-        name: '',
-        localName: ''
-      };
+      const fromHistory = history.find(
+        (d) =>
+          d.deviceId === bleController.deviceId ||
+          d.bindId === bleController.deviceId
+      );
+      currentDevice = enrichDeviceIdentity(
+        fromHistory || {
+          deviceId: bleController.deviceId,
+          name: '',
+          localName: ''
+        }
+      );
       app.globalData.currentDevice = currentDevice;
       app.globalData.isConnected = true;
     }
 
-    const connectedId = (currentDevice && currentDevice.deviceId) || '';
+    const connectedDeviceId = (currentDevice && currentDevice.deviceId) || '';
+    const connectedBindId = (currentDevice && getDeviceBindId(currentDevice)) || '';
 
     const myDevices = [];
     if (isConnected && currentDevice) {
@@ -80,20 +94,31 @@ Page({
         ...currentDevice,
         displayName: getDeviceDisplayName(currentDevice),
         bleName: getBleDefaultName(currentDevice),
-        customName: getCustomName(currentDevice.deviceId),
+        customName: getCustomName(currentDevice),
+        shortId: getShortDeviceId(currentDevice),
+        hasStableMac: !!(currentDevice.hasStableMac),
         statusText: '已连接'
       });
     }
 
     const historyDevices = history
-      .filter((d) => d.deviceId !== connectedId)
-      .map((d) => ({
-        ...d,
-        displayName: getDeviceDisplayName(d),
-        bleName: getBleDefaultName(d),
-        customName: getCustomName(d.deviceId),
-        lastConnectText: formatLastConnect(d.lastConnectTime)
-      }));
+      .filter((d) => {
+        if (connectedDeviceId && d.deviceId === connectedDeviceId) return false;
+        if (connectedBindId && getDeviceBindId(d) === connectedBindId) return false;
+        return true;
+      })
+      .map((d) => {
+        const enriched = enrichDeviceIdentity(d);
+        return {
+          ...enriched,
+          displayName: getDeviceDisplayName(enriched),
+          bleName: getBleDefaultName(enriched),
+          customName: getCustomName(enriched),
+          shortId: getShortDeviceId(enriched),
+          hasStableMac: !!enriched.hasStableMac,
+          lastConnectText: formatLastConnect(enriched.lastConnectTime)
+        };
+      });
 
     this.setData({
       isConnected,
@@ -105,14 +130,21 @@ Page({
 
   findDeviceById(deviceId) {
     const { currentDevice, myDevices, historyDevices } = this.data;
-    if (currentDevice && currentDevice.deviceId === deviceId) {
+    if (
+      currentDevice &&
+      (currentDevice.deviceId === deviceId || currentDevice.bindId === deviceId)
+    ) {
       return currentDevice;
     }
-    const inMy = myDevices.find((d) => d.deviceId === deviceId);
+    const inMy = myDevices.find(
+      (d) => d.deviceId === deviceId || d.bindId === deviceId
+    );
     if (inMy) {
       return inMy;
     }
-    const inHistory = historyDevices.find((d) => d.deviceId === deviceId);
+    const inHistory = historyDevices.find(
+      (d) => d.deviceId === deviceId || d.bindId === deviceId
+    );
     if (inHistory) {
       return inHistory;
     }
@@ -126,31 +158,45 @@ Page({
     }
 
     const device = this.findDeviceById(deviceId);
-    const custom = getCustomName(deviceId);
+    const custom = getCustomName(device);
     const bleName = getBleDefaultName(device);
     const currentLabel = custom || bleName;
 
-    wx.showModal({
-      title: '重命名手灯',
-      editable: true,
-      placeholderText: `最多${MAX_NAME_LEN}字，留空恢复蓝牙名`,
-      content: currentLabel,
-      success: (res) => {
-        if (!res.confirm) {
-          return;
+    wx.showActionSheet({
+      itemList: ['重命名手灯', '从历史删除'],
+      success: (sheetRes) => {
+        if (sheetRes.tapIndex === 0) {
+          wx.showModal({
+            title: '重命名手灯',
+            editable: true,
+            placeholderText: `最多${MAX_NAME_LEN}字，留空恢复蓝牙名`,
+            content: currentLabel,
+            success: (res) => {
+              if (!res.confirm) {
+                return;
+              }
+              const next = String(res.content || '').trim();
+              if (next.length > MAX_NAME_LEN) {
+                wx.showToast({ title: `名称最多${MAX_NAME_LEN}字`, icon: 'none' });
+                return;
+              }
+              setCustomName(device, next);
+              if (!next) {
+                wx.showToast({ title: '已恢复蓝牙名称', icon: 'none' });
+              } else {
+                wx.showToast({ title: '名称已保存', icon: 'success' });
+              }
+              this.refreshDeviceLists();
+            }
+          });
+        } else if (sheetRes.tapIndex === 1) {
+          if (typeof this.onRemoveHistory === 'function') {
+            this.onRemoveHistory({ currentTarget: { dataset: { deviceid: deviceId } } });
+          } else if (typeof app.removeDeviceHistory === 'function') {
+            app.removeDeviceHistory(deviceId);
+            this.refreshDeviceLists();
+          }
         }
-        const next = String(res.content || '').trim();
-        if (next.length > MAX_NAME_LEN) {
-          wx.showToast({ title: `名称最多${MAX_NAME_LEN}字`, icon: 'none' });
-          return;
-        }
-        setCustomName(deviceId, next);
-        if (!next) {
-          wx.showToast({ title: '已恢复蓝牙名称', icon: 'none' });
-        } else {
-          wx.showToast({ title: '名称已保存', icon: 'success' });
-        }
-        this.refreshDeviceLists();
       }
     });
   },

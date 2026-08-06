@@ -1,6 +1,11 @@
 // pages/index/index.js
 const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
+const {
+  isTargetBleDevice,
+  enrichDeviceIdentity,
+  dedupeDevicesByBindId
+} = require('../../utils/ble-device-id.js');
 const app = getApp();
 
 Page({
@@ -214,23 +219,10 @@ Page({
   },
 
   /**
-   * 是否为目标设备：优先按服务UUID过滤，兼容旧设备MAC前缀兜底
+   * 是否为目标设备（名称白名单 + FFE0 / 厂商 MAC）
    */
   isTargetBleDevice(device) {
-    const targetService = this.normalizeUuid(protocol.BLE_SERVICE_ID);
-    const serviceUuids = device.advertisServiceUUIDs || device.serviceUUIDs || [];
-    const hasServiceMatch = serviceUuids.some((u) => {
-      const nu = this.normalizeUuid(u);
-      return nu === targetService || nu.includes('FFE0');
-    });
-
-    if (hasServiceMatch) {
-      return true;
-    }
-
-    // 兼容兜底：历史安卓机型可能仅给出MAC样式deviceId
-    const deviceId = (device.deviceId || '').toUpperCase();
-    return deviceId.startsWith('84:AA:A4');
+    return isTargetBleDevice(device);
   },
 
   /**
@@ -307,7 +299,7 @@ Page({
             });
           });
           // 添加到列表显示
-          const deduped = this.dedupeDevicesById(existingDevices);
+          const deduped = dedupeDevicesByBindId(existingDevices);
           this.setData({ deviceList: this.annotateDeviceConnection(deduped) });
         } else {
           console.log('暂无已缓存的设备');
@@ -362,12 +354,11 @@ Page({
           }
         });
 
-        // 去重后按RSSI降序排列（信号越强，绝对值越小，排前面）
-        const uniqueList = this.dedupeDevicesById(newList);
+        const uniqueList = dedupeDevicesByBindId(newList);
         uniqueList.sort((a, b) => {
-          const rssiA = a.RSSI || -100;
-          const rssiB = b.RSSI || -100;
-          return rssiA - rssiB; // RSSI值越小（绝对值越大），信号越强，排前面
+          const rssiA = typeof a.RSSI === 'number' ? a.RSSI : -100;
+          const rssiB = typeof b.RSSI === 'number' ? b.RSSI : -100;
+          return rssiB - rssiA; // RSSI 越大信号越强
         });
 
         this.setData({ deviceList: this.annotateDeviceConnection(uniqueList) });
@@ -502,15 +493,15 @@ Page({
 
     try {
       await bleController.connectDevice(deviceid);
-      
-      // 保存设备信息
-      app.globalData.currentDevice = device;
+
+      const enriched = enrichDeviceIdentity(device);
+      app.globalData.currentDevice = enriched;
       app.globalData.isConnected = true;
-      app.saveDeviceHistory(device);
-      
+      app.saveDeviceHistory(enriched);
+
       this.setData({
         showDeviceList: false,
-        currentDevice: device
+        currentDevice: enriched
       });
 
       wx.hideLoading();

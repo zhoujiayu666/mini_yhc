@@ -1,6 +1,11 @@
 const bleController = require('./utils/ble.js');
 const { getUserInfo } = require('./utils/auth.js');
 const { initCloud: initCloudEnv } = require('./utils/cloud-config.js');
+const {
+  getDeviceBindId,
+  enrichDeviceIdentity,
+  isTargetHistoryRecord
+} = require('./utils/ble-device-id.js');
 
 /** 进入后台后延迟断开蓝牙，便于用户去系统设置授权后返回仍保持连接 */
 const BG_BLE_DISCONNECT_DELAY_MS = 30000;
@@ -104,21 +109,34 @@ App({
   },
 
   /**
-   * 保存设备连接历史（先合并本地已存记录，避免冷启动后覆盖丢失）
+   * 保存设备连接历史：按 bindId（广播 MAC）合并，避免 iOS deviceId 变化导致重复
    */
   saveDeviceHistory(device) {
     if (!device || !device.deviceId) {
       return;
     }
 
+    const enriched = enrichDeviceIdentity(device);
+    const bindId = getDeviceBindId(enriched);
+    if (!bindId) {
+      return;
+    }
+
     const stored = this.getDeviceHistory() || [];
     const history = stored.slice();
-    const index = history.findIndex((d) => d.deviceId === device.deviceId);
+    const index = history.findIndex((d) => {
+      const id = getDeviceBindId(d);
+      return (
+        (id && id === bindId) ||
+        (d.deviceId && d.deviceId === enriched.deviceId)
+      );
+    });
 
     const record = {
-      deviceId: device.deviceId,
-      name: device.name || device.localName || '',
-      localName: device.localName || device.name || '',
+      deviceId: enriched.deviceId,
+      bindId,
+      name: enriched.name || enriched.localName || '',
+      localName: enriched.localName || enriched.name || '',
       lastConnectTime: Date.now()
     };
 
@@ -139,13 +157,58 @@ App({
   },
 
   /**
-   * 获取设备连接历史
+   * 按 deviceId 或 bindId 删除一条历史
+   */
+  removeDeviceHistory(id) {
+    if (!id) return;
+    const key = String(id).toUpperCase();
+    const history = (this.getDeviceHistory() || []).filter((d) => {
+      const deviceId = String(d.deviceId || '').toUpperCase();
+      const bindId = String(d.bindId || getDeviceBindId(d) || '').toUpperCase();
+      return deviceId !== key && bindId !== key;
+    });
+    this.globalData.deviceHistory = history;
+    wx.setStorageSync('deviceHistory', history);
+  },
+
+  /**
+   * 获取设备连接历史（过滤非本产品，并补齐 bindId）
    */
   getDeviceHistory() {
     try {
-      const history = wx.getStorageSync('deviceHistory') || [];
-      this.globalData.deviceHistory = history;
-      return history;
+      let history = wx.getStorageSync('deviceHistory') || [];
+      const cleaned = [];
+      const seen = {};
+
+      history.forEach((raw) => {
+        if (!isTargetHistoryRecord(raw)) {
+          return;
+        }
+        const d = enrichDeviceIdentity(raw);
+        const key = (d.bindId || d.deviceId || '').toUpperCase();
+        if (!key) return;
+        if (seen[key]) {
+          // 同 bindId 只留更新时间更近的
+          if ((d.lastConnectTime || 0) > (seen[key].lastConnectTime || 0)) {
+            const idx = cleaned.findIndex(
+              (x) => (x.bindId || x.deviceId || '').toUpperCase() === key
+            );
+            if (idx >= 0) cleaned[idx] = d;
+            seen[key] = d;
+          }
+          return;
+        }
+        seen[key] = d;
+        cleaned.push(d);
+      });
+
+      cleaned.sort((a, b) => (b.lastConnectTime || 0) - (a.lastConnectTime || 0));
+
+      if (cleaned.length !== history.length) {
+        wx.setStorageSync('deviceHistory', cleaned);
+      }
+      this.globalData.deviceHistory = cleaned;
+      return cleaned;
     } catch (error) {
       console.error('获取设备历史失败', error);
       return [];

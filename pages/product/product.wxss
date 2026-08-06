@@ -267,6 +267,9 @@ page {
 .device-info-row {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
 }
 
 .device-name-row {
@@ -280,6 +283,11 @@ page {
   font-size: 28rpx;
   color: var(--text-primary);
   font-weight: 500;
+  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .device-connected-tag {
@@ -288,9 +296,11 @@ page {
   background: var(--brand-yellow-soft);
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
+  flex-shrink: 0;
 }
 
 .rssi-text {
   font-size: 24rpx;
   color: var(--text-tertiary);
+  word-break: break-all;
 }
