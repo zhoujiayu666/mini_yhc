@@ -1,7 +1,11 @@
 <view class="around-shell {{showCartPanel ? 'around-shell--panel-open' : ''}}">
   <page-nav-bar></page-nav-bar>
-  <view class="scrollarea" style="height: {{scrollHeight}}px;">
-    <view class="shop-page">
+  <scroll-view
+    class="scrollarea"
+    scroll-y
+    style="height: {{scrollHeight}}px;"
+  >
+    <view class="shop-page" style="padding-bottom: {{shopPaddingBottomPx}}px;">
       <view class="page-header">
         <view class="page-header-row">
           <text class="page-title">周边商城</text>
@@ -91,7 +95,7 @@
         </view>
       </view>
     </view>
-  </view>
+  </scroll-view>
 </view>
 
 <view

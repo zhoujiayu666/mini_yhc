@@ -40,14 +40,16 @@ function calcPageLayout() {
   const rpx = info.windowWidth / 750;
   const safeBottom = info.screenHeight - (info.safeArea ? info.safeArea.bottom : info.screenHeight);
   const tabBarHeightPx = Math.round(100 * rpx + safeBottom);
-  const cartBarHeightPx = Math.round(108 * rpx);
+  // 购物车栏实际高度（含内边距），略留余量避免挡住商品「+」
+  const cartBarHeightPx = Math.round(140 * rpx);
   const scrollHeight = Math.max(
     200,
     Math.floor(info.windowHeight - navBarHeight - cartBarHeightPx - tabBarHeightPx)
   );
   return {
     scrollHeight,
-    panelBottomPx: tabBarHeightPx
+    panelBottomPx: tabBarHeightPx,
+    shopPaddingBottomPx: Math.round(32 * rpx)
   };
 }
 function readProductCache() {
@@ -94,7 +96,8 @@ Page({
     showCartPanel: false,
     cartBadgeText: '',
     scrollHeight: 0,
-    panelBottomPx: 0
+    panelBottomPx: 0,
+    shopPaddingBottomPx: 0
   },
 
   refreshCartBar() {

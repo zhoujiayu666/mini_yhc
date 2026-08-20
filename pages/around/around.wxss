@@ -19,18 +19,17 @@ page {
 .scrollarea {
   width: 100%;
   flex-shrink: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .around-shell--panel-open .scrollarea {
-  overflow: hidden;
+  pointer-events: none;
 }
 
 .shop-page {
   display: flex;
   flex-direction: column;
-  padding: 24rpx 32rpx 24rpx;
+  padding: 24rpx 32rpx;
   box-sizing: border-box;
 }
 
