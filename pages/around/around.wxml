@@ -7,7 +7,7 @@
           <text class="page-title">周边商城</text>
           <text class="refresh-hint" wx:if="{{refreshing}}">更新中…</text>
         </view>
-        <text class="page-subtitle">荧光棒 · 发光球 · 精选周边</text>
+        <text class="page-subtitle">荧光棒 · 精选周边</text>
       </view>
 
       <view class="cloud-error-banner" wx:if="{{cloudError}}">

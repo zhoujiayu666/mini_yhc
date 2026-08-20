@@ -43,50 +43,6 @@ const SEED_PRODUCTS = [
     tag: '',
     stock: 999,
     sort: 70
-  },
-  {
-    sku: 'ball-01',
-    name: 'TOPUYI 发光弹跳球',
-    desc: '落地闪光 · 派对互动',
-    price: 4500,
-    category: 'ball',
-    color: '#7C4DFF',
-    tag: '热销',
-    stock: 999,
-    sort: 60
-  },
-  {
-    sku: 'ball-02',
-    name: '七彩闪光球 中号',
-    desc: '自动变色 · 氛围营造',
-    price: 3680,
-    category: 'ball',
-    color: '#FF4081',
-    tag: '',
-    stock: 999,
-    sort: 50
-  },
-  {
-    sku: 'ball-03',
-    name: '手持发光球 大号',
-    desc: '高亮柔光 · 舞台手持',
-    price: 5800,
-    category: 'ball',
-    color: '#00BFA5',
-    tag: '新品',
-    stock: 999,
-    sort: 40
-  },
-  {
-    sku: 'ball-04',
-    name: '氛围灯球 3件套',
-    desc: '桌摆/挂饰 · 多场景',
-    price: 9900,
-    category: 'ball',
-    color: '#FF9100',
-    tag: '',
-    stock: 999,
-    sort: 30
   }
 ];
 

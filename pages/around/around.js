@@ -77,8 +77,7 @@ Page({
   data: {
     categories: [
       { id: 'all', label: '全部' },
-      { id: 'stick', label: '荧光棒' },
-      { id: 'ball', label: '发光球' }
+      { id: 'stick', label: '荧光棒' }
     ],
     activeCategory: 'all',
     products: [],
@@ -134,8 +133,9 @@ Page({
   },
 
   filterByCategory(products, categoryId) {
-    if (categoryId === 'all') return products;
-    return products.filter((p) => p.category === categoryId);
+    const list = (products || []).filter((p) => p.category !== 'ball');
+    if (categoryId === 'all') return list;
+    return list.filter((p) => p.category === categoryId);
   },
 
   applyProductList(products, categoryId) {
