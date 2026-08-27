@@ -791,7 +791,7 @@ Page({
       return;
     }
     if (!/^\d+$/.test(form.id)) {
-      wx.showToast({ title: '群组ID仅支持数字', icon: 'none' });
+      wx.showToast({ title: '分组ID仅支持数字', icon: 'none' });
       return;
     }
     if (form.needPassword && !/^\d{4}$/.test(form.password)) {
@@ -821,7 +821,7 @@ Page({
     } catch (error) {
       wx.hideLoading();
       wx.showToast({ title: '创建失败', icon: 'none' });
-      console.error('创建群组失败', error);
+      console.error('创建设备分组失败', error);
     }
   },
 

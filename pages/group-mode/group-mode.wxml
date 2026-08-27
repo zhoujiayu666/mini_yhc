@@ -11,17 +11,17 @@
     <block wx:if="{{!groupDetailMode}}">
       <view class="group-card card">
         <view class="owner-entry" bindtap="openCreateGroupModal">
-          <text class="owner-entry-text">创建群组</text>
+          <text class="owner-entry-text">创建设备分组</text>
           <text class="owner-entry-arrow">›</text>
         </view>
 
         <view class="group-header">
-          <text class="group-title">群组控制</text>
+          <text class="group-title">分组控制</text>
         </view>
 
         <view class="group-tabs">
-          <view class="group-tab {{groupTab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchGroupTab">我的群组</view>
-          <view class="group-tab {{groupTab === 'all' ? 'active' : ''}}" data-tab="all" bindtap="switchGroupTab">可加入的群组</view>
+          <view class="group-tab {{groupTab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchGroupTab">我的设备分组</view>
+          <view class="group-tab {{groupTab === 'all' ? 'active' : ''}}" data-tab="all" bindtap="switchGroupTab">可加入的设备分组</view>
         </view>
 
         <view class="group-list" wx:if="{{filteredGroups.length > 0}}">
@@ -38,10 +38,10 @@
           </view>
         </view>
         <view class="empty-state inline-empty" wx:if="{{filteredGroups.length === 0}}">
-          <view class="empty-state-icon">👥</view>
-          <text class="empty-state-title">{{groupTab === 'mine' ? '暂无我创建的群组' : '暂无可加入群组'}}</text>
-          <text class="empty-state-desc" wx:if="{{groupTab === 'mine'}}">点击上方「创建群组」开始群控</text>
-          <text class="empty-state-desc" wx:else>稍后再来看看，或请管理员分享群组 ID</text>
+          <view class="empty-state-icon">💡</view>
+          <text class="empty-state-title">{{groupTab === 'mine' ? '暂无我创建的设备分组' : '暂无可加入设备分组'}}</text>
+          <text class="empty-state-desc" wx:if="{{groupTab === 'mine'}}">点击上方「创建设备分组」开始群控</text>
+          <text class="empty-state-desc" wx:else>稍后再来看看，或请管理员分享分组 ID</text>
         </view>
       </view>
     </block>
@@ -190,12 +190,12 @@
 <view class="sheet-modal {{showCreateGroupModal ? 'show' : ''}}" bindtap="closeCreateGroupModal">
   <view class="sheet-content" catchtap="stopPropagation">
     <view class="sheet-header">
-      <text class="sheet-title">创建新群组</text>
+      <text class="sheet-title">创建设备新分组</text>
       <view class="sheet-close" bindtap="closeCreateGroupModal">×</view>
     </view>
     <view class="sheet-body">
-      <input class="group-input" placeholder="请输入群组名称" data-field="name" value="{{createGroupForm.name}}" bindinput="onCreateGroupInput" />
-      <input class="group-input" placeholder="请输入群组ID（仅数字）" type="number" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
+      <input class="group-input" placeholder="请输入分组名称" data-field="name" value="{{createGroupForm.name}}" bindinput="onCreateGroupInput" />
+      <input class="group-input" placeholder="请输入分组ID（仅数字）" type="number" data-field="id" value="{{createGroupForm.id}}" bindinput="onCreateGroupInput" />
       <view class="password-switch-row">
         <text class="password-switch-label">需要密码</text>
         <switch color="#FFD100" checked="{{createGroupForm.needPassword}}" bindchange="onCreateNeedPasswordChange" />

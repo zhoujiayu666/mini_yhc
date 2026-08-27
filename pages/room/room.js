@@ -731,7 +731,7 @@ Page({
   },
 
   openCreateGroupModal() {
-    if (!requireLogin({ message: '创建群组需要登录' })) return;
+    if (!requireLogin({ message: '创建设备分组需要登录' })) return;
     this.setData({
       showCreateGroupModal: true,
       createGroupForm: { name: '', id: '', password: '', needPassword: true }
@@ -780,14 +780,14 @@ Page({
   },
 
   async createGroup() {
-    if (!requireLogin({ message: '创建群组需要登录', silent: true })) return;
+    if (!requireLogin({ message: '创建设备分组需要登录', silent: true })) return;
     const form = this.data.createGroupForm;
     if (!form.name || !form.id) {
       wx.showToast({ title: '请完整填写信息', icon: 'none' });
       return;
     }
     if (!/^\d+$/.test(form.id)) {
-      wx.showToast({ title: '群组ID仅支持数字', icon: 'none' });
+      wx.showToast({ title: '分组ID仅支持数字', icon: 'none' });
       return;
     }
     if (form.needPassword && !/^\d{4}$/.test(form.password)) {
@@ -806,7 +806,7 @@ Page({
       });
       wx.hideLoading();
       if (!result.success) {
-        showGroupError('创建群组失败', result.message || '创建失败');
+        showGroupError('创建设备分组失败', result.message || '创建失败');
         return;
       }
       this.setData({ showCreateGroupModal: false });
@@ -817,8 +817,8 @@ Page({
     } catch (error) {
       wx.hideLoading();
       const { parseCloudError } = require('../../utils/group-cloud.js');
-      showGroupError('创建群组失败', parseCloudError(error));
-      console.error('创建群组失败', error);
+      showGroupError('创建设备分组失败', parseCloudError(error));
+      console.error('创建设备分组失败', error);
     }
   },
 

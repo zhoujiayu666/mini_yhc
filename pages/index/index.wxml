@@ -143,13 +143,14 @@
           <view class="function-icon">
 
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-
-              <circle cx="7" cy="8" r="3" stroke="#FFD100" stroke-width="2"/>
-
-              <circle cx="17" cy="8" r="3" stroke="#FFD100" stroke-width="2"/>
-
-              <path d="M2 19C2 15.6863 4.68629 13 8 13H16C19.3137 13 22 15.6863 22 19" stroke="#FFD100" stroke-width="2" stroke-linecap="round"/>
-
+              <rect x="3" y="3" width="8" height="8" rx="1.5" stroke="#FFD100" stroke-width="2"/>
+              <rect x="13" y="3" width="8" height="8" rx="1.5" stroke="#FFD100" stroke-width="2"/>
+              <rect x="3" y="13" width="8" height="8" rx="1.5" stroke="#FFD100" stroke-width="2"/>
+              <rect x="13" y="13" width="8" height="8" rx="1.5" stroke="#FFD100" stroke-width="2"/>
+              <circle cx="7" cy="7" r="1.5" fill="#FFD100"/>
+              <circle cx="17" cy="7" r="1.5" fill="#FFD100"/>
+              <circle cx="7" cy="17" r="1.5" fill="#FFD100"/>
+              <circle cx="17" cy="17" r="1.5" fill="#FFD100"/>
             </svg>
 
           </view>
