@@ -8,7 +8,7 @@ const MFG_COMPANY_LO = 0x42;
 const MFG_COMPANY_HI = 0x06;
 
 /** 允许的蓝牙名（大小写不敏感） */
-const ALLOWED_NAME_PREFIXES = ['AB2038P', 'TOPUYI', 'FEELIGHT', 'FEEL'];
+const ALLOWED_NAME_PREFIXES = ['TPY', 'AB2038P', 'TOPUYI', 'FEELIGHT', 'FEEL'];
 
 function normalizeUuid(uuid) {
   return String(uuid || '').replace(/-/g, '').toUpperCase();
@@ -224,12 +224,13 @@ function isTargetBleDevice(device) {
   if (!device) return false;
   if (hasOurManufacturer(device.advertisData)) return true;
 
+  const name = getDeviceName(device);
+  if (isAllowedDeviceName(name)) return true;
+
   const deviceId = String(device.deviceId || '').toUpperCase();
   if (deviceId.startsWith('84:AA:A4')) return true;
 
   if (!hasFfe0Service(device)) return false;
-
-  const name = getDeviceName(device);
   if (!name) return true;
   return isAllowedDeviceName(name);
 }

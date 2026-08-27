@@ -308,12 +308,10 @@ Page({
         console.log('获取已发现设备失败（可能没有）:', err);
       }
 
-      // 开始搜索
-      await bleController.startBluetoothDevicesDiscovery();
-      console.log('开始搜索蓝牙设备...');
-
-      // 监听设备发现
-      wx.onBluetoothDeviceFound((res) => {
+      if (this._onBleDeviceFound) {
+        wx.offBluetoothDeviceFound(this._onBleDeviceFound);
+      }
+      this._onBleDeviceFound = (res) => {
         const devices = res.devices || [];
         console.log('========== 发现设备 ==========');
         console.log('本次发现设备数量:', devices.length, '个');
@@ -335,21 +333,18 @@ Page({
             });
           });
         } else if (devices.length > 0) {
-          console.log('⚠️ 本次发现设备均非目标设备（按FFE0服务UUID过滤）');
+          console.log('⚠️ 本次发现设备均非目标设备');
         }
         console.log('============================');
 
-        // 更新设备列表
         const currentList = this.data.deviceList;
         const newList = [...currentList];
 
         foundDevices.forEach(device => {
           const index = newList.findIndex(d => d.deviceId === device.deviceId);
           if (index >= 0) {
-            // 更新现有设备信息
             newList[index] = { ...newList[index], ...device };
           } else {
-            // 添加新设备
             newList.push(device);
           }
         });
@@ -358,13 +353,16 @@ Page({
         uniqueList.sort((a, b) => {
           const rssiA = typeof a.RSSI === 'number' ? a.RSSI : -100;
           const rssiB = typeof b.RSSI === 'number' ? b.RSSI : -100;
-          return rssiB - rssiA; // RSSI 越大信号越强
+          return rssiB - rssiA;
         });
 
         this.setData({ deviceList: this.annotateDeviceConnection(uniqueList) });
-      });
+      };
+      wx.onBluetoothDeviceFound(this._onBleDeviceFound);
 
-      // 延长搜索时间到10秒
+      await bleController.startBluetoothDevicesDiscovery();
+      console.log('开始搜索蓝牙设备...');
+
       setTimeout(async () => {
         await bleController.stopBluetoothDevicesDiscovery();
         console.log('========== 搜索结束 ==========');
@@ -389,7 +387,7 @@ Page({
             duration: 3000
           });
         }
-      }, 10000);
+      }, 15000);
     } catch (error) {
       console.error('搜索设备失败', error);
       this.setData({ isScanning: false });

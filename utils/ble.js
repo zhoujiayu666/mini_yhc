@@ -42,8 +42,9 @@ class BLEController {
    */
   startBluetoothDevicesDiscovery() {
     return new Promise((resolve, reject) => {
-      wx.startBluetoothDevicesDiscovery({
-        allowDuplicatesKey: false,
+        wx.startBluetoothDevicesDiscovery({
+        allowDuplicatesKey: true,
+        interval: 0,
         success: (res) => {
           console.log('开始搜索设备', res);
           resolve(res);

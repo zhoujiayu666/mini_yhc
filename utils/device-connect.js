@@ -83,39 +83,24 @@ function attachDeviceConnect(page) {
           console.log('获取已发现设备失败（可能没有）:', err);
         }
 
-        await bleController.startBluetoothDevicesDiscovery();
-
-        wx.onBluetoothDeviceFound((res) => {
+        if (this._onBleDeviceFound) {
+          wx.offBluetoothDeviceFound(this._onBleDeviceFound);
+        }
+        this._onBleDeviceFound = (res) => {
           const foundDevices = (res.devices || []).filter((d) => isTargetBleDevice(d));
-          // 调试：确认微信返回的厂商数据长度（新固件应为 >=8）
-          foundDevices.forEach((d) => {
-            const bytes =
-              d.advertisData instanceof ArrayBuffer
-                ? Array.from(new Uint8Array(d.advertisData))
-                : [];
-            if (bytes.length) {
-              console.log(
-                '[BLE] advertisData len=',
-                bytes.length,
-                'head=',
-                bytes
-                  .slice(0, 10)
-                  .map((b) => b.toString(16).padStart(2, '0'))
-                  .join(' ')
-              );
-            }
-          });
           const currentList = this.data.deviceList;
           const newList = [...currentList, ...foundDevices];
           const uniqueList = dedupeDevicesByBindId(newList);
-          // RSSI 越大（越接近 0）信号越强，排前面
           uniqueList.sort((a, b) => {
             const rssiA = typeof a.RSSI === 'number' ? a.RSSI : -100;
             const rssiB = typeof b.RSSI === 'number' ? b.RSSI : -100;
             return rssiB - rssiA;
           });
           this.setData({ deviceList: this.annotateDeviceConnection(uniqueList) });
-        });
+        };
+        wx.onBluetoothDeviceFound(this._onBleDeviceFound);
+
+        await bleController.startBluetoothDevicesDiscovery();
 
         setTimeout(async () => {
           await bleController.stopBluetoothDevicesDiscovery();
