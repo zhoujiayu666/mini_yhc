@@ -1,4 +1,8 @@
 // components/color-wheel/color-wheel.js
+const WHEEL_SIZE_RPX = 506;
+const OUTER_RADIUS_RPX = WHEEL_SIZE_RPX / 2;
+const CENTER_RADIUS_RPX = 11;
+
 Component({
   /**
    * 组件的属性列表
@@ -29,17 +33,17 @@ Component({
    * 组件的初始数据
    */
   data: {
-    wheelSize: 506,
-    wheelRadius: 253,
+    wheelSize: WHEEL_SIZE_RPX,
+    wheelRadius: OUTER_RADIUS_RPX,
     selectorSize: 40,
-    selectorX: 253,
+    selectorX: OUTER_RADIUS_RPX,
     selectorY: 0,
     previewColor: '#FFD100'
   },
 
   lifetimes: {
     attached() {
-      // 在 attached 阶段就开始初始化，提前准备
+      this._touching = false;
       this.updateSelectorPosition();
       this.updatePreviewColor();
     }
@@ -51,9 +55,9 @@ Component({
      * HSB转RGB（返回数组格式，用于ImageData）
      */
     hsbToRgbArray(h, s, b) {
-      h = h % 360;
-      s = s / 100;
-      b = b / 100;
+      h = ((Number(h) % 360) + 360) % 360;
+      s = Math.max(0, Math.min(100, Number(s) || 0)) / 100;
+      b = Math.max(0, Math.min(100, Number(b) || 0)) / 100;
       
       const c = b * s;
       const x = c * (1 - Math.abs((h / 60) % 2 - 1));
@@ -94,13 +98,11 @@ Component({
      * 更新选择器位置
      */
     updateSelectorPosition() {
+      if (this._touching) return;
       const hue = this.properties.hue;
       const saturation = this.properties.saturation;
-      // 中心半径约11rpx，外半径253rpx（506/2）
-      const centerRadius = 11;
-      const outerRadius = 253;
-      const radius = outerRadius - centerRadius;
-      const distance = centerRadius + (saturation / 100) * radius;
+      const radius = OUTER_RADIUS_RPX - CENTER_RADIUS_RPX;
+      const distance = CENTER_RADIUS_RPX + (saturation / 100) * radius;
       
       // 角度计算需要和 handleTouch 保持一致
       // 在 handleTouch 中，我们加了 90° 偏移来匹配 CSS 渐变
@@ -109,8 +111,8 @@ Component({
       let angle = ((hue - 90 + 360) % 360) * Math.PI / 180;
       
       // 计算选择器位置（相对于圆心）
-      const x = this.data.wheelRadius + distance * Math.cos(angle);
-      const y = this.data.wheelRadius + distance * Math.sin(angle);
+      const x = OUTER_RADIUS_RPX + distance * Math.cos(angle);
+      const y = OUTER_RADIUS_RPX + distance * Math.sin(angle);
       
       this.setData({
         selectorX: x,
@@ -136,6 +138,7 @@ Component({
      * 触摸开始
      */
     onTouchStart(e) {
+      this._touching = true;
       this.handleTouch(e);
     },
 
@@ -143,7 +146,17 @@ Component({
      * 触摸移动
      */
     onTouchMove(e) {
+      this._touching = true;
       this.handleTouch(e);
+    },
+
+    onTouchEnd(e) {
+      this.handleTouch(e);
+      this._touching = false;
+    },
+
+    onTouchCancel() {
+      this._touching = false;
     },
 
     /**
@@ -173,11 +186,11 @@ Component({
         const distance = Math.sqrt(x * x + y * y);
 
         // 使用与样式一致的尺寸（506rpx 外径，22rpx 内径）并转换为 px
-        const outerRadius = (506 * rpxRatio) / 2;
-        const centerRadius = (22 * rpxRatio) / 2;
+        const outerRadius = OUTER_RADIUS_RPX * rpxRatio;
+        const centerRadius = CENTER_RADIUS_RPX * rpxRatio;
         
         // 确保在色轮范围内
-        if (distance <= outerRadius && distance >= centerRadius) {
+        if (distance <= outerRadius) {
           // 计算角度：atan2(y, x) 数学坐标系
           // atan2: 0°=右侧, 90°=下方, 180°=左侧, 270°=上方
           let angle = Math.atan2(y, x) * 180 / Math.PI;
@@ -190,27 +203,32 @@ Component({
           // 或者 CSS 渐变被逆时针旋转了 90°
           angle = (angle + 90) % 360;
           
-          // 计算饱和度（从中心到边缘，饱和度从0到100）
-          const ratio = (distance - centerRadius) / (outerRadius - centerRadius);
-          const saturation = Math.min(100, Math.max(0, ratio * 100));
-          
+          // 当前视觉色盘除了中心白点，其他区域都是满彩色；取色也保持一致。
+          const saturation = distance < centerRadius ? 0 : 100;
           // 计算色相（角度）
           const hue = Math.round(angle);
+          const brightness = this.properties.brightness;
+          const rgb = this.hsbToRgbArray(hue, saturation, brightness);
+          const displayDistance = Math.max(centerRadius, distance);
+          const selectorX = OUTER_RADIUS_RPX + (displayDistance / rpxRatio) * Math.cos((angle - 90) * Math.PI / 180);
+          const selectorY = OUTER_RADIUS_RPX + (displayDistance / rpxRatio) * Math.sin((angle - 90) * Math.PI / 180);
+
+          this.setData({
+            selectorX,
+            selectorY,
+            previewColor: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+          });
           
           this.triggerEvent('change', {
             hue: hue,
-            saturation: Math.round(saturation),
-            brightness: this.properties.brightness
+            saturation,
+            brightness,
+            r: rgb[0],
+            g: rgb[1],
+            b: rgb[2]
           });
         }
       }).exec();
-    },
-
-    /**
-     * 点击色轮
-     */
-    onTap(e) {
-      this.handleTouch(e);
     }
   }
 })

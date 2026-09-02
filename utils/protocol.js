@@ -6,6 +6,8 @@
 // ServiceID 和 CharacteristicID
 const BLE_SERVICE_ID = '0000FFE0-0000-1000-8000-00805F9B34FB';
 const BLE_CHARACTERISTIC_ID = '0000FFE1-0000-1000-8000-00805F9B34FB';
+// 页面、色盘和设备写入统一使用 RGB。
+const DEVICE_COLOR_CHANNEL_ORDER = ['r', 'g', 'b'];
 
 /**
  * 标准CRC32计算（小端模式）
@@ -59,9 +61,9 @@ function rgbToHex(r, g, b) {
  * HSB转RGB
  */
 function hsbToRgb(h, s, b) {
-  h = h % 360;
-  s = s / 100;
-  b = b / 100;
+  h = ((Number(h) % 360) + 360) % 360;
+  s = Math.max(0, Math.min(100, Number(s) || 0)) / 100;
+  b = Math.max(0, Math.min(100, Number(b) || 0)) / 100;
   
   const c = b * s;
   const x = c * (1 - Math.abs((h / 60) % 2 - 1));
@@ -90,6 +92,19 @@ function hsbToRgb(h, s, b) {
   };
 }
 
+function normalizeColorByte(value) {
+  return Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+}
+
+function toDeviceColorBytes(r, g, b) {
+  const rgb = {
+    r: normalizeColorByte(r),
+    g: normalizeColorByte(g),
+    b: normalizeColorByte(b)
+  };
+  return DEVICE_COLOR_CHANNEL_ORDER.map((channel) => rgb[channel]);
+}
+
 /**
  * 构建静态模式数据帧
  * @param {Number} frameSeq 帧序号
@@ -99,6 +114,7 @@ function hsbToRgb(h, s, b) {
  */
 function buildStaticFrame(frameSeq, r, g, b) {
   const frame = [];
+  const colorBytes = toDeviceColorBytes(r, g, b);
   
   // 帧序号（4字节小端）
   frame.push(...toLittleEndianBytes(frameSeq, 4));
@@ -106,8 +122,8 @@ function buildStaticFrame(frameSeq, r, g, b) {
   // 应用层控制字：00（静态模式）
   frame.push(0x00);
   
-  // RGB颜色（3字节）
-  frame.push(r, g, b);
+  // 设备颜色通道
+  frame.push(...colorBytes);
   
   // 计算CRC（4字节小端）- 只对帧序号+控制字+RGB计算CRC
   const crc = calculateCRC32(new Uint8Array(frame));
@@ -118,7 +134,9 @@ function buildStaticFrame(frameSeq, r, g, b) {
   console.log('📦 构建静态模式数据帧:', {
     帧序号: `0x${frameSeq.toString(16).padStart(8, '0')}`,
     控制字: '0x00 (静态模式)',
-    RGB: `R:${r.toString(16).padStart(2, '0')} G:${g.toString(16).padStart(2, '0')} B:${b.toString(16).padStart(2, '0')}`,
+    RGB: `R:${normalizeColorByte(r).toString(16).padStart(2, '0')} G:${normalizeColorByte(g).toString(16).padStart(2, '0')} B:${normalizeColorByte(b).toString(16).padStart(2, '0')}`,
+    设备通道: DEVICE_COLOR_CHANNEL_ORDER.join('').toUpperCase(),
+    设备字节: colorBytes.map(byte => byte.toString(16).padStart(2, '0')).join(' '),
     CRC: `0x${crc.toString(16).padStart(8, '0')}`,
     数据长度: frame.length,
     十六进制: hexString
@@ -142,6 +160,7 @@ function buildStaticFrame(frameSeq, r, g, b) {
  */
 function buildFlashFrame(frameSeq, r, g, b, onMin = 2, onMax = 12, offMin = 6, offMax = 16) {
   const frame = [];
+  const colorBytes = toDeviceColorBytes(r, g, b);
   
   // 帧序号（4字节小端）
   frame.push(...toLittleEndianBytes(frameSeq, 4));
@@ -149,8 +168,8 @@ function buildFlashFrame(frameSeq, r, g, b, onMin = 2, onMax = 12, offMin = 6, o
   // 应用层控制字：10（闪烁模式，根据开发指引）
   frame.push(0x10);
   
-  // RGB颜色
-  frame.push(r, g, b);
+  // 设备颜色通道
+  frame.push(...colorBytes);
   
   // 闪烁参数（单位5ms）
   frame.push(onMin, onMax, offMin, offMax);
@@ -164,7 +183,9 @@ function buildFlashFrame(frameSeq, r, g, b, onMin = 2, onMax = 12, offMin = 6, o
   console.log('📦 构建闪烁模式数据帧:', {
     帧序号: `0x${frameSeq.toString(16).padStart(8, '0')}`,
     控制字: '0x10 (闪烁模式)',
-    RGB: `R:${r.toString(16).padStart(2, '0')} G:${g.toString(16).padStart(2, '0')} B:${b.toString(16).padStart(2, '0')}`,
+    RGB: `R:${normalizeColorByte(r).toString(16).padStart(2, '0')} G:${normalizeColorByte(g).toString(16).padStart(2, '0')} B:${normalizeColorByte(b).toString(16).padStart(2, '0')}`,
+    设备通道: DEVICE_COLOR_CHANNEL_ORDER.join('').toUpperCase(),
+    设备字节: colorBytes.map(byte => byte.toString(16).padStart(2, '0')).join(' '),
     参数: `onMin:${onMin}(${onMin*5}ms) onMax:${onMax}(${onMax*5}ms) offMin:${offMin}(${offMin*5}ms) offMax:${offMax}(${offMax*5}ms)`,
     CRC: `0x${crc.toString(16).padStart(8, '0')}`,
     数据长度: frame.length,
@@ -187,6 +208,7 @@ function buildFlashFrame(frameSeq, r, g, b, onMin = 2, onMax = 12, offMin = 6, o
  */
 function buildBreathFrame(frameSeq, r, g, b, period = 2500, duty = 500) {
   const frame = [];
+  const colorBytes = toDeviceColorBytes(r, g, b);
   
   // 帧序号（4字节小端）
   frame.push(...toLittleEndianBytes(frameSeq, 4));
@@ -194,8 +216,8 @@ function buildBreathFrame(frameSeq, r, g, b, period = 2500, duty = 500) {
   // 应用层控制字：20（呼吸模式，根据开发指引）
   frame.push(0x20);
   
-  // RGB颜色
-  frame.push(r, g, b);
+  // 设备颜色通道
+  frame.push(...colorBytes);
   
   // 呼吸参数（周期和占空比，各2字节小端）
   frame.push(...toLittleEndianBytes(period, 2));
@@ -212,7 +234,9 @@ function buildBreathFrame(frameSeq, r, g, b, period = 2500, duty = 500) {
   console.log('📦 构建呼吸模式数据帧:', {
     帧序号: `0x${frameSeq.toString(16).padStart(8, '0')}`,
     控制字: '0x20 (呼吸模式)',
-    RGB: `R:${r.toString(16).padStart(2, '0')} G:${g.toString(16).padStart(2, '0')} B:${b.toString(16).padStart(2, '0')}`,
+    RGB: `R:${normalizeColorByte(r).toString(16).padStart(2, '0')} G:${normalizeColorByte(g).toString(16).padStart(2, '0')} B:${normalizeColorByte(b).toString(16).padStart(2, '0')}`,
+    设备通道: DEVICE_COLOR_CHANNEL_ORDER.join('').toUpperCase(),
+    设备字节: colorBytes.map(byte => byte.toString(16).padStart(2, '0')).join(' '),
     周期: `${period}ms (0x${periodBytes.map(b => b.toString(16).padStart(2, '0')).join('')})`,
     占空比: `${duty}ms (0x${dutyBytes.map(b => b.toString(16).padStart(2, '0')).join('')})`,
     CRC: `0x${crc.toString(16).padStart(8, '0')}`,

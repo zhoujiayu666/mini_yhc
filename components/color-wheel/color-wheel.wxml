@@ -6,7 +6,8 @@
       style="width: {{wheelSize}}rpx; height: {{wheelSize}}rpx;"
       bindtouchstart="onTouchStart"
       bindtouchmove="onTouchMove"
-      bindtap="onTap"
+      bindtouchend="onTouchEnd"
+      bindtouchcancel="onTouchCancel"
     >
       <view class="color-wheel-ring"></view>
       <view class="color-wheel-center" style="width: {{centerSize}}rpx; height: {{centerSize}}rpx;"></view>
