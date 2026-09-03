@@ -1,6 +1,7 @@
 const app = getApp();
 const { isLoggedIn, getUserInfo, formatPhone, logout, goLoginPage } = require('../../utils/auth.js');
 const { SOFTWARE_LIST } = require('../../utils/software-center.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 
 Page({
   data: {
@@ -12,6 +13,7 @@ Page({
   },
 
   onShow() {
+    showShareMenu();
     if (isLoggedIn()) {
       this.loadProfile();
     } else {
@@ -22,6 +24,19 @@ Page({
         localOnly: false
       });
     }
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 拓普依智能灯光',
+      path: '/pages/mine/mine'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 拓普依智能灯光'
+    });
   },
 
   loadProfile() {

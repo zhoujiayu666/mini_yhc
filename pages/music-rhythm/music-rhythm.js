@@ -1,6 +1,7 @@
 // pages/music-rhythm/music-rhythm.js
 const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 const app = getApp();
 
 Page({
@@ -37,6 +38,7 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    showShareMenu();
     /** 用户点击停止时为 true；时长到点自动停时为 false，用于区分是否自动续录 */
     this._userRequestedStop = false;
     /** 防回黑保持窗口：颜色亮起后短时间内不回最低亮度 */
@@ -90,10 +92,24 @@ Page({
    * 生命周期函数--监听页面显示
    */
   onShow() {
+    showShareMenu();
     // 如果已连接且之前开启了监听，自动开启
     if (this.data.isConnected && !this.data.isListening) {
       // 可以选择自动开启或手动开启
     }
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 音乐律动灯光',
+      path: '/pages/music-rhythm/music-rhythm'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 音乐律动灯光'
+    });
   },
 
   /**

@@ -8,6 +8,7 @@ const {
   rhythmOnConnectionLost
 } = require('../../utils/rhythm-logic.js');
 const { DEVICE_CONNECT_DATA, attachDeviceConnect } = require('../../utils/device-connect.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 const app = getApp();
 
 Page({
@@ -86,6 +87,7 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    showShareMenu();
     this._mainScrollTop = 0;
     const saved = app.globalData.colorControlState;
     const patch = {
@@ -145,6 +147,7 @@ Page({
   },
 
   onShow() {
+    showShareMenu();
     this.setData(
       this.mergeScrollTop({
         isConnected: app.globalData.isConnected || bleController.isConnected
@@ -156,6 +159,14 @@ Page({
         this.searchDevices();
       }, 300);
     }
+  },
+
+  onShareAppMessage() {
+    return getShareMessage();
+  },
+
+  onShareTimeline() {
+    return getTimelineShare();
   },
 
   mergeScrollTop(patch) {

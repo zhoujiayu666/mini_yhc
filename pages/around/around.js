@@ -2,6 +2,7 @@ const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
 const { requireLogin } = require('../../utils/auth.js');
 const { FALLBACK_PRODUCTS, addToCart, getCart, formatYuan, updateCartQty, removeFromCart } = require('../../utils/shop.js');
 const { enrichProductsForList } = require('../../utils/product-images.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 
 const PRODUCT_CACHE_KEY = 'topuyi_shop_products_v2';
 const PRODUCT_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -109,10 +110,12 @@ Page({
   },
 
   onLoad() {
+    showShareMenu();
     this.initPageLayout();
   },
 
   onShow() {
+    showShareMenu();
     this.initPageLayout();
     this.refreshCartBar();
     const cached = readProductCache();
@@ -133,6 +136,19 @@ Page({
       return;
     }
     this.loadProducts();
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 拓普依周边商城',
+      path: '/pages/around/around'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 拓普依周边商城'
+    });
   },
 
   filterByCategory(products, categoryId) {

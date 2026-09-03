@@ -6,6 +6,7 @@ const {
   enrichDeviceIdentity,
   dedupeDevicesByBindId
 } = require('../../utils/ble-device-id.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 const app = getApp();
 
 Page({
@@ -32,6 +33,7 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    showShareMenu();
     // 检查连接状态
     this.updateConnectionStatus();
     
@@ -56,6 +58,7 @@ Page({
    * 生命周期函数--监听页面显示
    */
   onShow() {
+    showShareMenu();
     // 更新连接状态
     this.updateConnectionStatus();
     this.syncColorPreview();
@@ -93,7 +96,11 @@ Page({
    * 用户点击右上角分享
    */
   onShareAppMessage() {
+    return getShareMessage();
+  },
 
+  onShareTimeline() {
+    return getTimelineShare();
   },
 
   /**

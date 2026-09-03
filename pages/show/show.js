@@ -1,4 +1,5 @@
 const { initCloud, CLOUD_ENV_ID, TOPUYI_APP_ID } = require('../../utils/cloud-config.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 
 const STORAGE_KEY = 'topuyi_show_seat';
 const ZONE_LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
@@ -60,15 +61,30 @@ Page({
   },
 
   onLoad() {
+    showShareMenu();
     this.loadPerformances();
   },
 
   onShow() {
+    showShareMenu();
     if (!this.data.performances.length && !this.data.loadingPerformances) {
       this.loadPerformances();
       return;
     }
     this.loadSeat();
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 演出座位绑定',
+      path: '/pages/show/show'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 演出座位绑定'
+    });
   },
 
   normalizePerformance(item) {

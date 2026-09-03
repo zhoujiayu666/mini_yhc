@@ -3,6 +3,7 @@ const protocol = require('../../utils/protocol.js');
 const { requireLogin } = require('../../utils/auth.js');
 const { initCloud } = require('../../utils/cloud-config.js');
 const { callGroupService: invokeGroupService, showGroupError } = require('../../utils/group-cloud.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 const app = getApp();
 
 const MODE_TO_EFFECT = {
@@ -79,6 +80,7 @@ Page({
   },
 
   onLoad() {
+    showShareMenu();
     initCloud();
     this.updateConnectionStatus();
     bleController.onConnectionStateChange = (connected) => {
@@ -91,6 +93,7 @@ Page({
   },
 
   onShow() {
+    showShareMenu();
     this.updateConnectionStatus();
     if (this._skipOnShowLoadOnce) {
       this._skipOnShowLoadOnce = false;
@@ -101,6 +104,19 @@ Page({
     if (this.data.groupDetailMode) {
       this.startGroupWatch(this.data.activeGroup && this.data.activeGroup.id);
     }
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 设备分组灯光互动',
+      path: '/pages/room/room'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 设备分组灯光互动'
+    });
   },
 
   onHide() {

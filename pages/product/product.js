@@ -12,6 +12,7 @@ const {
   getShortDeviceId,
   enrichDeviceIdentity
 } = require('../../utils/ble-device-id.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 const app = getApp();
 
 function formatLastConnect(time) {
@@ -34,6 +35,7 @@ Page({
   },
 
   onLoad() {
+    showShareMenu();
     attachDeviceConnect(this);
     this._prevConnectionHandler = bleController.onConnectionStateChange;
     bleController.onConnectionStateChange = (connected) => {
@@ -52,7 +54,21 @@ Page({
   },
 
   onShow() {
+    showShareMenu();
     this.refreshDeviceLists();
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 拓普依智能手灯',
+      path: '/pages/product/product'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 拓普依智能手灯'
+    });
   },
 
   onUnload() {

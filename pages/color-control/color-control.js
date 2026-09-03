@@ -1,6 +1,7 @@
 // pages/color-control/color-control.js
 const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
+const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
 const app = getApp();
 
 Page({
@@ -77,6 +78,7 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    showShareMenu();
     this._mainScrollTop = 0;
     const saved = app.globalData.colorControlState;
     const patch = {
@@ -133,11 +135,25 @@ Page({
   },
 
   onShow() {
+    showShareMenu();
     this.setData(
       this.mergeScrollTop({
         isConnected: app.globalData.isConnected || bleController.isConnected
       })
     );
+  },
+
+  onShareAppMessage() {
+    return getShareMessage({
+      title: 'TOPUYI 智能调光控制',
+      path: '/pages/color-control/color-control'
+    });
+  },
+
+  onShareTimeline() {
+    return getTimelineShare({
+      title: 'TOPUYI 智能调光控制'
+    });
   },
 
   mergeScrollTop(patch) {
