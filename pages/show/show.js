@@ -1,6 +1,21 @@
+const { initCloud, CLOUD_ENV_ID, TOPUYI_APP_ID } = require('../../utils/cloud-config.js');
+
 const STORAGE_KEY = 'topuyi_show_seat';
 const ZONE_LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 const SEAT_NUMBERS = Array.from({ length: 99 }, (_, i) => String(i + 1));
+const PERFORMANCE_COLLECTION = 'performances';
+const FALLBACK_PERFORMANCES = [
+  {
+    id: 'topuyi-live-2026',
+    name: 'TOPUYI 星光应援互动场',
+    date: '2026-10-01',
+    time: '19:30',
+    venue: '广州星光音乐空间',
+    status: '座位绑定开放中',
+    description: '现场观众可绑定座位号，连接 TOPUYI 手灯后参与统一灯光互动。',
+    sort: 100
+  }
+];
 
 function toNumberIndex(value) {
   const num = parseInt(value, 10);
@@ -34,6 +49,8 @@ Page({
     performances: [],
     selectedIndex: 0,
     seatEnabled: false,
+    loadingPerformances: false,
+    performanceError: '',
     seatRange: [ZONE_LETTERS, SEAT_NUMBERS, SEAT_NUMBERS],
     seatPickerIndex: [0, 0, 0],
     zone: 'A',
@@ -42,9 +59,78 @@ Page({
     binding: false
   },
 
+  onLoad() {
+    this.loadPerformances();
+  },
+
   onShow() {
-    this.syncSeatEnabled();
+    if (!this.data.performances.length && !this.data.loadingPerformances) {
+      this.loadPerformances();
+      return;
+    }
     this.loadSeat();
+  },
+
+  normalizePerformance(item) {
+    return {
+      id: item.id || item.performanceId || item._id || '',
+      name: item.name || '未命名演出',
+      date: item.date || '',
+      time: item.time || '',
+      venue: item.venue || '',
+      status: item.statusText || item.status || '座位绑定开放中',
+      description: item.description || '',
+      sort: Number(item.sort || 0)
+    };
+  },
+
+  applyPerformanceList(list) {
+    const performances = (list || [])
+      .map((item) => this.normalizePerformance(item))
+      .sort((a, b) => {
+        if (b.sort !== a.sort) return b.sort - a.sort;
+        return `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
+      });
+    const selectedIndex = performances.length
+      ? Math.min(this.data.selectedIndex || 0, performances.length - 1)
+      : 0;
+    this.setData(
+      {
+        performances,
+        selectedIndex,
+        seatEnabled: performances.length > 0,
+        loadingPerformances: false,
+        performanceError: ''
+      },
+      () => this.loadSeat()
+    );
+  },
+
+  async loadPerformances() {
+    const cloud = initCloud();
+    if (!cloud.ok || !wx.cloud) {
+      console.warn('云开发未初始化，使用演出兜底数据:', cloud.reason);
+      this.applyPerformanceList(FALLBACK_PERFORMANCES);
+      return;
+    }
+
+    this.setData({ loadingPerformances: true, performanceError: '' });
+    try {
+      const db = wx.cloud.database();
+      const res = await db
+        .collection(PERFORMANCE_COLLECTION)
+        .where({
+          sourceAppId: TOPUYI_APP_ID,
+          status: 'published'
+        })
+        .limit(20)
+        .get();
+      const list = res.data || [];
+      this.applyPerformanceList(list.length ? list : FALLBACK_PERFORMANCES);
+    } catch (error) {
+      console.error('加载云端演出失败，使用演出兜底数据', error);
+      this.applyPerformanceList(FALLBACK_PERFORMANCES);
+    }
   },
 
   syncSeatEnabled() {
@@ -76,7 +162,10 @@ Page({
       ];
       this.applySeatIndices(indices);
       this.setData({
-        selectedIndex: Number.isFinite(saved.selectedIndex) ? saved.selectedIndex : 0
+        selectedIndex: Math.min(
+          Number.isFinite(saved.selectedIndex) ? saved.selectedIndex : 0,
+          Math.max(0, this.data.performances.length - 1)
+        )
       });
     } catch (e) {
       /* ignore */

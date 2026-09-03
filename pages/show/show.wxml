@@ -3,16 +3,30 @@
   <view class="show-page">
     <view class="section-card">
       <text class="section-title">请选择演出</text>
-      <block wx:if="{{performances.length}}">
+      <view class="empty-show" wx:if="{{loadingPerformances}}">
+        <text class="empty-show-text">演出信息加载中...</text>
+      </view>
+      <view class="empty-show" wx:elif="{{performanceError}}">
+        <text class="empty-show-text">{{performanceError}}</text>
+      </view>
+      <block wx:elif="{{performances.length}}">
         <picker mode="selector" range="{{performances}}" range-key="name" value="{{selectedIndex}}" bindchange="onPerformanceChange">
           <view class="picker-row">
-            <text class="picker-value">{{performances[selectedIndex].name}}</text>
+            <view class="picker-main">
+              <text class="picker-value">{{performances[selectedIndex].name}}</text>
+              <text class="picker-meta">{{performances[selectedIndex].date}} {{performances[selectedIndex].time}}</text>
+            </view>
             <text class="picker-arrow">›</text>
           </view>
         </picker>
+        <view class="show-detail">
+          <view class="show-status">{{performances[selectedIndex].status}}</view>
+          <text class="show-info">{{performances[selectedIndex].venue}}</text>
+          <text class="show-desc">{{performances[selectedIndex].description}}</text>
+        </view>
       </block>
       <view class="empty-show" wx:else>
-        <text class="empty-show-text">暂无演出，敬请期待...</text>
+        <text class="empty-show-text">暂无已上架演出</text>
       </view>
     </view>
 

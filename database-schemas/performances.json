@@ -1,0 +1,82 @@
+{
+  "title": "演出",
+  "name": "performances",
+  "description": "TOPUYI 演出与座位绑定活动（关联集合 performances）",
+  "type": "object",
+  "x-kind": "tcb",
+  "x-primary-column": "name",
+  "x-defaultMethods": [
+    "wedaCreate",
+    "wedaDelete",
+    "wedaUpdate",
+    "wedaGetItem",
+    "wedaGetList",
+    "wedaGetRecords",
+    "wedaBatchCreate",
+    "wedaBatchUpdate",
+    "wedaBatchDelete"
+  ],
+  "required": [
+    "id",
+    "name",
+    "date",
+    "time",
+    "venue",
+    "status",
+    "sourceAppId"
+  ],
+  "properties": {
+    "id": {
+      "title": "演出编号",
+      "type": "string",
+      "description": "如 topuyi-live-2026，唯一",
+      "x-unique": true
+    },
+    "name": {
+      "title": "演出名称",
+      "type": "string",
+      "x-primary-column": true
+    },
+    "date": {
+      "title": "演出日期",
+      "type": "string",
+      "description": "格式：YYYY-MM-DD"
+    },
+    "time": {
+      "title": "演出时间",
+      "type": "string",
+      "description": "格式：19:30"
+    },
+    "venue": {
+      "title": "演出地点",
+      "type": "string"
+    },
+    "description": {
+      "title": "互动说明",
+      "type": "string",
+      "description": "演出页展示"
+    },
+    "statusText": {
+      "title": "展示状态",
+      "type": "string",
+      "description": "如：座位绑定开放中"
+    },
+    "status": {
+      "title": "状态",
+      "type": "string",
+      "format": "x-enum",
+      "enum": ["published", "draft", "offline"],
+      "description": "published=上架 draft=草稿 offline=下架"
+    },
+    "sort": {
+      "title": "排序",
+      "type": "number",
+      "description": "越大越靠前"
+    },
+    "sourceAppId": {
+      "title": "小程序ID",
+      "type": "string",
+      "default": "wx3610c3ef05d1131e"
+    }
+  }
+}
