@@ -289,6 +289,12 @@ Page({
 
       this.setData({ isScanning: true, showDeviceList: true, deviceList: [] });
 
+      // 定时清理：广播已消失（关机/断开）的设备自动从列表移除
+      if (this._pruneTimer) {
+        clearInterval(this._pruneTimer);
+      }
+      this._pruneTimer = setInterval(() => this._pruneStaleDevices(), 1000);
+
       // 先获取已发现的设备列表（iOS 设备ID非MAC，不做MAC前缀过滤）
       try {
         console.log('========== 开始搜索设备 ==========');
@@ -305,8 +311,9 @@ Page({
               信号强度: device.RSSI ? `${device.RSSI} dBm` : '未知'
             });
           });
-          // 添加到列表显示
-          const deduped = dedupeDevicesByBindId(existingDevices);
+          // 添加到列表显示（带发现时间，便于超时清理）
+          const withSeen = existingDevices.map((d) => ({ ...d, _lastSeen: Date.now() }));
+          const deduped = dedupeDevicesByBindId(withSeen);
           this.setData({ deviceList: this.annotateDeviceConnection(deduped) });
         } else {
           console.log('暂无已缓存的设备');
@@ -347,12 +354,14 @@ Page({
         const currentList = this.data.deviceList;
         const newList = [...currentList];
 
+        console.log('[回调] 本次设备:', foundDevices.map((d) => d.name || '未知'));
         foundDevices.forEach(device => {
           const index = newList.findIndex(d => d.deviceId === device.deviceId);
+          const fresh = { ...device, _lastSeen: Date.now() };
           if (index >= 0) {
-            newList[index] = { ...newList[index], ...device };
+            newList[index] = { ...newList[index], ...fresh };
           } else {
-            newList.push(device);
+            newList.push(fresh);
           }
         });
 
@@ -370,31 +379,27 @@ Page({
       await bleController.startBluetoothDevicesDiscovery();
       console.log('开始搜索蓝牙设备...');
 
-      setTimeout(async () => {
-        await bleController.stopBluetoothDevicesDiscovery();
-        console.log('========== 搜索结束 ==========');
-        console.log('最终发现的设备数量:', this.data.deviceList.length, '个');
-        if (this.data.deviceList.length > 0) {
-          console.log('设备列表（按信号强度排序）:');
-          this.data.deviceList.forEach((device, index) => {
-            console.log(`${index + 1}. ${device.name || '未知设备'}`, {
-              MAC地址: device.deviceId,
-              信号强度: device.RSSI ? `${device.RSSI} dBm` : '未知'
-            });
-          });
+      // 持续扫描：每 15 秒一轮，弹窗开着就一直扫，列表实时反映广播状态
+      const keepScanning = async () => {
+        try {
+          await bleController.stopBluetoothDevicesDiscovery();
+        } catch (e) {
+          // 忽略停止失败
         }
-        console.log('============================');
-        
-        this.setData({ isScanning: false });
-        
-        if (this.data.deviceList.length === 0) {
-          wx.showToast({
-            title: '未发现设备',
-            icon: 'none',
-            duration: 3000
-          });
+        console.log('========== 一轮搜索结束 ==========');
+        if (!this.data.showDeviceList) {
+          this.setData({ isScanning: false });
+          return;
         }
-      }, 15000);
+        try {
+          await bleController.startBluetoothDevicesDiscovery();
+          console.log('继续搜索蓝牙设备...');
+        } catch (e) {
+          console.log('继续搜索失败', e);
+        }
+        this._scanLoopTimer = setTimeout(keepScanning, 15000);
+      };
+      this._scanLoopTimer = setTimeout(keepScanning, 15000);
     } catch (error) {
       console.error('搜索设备失败', error);
       this.setData({ isScanning: false });
@@ -557,10 +562,36 @@ Page({
   },
 
   /**
+   * 清理广播已消失的设备：
+   * 超过 2 秒没再收到新广播（关机/断开）就从列表移除，
+   * 保证页面里出现的都是当前还在广播的设备。
+   */
+  _pruneStaleDevices() {
+    const now = Date.now();
+    const list = this.data.deviceList;
+    const kept = list.filter((d) => now - (d._lastSeen || 0) <= 2000);
+    if (kept.length !== list.length) {
+      console.log('[清理] 移除失效设备:', list.map((d) => ({
+        name: d.name,
+        age: Math.round((now - (d._lastSeen || 0)) / 1000) + 's'
+      })));
+      this.setData({ deviceList: this.annotateDeviceConnection(kept) });
+    }
+  },
+
+  /**
    * 关闭设备列表
    */
   closeDeviceList() {
-    this.setData({ showDeviceList: false });
+    this.setData({ showDeviceList: false, deviceList: [] });
+    if (this._scanLoopTimer) {
+      clearTimeout(this._scanLoopTimer);
+      this._scanLoopTimer = null;
+    }
+    if (this._pruneTimer) {
+      clearInterval(this._pruneTimer);
+      this._pruneTimer = null;
+    }
     if (this.data.isScanning) {
       bleController.stopBluetoothDevicesDiscovery();
       this.setData({ isScanning: false });
