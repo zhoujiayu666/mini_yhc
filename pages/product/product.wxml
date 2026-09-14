@@ -20,7 +20,7 @@
           <view class="device-info">
             <text class="device-name">{{item.displayName}}</text>
             <text class="device-ble-name" wx:if="{{item.customName}}">蓝牙名：{{item.bleName}}</text>
-            <text class="device-id">ID {{item.hasStableMac ? item.shortId : (item.shortId || item.bindId || item.deviceId)}}</text>
+            <text class="device-id">ID {{item.bindId || item.deviceId}}</text>
             <text class="device-status connected">{{item.statusText}}</text>
           </view>
           <view class="device-action disconnect" catchtap="disconnectDevice">断开</view>
@@ -66,7 +66,7 @@
           <view class="device-info">
             <text class="device-name">{{item.displayName}}</text>
             <text class="device-ble-name" wx:if="{{item.customName}}">蓝牙名：{{item.bleName}}</text>
-            <text class="device-id">ID {{item.hasStableMac ? item.shortId : (item.shortId || item.bindId || item.deviceId)}}</text>
+            <text class="device-id">ID {{item.bindId || item.deviceId}}</text>
             <text class="device-status">{{item.lastConnectText}}</text>
           </view>
           <view class="device-action">连接</view>
@@ -94,7 +94,7 @@
             <text class="device-item-name">{{item.name || item.localName || '未知设备'}}</text>
             <text class="device-connected-tag" wx:if="{{item.isConnectedDevice}}">已连接</text>
           </view>
-          <text class="rssi-text">信号 {{item.RSSI || '未知'}}<block wx:if="{{item.hasStableMac}}"> · {{item.shortId}}</block></text>
+          <text class="rssi-text">信号 {{item.RSSI || '未知'}}<block wx:if="{{item.hasStableMac}}"> · {{item.bindId}}</block></text>
         </view>
       </view>
       <view class="empty-state" wx:if="{{deviceList.length === 0 && !isScanning}}">
