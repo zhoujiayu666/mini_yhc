@@ -28,6 +28,7 @@ function requireLogin(options = {}) {
 
   showLoginSheet({
     message,
+    onSuccess: options.onSuccess,
     onCancel: backOnCancel
       ? () => {
           wx.navigateBack({

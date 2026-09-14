@@ -55,6 +55,8 @@ Page({
     goLoginPage('登录后可查看订单与收货地址');
   },
 
+  onGoDevices() { wx.navigateTo({ url: '/pages/product/product' }); },
+
   onGoConnectGuide() {
     wx.navigateTo({ url: '/pages/connect-guide/connect-guide' });
   },

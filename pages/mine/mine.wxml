@@ -31,8 +31,9 @@
     </view>
 
     <view class="section">
-      <text class="section-label">账号</text>
+      <text class="section-label">设备</text>
       <view class="menu-card">
+        <view class="menu-item" bindtap="onGoDevices"><text class="menu-title">我的设备</text><text class="menu-arrow">›</text></view>
         <view class="menu-item" bindtap="onGoConnectGuide">
           <text class="menu-title">设备连接引导</text>
           <text class="menu-arrow">›</text>

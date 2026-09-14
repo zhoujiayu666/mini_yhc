@@ -1,6 +1,7 @@
 const bleController = require('../../utils/ble.js');
 const protocol = require('../../utils/protocol.js');
 const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
+const { ensureBluetoothReady, showBluetoothError } = require('../../utils/bluetooth-permission.js');
 const app = getApp();
 
 const MODE_TO_EFFECT = {
@@ -230,15 +231,9 @@ Page({
       return;
     }
     try {
-      await bleController.initBluetoothAdapter().catch(() => {});
-      const adapterState = await this.checkBluetoothAdapter();
+      const adapterState = await ensureBluetoothReady(() => bleController.initBluetoothAdapter());
       if (!adapterState.available) {
-        wx.showModal({
-          title: '无法使用蓝牙',
-          content: adapterState.message || '请先打开蓝牙并检查微信蓝牙权限',
-          showCancel: false,
-          confirmText: '知道了'
-        });
+        showBluetoothError(adapterState.error || adapterState.message, '无法使用蓝牙');
         return;
       }
 
@@ -289,11 +284,7 @@ Page({
     } catch (error) {
       console.error('搜索设备失败', error);
       this.setData({ isScanning: false });
-      wx.showModal({
-        title: '搜索失败',
-        content: error.errMsg || '请检查蓝牙状态后重试',
-        showCancel: false
-      });
+      showBluetoothError(error, '搜索失败');
     }
   },
 

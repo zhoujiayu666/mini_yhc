@@ -1,0 +1,27 @@
+<view class="home">
+  <view class="preview" wx:if="{{editable}}"><text>{{preview ? '本机草稿预览' : (syncing ? '正在同步…' : cloudStatus)}}</text><text bindtap="connectDesktop">连接电脑后台 ›</text></view>
+  <view class="preview-actions" wx:if="{{editable}}"><text bindtap="refreshHome">刷新云端预览</text></view>
+  <block wx:for="{{blocks}}" wx:key="id" wx:for-item="block">
+    <view class="module {{block.id === 'default-community' ? 'community-entries' : ''}} {{block.type}} {{block.background === '#171b26' || block.background === '#202733' ? 'dark' : ''}}" style="background: {{block.background}}; margin-bottom: {{block.spacing !== undefined ? block.spacing * 2 : 24}}rpx;">
+      <view class="heading" wx:if="{{block.showHeading !== false && (block.title || block.subtitle)}}"><text class="title">{{block.title}}</text><text class="subtitle" wx:if="{{block.subtitle}}">{{block.subtitle}}</text></view>
+      <swiper wx:if="{{block.type === 'banner'}}" style="height: {{block.height}}rpx" indicator-dots autoplay circular interval="5000" indicator-active-color="#ffd100">
+        <swiper-item wx:for="{{block.items}}" wx:key="index"><view class="hero" data-target="{{item.target}}" bindtap="open"><image wx:if="{{item.image}}" class="cover" src="{{item.image}}" mode="aspectFill"/><view class="orb" wx:else></view></view></swiper-item>
+      </swiper>
+      <block wx:else>
+        <block wx:if="{{block.type === 'video'}}"><video wx:if="{{block.video}}" src="{{block.video}}" poster="{{block.items[0].image}}" controls style="height: {{block.height}}rpx"/><view wx:else class="video-placeholder" style="height: {{block.height}}rpx"><text class="play">▷</text><text>现场影像</text><text class="muted">精彩故事，等待上映</text></view></block>
+        <view wx:elif="{{block.type === 'products'}}" class="home-product-grid"><view wx:for="{{block.items}}" wx:key="index" class="home-product" data-sku="{{item.sku}}" bindtap="openProduct"><image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill"/><view wx:else class="home-product-placeholder">商品图片</view><text class="home-product-name">{{item.title}}</text><view class="home-product-purchase"><view><text class="home-price">{{item.priceText ? '¥' + item.priceText : '暂不可用'}}</text><text wx:if="{{item.originalPriceText}}" class="home-original">原价 ¥{{item.originalPriceText}}</text></view><button size="mini" disabled="{{!item.available}}" data-sku="{{item.sku}}" catchtap="addProduct">{{item.available ? '＋购物车' : '暂不可购'}}</button></view></view></view>
+        <view wx:elif="{{block.type === 'links'}}" class="grid {{block.columns === 4 ? 'four-entries' : ''}}">
+          <view wx:for="{{block.items}}" wx:key="index" class="tile {{block.type === 'products' ? 'product-tile' : ''}}" style="width: {{block.columns === 1 ? '100%' : (block.columns === 4 ? '22%' : '48%')}}" data-target="{{item.target}}" data-block-id="{{block.id}}" data-item-id="{{item.id}}" bindtap="open">
+            <image wx:if="{{item.image}}" class="tile-image" style="height: {{block.height}}rpx;" src="{{item.image}}" mode="aspectFill"/>
+            <view wx:elif="{{block.columns === 4}}" class="entry-placeholder" style="height: {{block.height}}rpx">海报</view>
+            <view wx:elif="{{block.type === 'products'}}" class="product-art"><view class="light-stick"></view><text>TOPUYI</text></view>
+            <text class="tile-title">{{item.title}}<text wx:if="{{item.target && block.columns !== 4}}">↗</text></text><text class="subtitle" wx:if="{{item.subtitle && block.id !== 'default-community'}}">{{item.subtitle}}</text>
+          </view>
+        </view>
+        <block wx:else><view wx:for="{{block.items}}" wx:key="index" data-target="{{item.target}}" bindtap="open"><image wx:if="{{item.image}}" src="{{item.image}}" class="poster-image" style="height: {{block.height}}rpx" mode="aspectFill"/><text class="poster-link" wx:if="{{item.title}}">{{item.title}} <text wx:if="{{item.target}}">↗</text></text><text class="subtitle" wx:if="{{item.subtitle}}">{{item.subtitle}}</text></view></block>
+      </block>
+    </view>
+  </block>
+  <view class="footer">TOPUYI 拓普依 · 让热爱发光</view>
+</view><view class="floating-cart" bindtap="openCart" role="button" aria-label="购物车"><view class="cart-drawing"><view class="cart-handle"></view><view class="cart-basket"></view><view class="cart-wheel cart-wheel-left"></view><view class="cart-wheel cart-wheel-right"></view></view><text class="floating-cart-count" wx:if="{{cartCount}}">{{cartCount > 99 ? "99+" : cartCount}}</text></view>
+<main-tab-bar current="home"/>

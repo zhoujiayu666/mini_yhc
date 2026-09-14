@@ -1,0 +1,13 @@
+import {build} from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/postcss';
+import {resolve} from 'node:path';
+import {copyFile,writeFile} from 'node:fs/promises';
+const root=process.cwd(),out=resolve(root,'outputs/cloudrun');
+const common={configFile:false,resolve:{alias:{'@':root}},logLevel:'warn'};
+await build({...common,root:resolve(root,'deploy-cn'),plugins:[react()],css:{postcss:{plugins:[tailwindcss()]}},build:{outDir:resolve(out,'client'),emptyOutDir:true}});
+await build({...common,build:{outDir:out,emptyOutDir:false,ssr:resolve(root,'app/api/ops/[...path]/route.ts'),rollupOptions:{output:{entryFileNames:'api.mjs'}}}});
+await copyFile('deploy-cn/server.mjs',resolve(out,'server.mjs'));
+await writeFile(resolve(out,'package.json'),JSON.stringify({name:'topuyi-operations-cn',private:true,type:'module',scripts:{start:'node server.mjs'},engines:{node:'>=22'}}));
+await writeFile(resolve(out,'Dockerfile'),'FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nENV NODE_ENV=production\nENV PORT=8080\nENV PUBLIC_ORIGIN=https://admin.topuyi.com\nEXPOSE 8080\nUSER node\nCMD ["node","server.mjs"]\n');
+console.log('Domestic deployment ready: outputs/cloudrun');

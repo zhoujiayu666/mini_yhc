@@ -1,0 +1,19 @@
+<view class="editor">
+  <view class="notice">本机装修预览 · 不同步线上<text>保存仅保存在当前设备。图片、视频暂填 HTTPS 地址；商品卡片为示例展示。</text></view>
+  <view class="toolbar"><picker range="{{types}}" bindchange="add"><button size="mini">＋ 添加模块</button></picker><button size="mini" bindtap="reset">恢复模板</button></view>
+  <view class="module-list"><view wx:for="{{config.blocks}}" wx:key="id" class="module-row {{selected === index ? 'active' : ''}}" data-index="{{index}}" bindtap="select"><text>{{index + 1}}. {{item.title}}</text><text>{{item.visible ? '显示' : '隐藏'}} ›</text></view></view>
+  <block wx:if="{{config.blocks.length}}"><block wx:for="{{config.blocks}}" wx:key="id" wx:for-item="block"><view class="panel" wx:if="{{selected === index}}">
+    <view class="panel-title">编辑模块</view><view class="actions"><button size="mini" data-step="-1" bindtap="move" disabled="{{selected === 0}}">上移</button><button size="mini" data-step="1" bindtap="move" disabled="{{selected === config.blocks.length - 1}}">下移</button><button size="mini" bindtap="duplicate">复制</button><button size="mini" bindtap="remove">删除</button></view>
+    <view class="switch-row">在图片／视频上方显示标题和介绍<switch checked="{{block.showHeading !== false}}" data-field="showHeading" bindchange="field" color="#c29921"/></view>
+    <label>模块标题<input value="{{block.title}}" data-field="title" bindinput="field" maxlength="60"/></label>
+    <label>介绍文字<textarea value="{{block.subtitle}}" data-field="subtitle" bindinput="field" maxlength="300" auto-height/></label>
+    <view class="switch-row">显示模块<switch checked="{{block.visible}}" data-field="visible" bindchange="field" color="#c29921"/></view>
+    <label>背景颜色<view class="swatches"><view wx:for="{{colors}}" wx:key="*this" style="background: {{item}}" class="swatch {{block.background === item ? 'chosen' : ''}}" data-color="{{item}}" bindtap="color"/></view></label>
+    <label wx:if="{{block.type === 'banner' || block.type === 'poster' || block.type === 'video' || block.type === 'about'}}">媒体高度（160–900 rpx）<slider min="160" max="900" step="20" value="{{block.height}}" show-value data-field="height" bindchange="field" activeColor="#c29921"/></label>
+    <label wx:if="{{block.type === 'links' || block.type === 'products'}}">排列<picker range="{{['单列','双列','四列']}}" value="{{block.columns === 4 ? 2 : block.columns - 1}}" data-field="columns" bindchange="field"><view class="input">{{block.columns === 1 ? '单列' : (block.columns === 4 ? '四列' : '双列')}} ›</view></picker></label>
+    <label wx:if="{{block.type === 'video'}}">视频 HTTPS 地址<input value="{{block.video}}" data-field="video" bindinput="field" maxlength="2000" placeholder="https://…"/></label>
+    <view class="item" wx:for="{{block.items}}" wx:key="index"><view class="panel-title">内容 {{index + 1}}</view><label>标题<input value="{{item.title}}" data-index="{{index}}" data-field="title" bindinput="itemField" maxlength="80"/></label><label>说明<input value="{{item.subtitle}}" data-index="{{index}}" data-field="subtitle" bindinput="itemField" maxlength="200"/></label><label>图片 / 视频封面 HTTPS 地址<input value="{{item.image}}" data-index="{{index}}" data-field="image" bindinput="itemField" maxlength="2000" placeholder="留空使用默认展示"/></label><label>点击跳转<picker range="{{targets}}" value="{{item.target}}" data-index="{{index}}" data-field="target" bindchange="itemField"><view class="input">{{targets[item.target]}} ›</view></picker></label><button size="mini" data-index="{{index}}" bindtap="removeItem">移除此项</button></view>
+    <button bindtap="addItem">＋ 添加内容项</button>
+  </view></block></block>
+  <view class="bottom"><button bindtap="save">{{dirty ? '保存草稿 *' : '保存草稿'}}</button><button class="primary" bindtap="preview">预览效果</button></view>
+</view>

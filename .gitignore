@@ -31,3 +31,7 @@ desktop.ini
 
 # 本地临时笔记（按需取消注释）
 # 一些信息.txt
+
+# Local data backups and admin tooling metadata
+/backups/
+/desktop-admin/.openai/

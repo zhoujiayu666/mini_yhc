@@ -109,6 +109,52 @@ Page({
     this.setData(calcPageLayout());
   },
 
+  showInstantProducts() {
+    const displayProducts = this.filterByCategory(FALLBACK_PRODUCTS, this.data.activeCategory);
+    this.setData({
+      products: FALLBACK_PRODUCTS,
+      displayProducts,
+      loading: false,
+      refreshing: true,
+      cloudReady: false,
+      useFallback: true,
+      cloudError: ''
+    });
+  },
+
+  showProductsNow(products, options = {}) {
+    const category = options.category != null ? options.category : this.data.activeCategory;
+    const displayProducts = this.filterByCategory(products, category);
+    this.setData({
+      products,
+      displayProducts,
+      loading: false,
+      refreshing: options.refreshing !== false,
+      cloudReady: options.cloudReady !== false,
+      useFallback: !!options.useFallback,
+      cloudError: options.cloudError || ''
+    });
+  },
+
+  enrichVisibleProducts(products, options = {}) {
+    const category = options.category != null ? options.category : this.data.activeCategory;
+    enrichProductsForList(products).then((enriched) => {
+      const displayProducts = this.filterByCategory(enriched, category);
+      this.setData({
+        products: enriched,
+        displayProducts,
+        loading: false,
+        refreshing: options.refreshing !== false,
+        cloudReady: options.cloudReady !== false,
+        useFallback: !!options.useFallback,
+        cloudError: options.cloudError || ''
+      });
+      if (options.saveCache) {
+        saveProductCache(enriched);
+      }
+    });
+  },
+
   onLoad() {
     showShareMenu();
     this.initPageLayout();
@@ -120,22 +166,17 @@ Page({
     this.refreshCartBar();
     const cached = readProductCache();
     if (cached) {
-      enrichProductsForList(cached.products).then((enriched) => {
-        const displayProducts = this.filterByCategory(enriched, this.data.activeCategory);
-        this.setData({
-          products: enriched,
-          displayProducts,
-          loading: false,
-          refreshing: true,
-          cloudReady: true,
-          useFallback: false,
-          cloudError: ''
-        });
-        this.loadProducts({ silent: true, skipSeed: true });
+      this.showProductsNow(cached.products);
+      this.enrichVisibleProducts(cached.products, {
+        refreshing: true,
+        cloudReady: true,
+        saveCache: true
       });
+      this.loadProducts({ silent: true, skipSeed: true });
       return;
     }
-    this.loadProducts();
+    this.showInstantProducts();
+    this.loadProducts({ silent: true });
   },
 
   onShareAppMessage() {
@@ -159,18 +200,16 @@ Page({
 
   applyProductList(products, categoryId) {
     const category = categoryId != null ? categoryId : this.data.activeCategory;
-    enrichProductsForList(products).then((enriched) => {
-      const displayProducts = this.filterByCategory(enriched, category);
-      this.setData({
-        products: enriched,
-        displayProducts,
-        loading: false,
-        refreshing: false,
-        cloudReady: true,
-        useFallback: false,
-        cloudError: ''
-      });
-      saveProductCache(enriched);
+    this.showProductsNow(products, {
+      category,
+      refreshing: false,
+      cloudReady: true
+    });
+    this.enrichVisibleProducts(products, {
+      category,
+      refreshing: false,
+      cloudReady: true,
+      saveCache: true
     });
   },
 

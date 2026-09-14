@@ -1,6 +1,27 @@
 <page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
-  <view class="shop-page" wx:if="{{!loading}}">
+  <view class="page-state" wx:if="{{loading}}">
+    <text class="state-title">正在加载购物车…</text>
+    <text class="state-detail">正在读取商品和金额，请稍候</text>
+  </view>
+  <view class="page-state" wx:elif="{{loginRequired}}">
+    <text class="state-title">登录后查看购物车</text>
+    <text class="state-detail">已添加的商品会保留在本机</text>
+    <button class="state-button" bindtap="onLogin">登录并继续</button>
+    <button class="state-button state-secondary" bindtap="onContinueShopping">继续选购</button>
+  </view>
+  <view class="page-state" wx:elif="{{loadError}}">
+    <text class="state-title">购物车暂时无法加载</text>
+    <text class="state-detail">{{loadError}}</text>
+    <button class="state-button" bindtap="onRetry">重新加载</button>
+    <button class="state-button state-secondary" bindtap="onContinueShopping">返回选购</button>
+  </view>
+  <view class="page-state" wx:elif="{{!previewItems.length}}">
+    <text class="state-title">购物车还是空的</text>
+    <text class="state-detail">先挑选喜欢的商品，再来结算吧</text>
+    <button class="state-button" bindtap="onContinueShopping">去选购</button>
+  </view>
+  <view class="shop-page" wx:else>
     <view class="section-card" bindtap="onChooseAddress">
       <block wx:if="{{address}}">
         <view class="addr-row">
@@ -20,10 +41,16 @@
       <view class="line-item" wx:for="{{previewItems}}" wx:key="sku">
         <view class="line-main">
           <text class="line-name">{{item.name}}</text>
-          <text class="line-qty">×{{item.qty}}</text>
+          <view class="quantity-control" wx:if="{{mode === 'cart'}}">
+            <button class="quantity-btn" aria-label="减少{{item.name}}数量" data-sku="{{item.sku}}" data-step="-1" disabled="{{item.qty <= 1 || updatingQuantity || submitting}}" bindtap="onChangeQuantity">−</button>
+            <text class="quantity-value">{{item.qty}}</text>
+            <button class="quantity-btn" aria-label="增加{{item.name}}数量" data-sku="{{item.sku}}" data-step="1" disabled="{{item.qty >= 99 || updatingQuantity || submitting}}" bindtap="onChangeQuantity">＋</button>
+          </view>
+          <text class="line-qty" wx:else>×{{item.qty}}</text>
         </view>
         <text class="line-price">¥{{item.lineYuan}}</text>
       </view>
+      <text class="quantity-hint" wx:if="{{updatingQuantity}}">正在更新数量和金额…</text>
     </view>
 
     <view class="section-card">
@@ -56,10 +83,10 @@
   </view>
 </scroll-view>
 
-<view class="bottom-bar" wx:if="{{!loading}}">
+<view class="bottom-bar" wx:if="{{!loading && !loginRequired && !loadError && previewItems.length}}">
   <view class="bottom-total">
   <text class="bottom-label">合计</text>
   <text class="bottom-amount">¥{{payYuan}}</text>
   </view>
-  <button class="submit-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">提交订单并支付</button>
+  <button class="submit-btn" loading="{{submitting || updatingQuantity}}" disabled="{{submitting || updatingQuantity || !previewItems.length}}" bindtap="onSubmit">{{updatingQuantity ? '正在更新金额' : '提交订单并支付'}}</button>
 </view>

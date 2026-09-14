@@ -1,5 +1,7 @@
 {
   "pages": [
+    "pages/home/home",
+    "pages/home-editor/home-editor",
     "pages/control/control",
     "pages/login/login",
     "pages/room/room",
@@ -7,6 +9,9 @@
     "pages/show/show",
     "pages/around/around",
     "pages/product-detail/product-detail",
+    "pages/home-product-detail/home-product-detail",
+    "pages/home-content-detail/home-content-detail",
+    "pages/all-products/all-products",
     "pages/mine/mine",
     "pages/checkout/checkout",
     "pages/orders/orders",
@@ -51,6 +56,9 @@
   "permission": {
     "scope.bluetooth": {
       "desc": "用于连接和控制灯光设备"
+    },
+    "scope.userLocation": {
+      "desc": "用于在部分安卓手机上搜索附近蓝牙灯光设备"
     },
     "scope.record": {
       "desc": "用于音乐律动功能，分析环境音频"

@@ -7,6 +7,7 @@ const {
   dedupeDevicesByBindId
 } = require('../../utils/ble-device-id.js');
 const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
+const { ensureBluetoothReady, showBluetoothError } = require('../../utils/bluetooth-permission.js');
 const app = getApp();
 
 Page({
@@ -250,13 +251,8 @@ Page({
     }
 
     try {
-      // 先确保蓝牙适配器已初始化，避免 getBluetoothAdapterState:fail:not init
-      await bleController.initBluetoothAdapter().catch((err) => {
-        console.warn('蓝牙适配器初始化失败，继续走状态检查兜底', err);
-      });
-
       // 检查蓝牙适配器状态
-      const adapterState = await this.checkBluetoothAdapter();
+      const adapterState = await ensureBluetoothReady(() => bleController.initBluetoothAdapter());
       if (!adapterState.available) {
         // 检查是否是 Windows 平台不支持的问题
         if (adapterState.message && adapterState.message.includes('Mac 以外的平台')) {
@@ -267,22 +263,7 @@ Page({
             confirmText: '知道了'
           });
         } else {
-          // available 为 false 不一定是系统蓝牙关着：常见还有微信未获蓝牙权限、Android 需定位/附近设备等
-          const detail =
-            adapterState.message ||
-            [
-              '请依次检查：',
-              '1. 系统设置里蓝牙已打开',
-              '2. 若曾在弹窗里点过「拒绝」，请到：设置 → 应用 → 微信 → 权限，重新允许「附近设备」和「位置信息」（Android 扫描蓝牙常需要）',
-              '3. iPhone：设置 → 微信 → 打开「蓝牙」',
-              '4. 打开系统「定位服务」总开关后，完全退出微信再进入重试'
-            ].join('\n');
-          wx.showModal({
-            title: '无法使用蓝牙',
-            content: detail,
-            showCancel: false,
-            confirmText: '知道了'
-          });
+          showBluetoothError(adapterState.error || adapterState.message, '无法使用蓝牙');
         }
         return;
       }
@@ -408,11 +389,7 @@ Page({
         errorMsg = error.errMsg;
       }
       
-      wx.showModal({
-        title: '搜索失败',
-        content: errorMsg,
-        showCancel: false
-      });
+      showBluetoothError(error, '搜索失败');
     }
   },
 

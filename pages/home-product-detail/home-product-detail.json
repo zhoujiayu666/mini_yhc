@@ -1,0 +1,5 @@
+{
+  "renderer": "webview",
+  "disableScroll": false,
+  "navigationBarTitleText": "商品详情"
+}

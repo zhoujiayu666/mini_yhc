@@ -1,0 +1,10 @@
+<page-nav-bar></page-nav-bar>
+<view class="content-page" wx:if="{{content}}">
+  <image wx:if="{{content.image}}" class="content-image" src="{{content.image}}" mode="widthFix" bindtap="previewImage"/>
+  <view class="article">
+    <text class="article-title">{{content.title}}</text>
+    <text class="article-text" wx:if="{{content.text}}">{{content.text}}</text>
+    <text class="article-empty" wx:else>暂无内容</text>
+  </view>
+</view>
+<view class="empty" wx:else>内容不存在</view>

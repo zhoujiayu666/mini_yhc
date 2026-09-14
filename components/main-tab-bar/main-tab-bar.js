@@ -8,12 +8,9 @@ Component({
 
   data: {
     tabs: [
-      { id: 'product', label: '产品', icon: '◇', path: '/pages/product/product' },
-      { id: 'show', label: '演出', icon: '◎', path: '/pages/show/show' },
-      { id: 'control', label: '控制', icon: '◉', path: '/pages/control/control' },
-      { id: 'room', label: '房间', icon: '▣', path: '/pages/room/room' },
-      { id: 'around', label: '周边', icon: '◈', path: '/pages/around/around' },
-      { id: 'mine', label: '我的', icon: '○', path: '/pages/mine/mine' }
+      { id: 'home', label: '首页', icon: '◇', path: '/pages/home/home' },
+      { id: 'products', label: '全部商品', icon: '▣', path: '/pages/all-products/all-products' },
+      { id: 'mine', label: '个人中心', icon: '○', path: '/pages/mine/mine' }
     ]
   },
 

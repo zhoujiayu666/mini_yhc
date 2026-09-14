@@ -4,6 +4,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const _ = db.command;
+const DEV_PRODUCTS = 'topuyi_home_products_dev_v1';
+const LIVE_PRODUCTS = 'topuyi_home_products_live_v1';
+const isHomeCatalog = source => ['home_dev','home_live'].includes(source);
+const productCollection = source => source === 'home_dev' ? DEV_PRODUCTS : source === 'home_live' ? LIVE_PRODUCTS : 'products';
 const { withScope, docInScope } = require('./app-scope');
 const {
   TOPUYI_APP_ID,
@@ -207,20 +211,26 @@ function normalizeItemsInput(items) {
   return { items: normalized };
 }
 
-async function loadProductsBySkus(appId, skus) {
+async function loadProductsBySkus(appId, skus, catalogSource) {
   const unique = [...new Set(skus)];
-  const res = await db
-    .collection('products')
-    .where(
-      withScope(appId, {
-        sku: _.in(unique),
-        status: 'on_sale'
-      })
-    )
-    .get();
+  const isDev = isHomeCatalog(catalogSource);
+  const query = isDev
+    ? { sku: _.in(unique), active: true }
+    : withScope(appId, { sku: _.in(unique), status: 'on_sale' });
+  const res = await db.collection(productCollection(catalogSource)).where(query).get();
   const map = {};
-  (res.data || []).forEach((doc) => {
-    if (docInScope(doc, appId)) {
+  (res.data || []).forEach((raw) => {
+    if (isDev || docInScope(raw, appId)) {
+      const doc = isDev ? {
+        ...raw,
+        price: Math.round((Number(raw.price) || 0) * 100),
+        originalPrice: Math.round((Number(raw.originalPrice) || 0) * 100),
+        category: raw.category || '商品',
+        color: raw.color || '',
+        manageStock: raw.manageStock === false ? false : true,
+        status: 'on_sale',
+        sourceAppId: appId
+      } : {...raw, manageStock: true};
       map[doc.sku] = doc;
     }
   });
@@ -235,7 +245,7 @@ function buildOrderLines(items, productMap) {
     if (!product) {
       return { error: `商品 ${it.sku} 不存在或已下架` };
     }
-    if ((product.stock || 0) < it.qty) {
+    if (product.manageStock !== false && (product.stock || 0) < it.qty) {
       return { error: `${product.name} 库存不足` };
     }
     const unitPrice = product.price;
@@ -249,7 +259,8 @@ function buildOrderLines(items, productMap) {
       color: product.color,
       qty: it.qty,
       unitPrice,
-      lineAmount
+      lineAmount,
+      manageStock: product.manageStock !== false
     });
   }
   return { lines, totalAmount };
@@ -468,7 +479,8 @@ async function previewOrder(openid, appId, event) {
   }
   const productMap = await loadProductsBySkus(
     appId,
-    parsed.items.map((i) => i.sku)
+    parsed.items.map((i) => i.sku),
+    event.catalogSource
   );
   const built = buildOrderLines(parsed.items, productMap);
   if (built.error) {
@@ -503,7 +515,8 @@ async function createOrder(openid, appId, event) {
 
   const productMap = await loadProductsBySkus(
     appId,
-    parsed.items.map((i) => i.sku)
+    parsed.items.map((i) => i.sku),
+    event.catalogSource
   );
   const built = buildOrderLines(parsed.items, productMap);
   if (built.error) {
@@ -512,14 +525,12 @@ async function createOrder(openid, appId, event) {
 
   for (const line of built.lines) {
     const product = productMap[line.sku];
+    const isDev = isHomeCatalog(event.catalogSource);
+    if (isDev && product.manageStock === false) continue;
+    const stockQuery = { _id: product._id, stock: _.gte(line.qty) };
     const updated = await db
-      .collection('products')
-      .where(
-        withScope(appId, {
-          _id: product._id,
-          stock: _.gte(line.qty)
-        })
-      )
+      .collection(productCollection(event.catalogSource))
+      .where(isDev ? stockQuery : withScope(appId, stockQuery))
       .update({
         data: {
           stock: _.inc(-line.qty),
@@ -538,6 +549,7 @@ async function createOrder(openid, appId, event) {
   const orderDoc = {
     orderNo,
     sourceAppId: appId,
+    catalogSource: isHomeCatalog(event.catalogSource) ? event.catalogSource : 'standard',
     openid,
     status: 'pending_pay',
     items: built.lines,
@@ -747,9 +759,9 @@ async function cancelOrder(openid, appId, event) {
   });
 
   for (const line of doc.items || []) {
-    if (line.productId && line.qty) {
+    if (line.productId && line.qty && !(isHomeCatalog(doc.catalogSource) && line.manageStock === false)) {
       await db
-        .collection('products')
+        .collection(productCollection(doc.catalogSource))
         .doc(line.productId)
         .update({
           data: {

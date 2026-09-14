@@ -1,0 +1,13 @@
+<page-nav-bar></page-nav-bar>
+<view class="detail-page" wx:if="{{product}}">
+  <swiper wx:if="{{product.detailImages.length}}" class="main-swiper" indicator-dots="{{product.detailImages.length > 1}}" circular="{{product.detailImages.length > 1}}"><swiper-item wx:for="{{product.detailImages}}" wx:key="index"><image class="main-image" src="{{item}}" mode="aspectFit" data-index="{{index}}" bindtap="previewImage"/></swiper-item></swiper>
+  <view wx:else class="image-placeholder">商品主图</view>
+  <view class="title-card">
+    <text class="product-title">{{product.name}}</text>
+    <view class="price-row" wx:if="{{product.price}}"><text class="price">¥{{product.price}}</text><text class="original" wx:if="{{product.originalPrice > product.price}}">¥{{product.originalPrice}}</text></view>
+  </view>
+  <view class="detail-card"><text class="section-title">商品详情</text><block wx:if="{{product.detailBlocks.length}}"><block wx:for="{{product.detailBlocks}}" wx:key="id"><text wx:if="{{item.type === 'text'}}" class="detail-text detail-block-text">{{item.text}}</text><image wx:elif="{{item.type === 'image' && item.image}}" class="detail-block-image" src="{{item.image}}" mode="widthFix"/></block></block><text wx:else class="detail-text">{{product.detail || '暂无商品详情'}}</text></view>
+  <view class="bottom-space"></view>
+</view>
+<view class="empty" wx:else><text>{{loading ? '正在加载商品…' : error || '商品信息不存在'}}</text><button wx:if="{{!loading}}" bindtap="loadProduct">重新加载</button></view>
+<view class="bottom-bar" wx:if="{{product}}"><button class="cart-button" bindtap="addCart">加入购物车</button><button class="buy-button" bindtap="buyNow">立即购买</button></view>

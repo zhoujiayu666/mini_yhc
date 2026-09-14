@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="product-page">
     <view class="section">
@@ -110,4 +110,4 @@
   </view>
 </view>
 
-<main-tab-bar current="product"></main-tab-bar>
+<main-tab-bar current="mine"></main-tab-bar>
