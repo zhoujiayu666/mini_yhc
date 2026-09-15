@@ -1,10 +1,15 @@
 'use client';
-import {useEffect,useState,type SubmitEvent} from 'react';
+import {useEffect,useState,type SubmitEvent,type CSSProperties} from 'react';
 import {LockKeyhole,PanelsTopLeft,ImagePlus,Users,ArrowRight,ShieldCheck} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import HomeEditor from '@/components/home-editor';
 import MemberEditor from '@/components/member-editor';
+import CategoryManager from '@/components/category-manager';
+import MemberRedemptions from '@/components/member-redemptions';
+import OperationsSidebar,{type OperationsPage} from '@/components/operations-sidebar';
+import {SidebarProvider} from '@/components/ui/sidebar';
+import {CategoriesProvider} from '@/lib/categories';
 import {ops} from '@/lib/ops-client';
 type User={name:string;username:string;role:string};
 export default function Operations(){
@@ -17,7 +22,13 @@ export default function Operations(){
 }
 
 function EditorWorkspace({userName,onLogout}:{userName:string;onLogout:()=>void}){
- const [page,setPage]=useState<'home'|'member'>('home'),[memberOpened,setMemberOpened]=useState(false),[homeDirty,setHomeDirty]=useState(false),[memberDirty,setMemberDirty]=useState(false);
+ const [page,setPage]=useState<OperationsPage>('home'),[memberOpened,setMemberOpened]=useState(false),[redemptionsOpened,setRedemptionsOpened]=useState(false),[homeDirty,setHomeDirty]=useState(false),[memberDirty,setMemberDirty]=useState(false);
  const exit=()=>{if((homeDirty||memberDirty)&&!window.confirm('有未保存的首页或会员中心修改，确定退出登录？'))return;onLogout();};
- return <><div style={{display:page==='home'?'block':'none'}}><HomeEditor online userName={userName} onLogout={exit} onDirtyChange={setHomeDirty} onMember={()=>{setMemberOpened(true);setPage('member');}}/></div>{memberOpened&&<div style={{display:page==='member'?'block':'none'}}><MemberEditor userName={userName} onHome={()=>setPage('home')} onLogout={exit} onDirtyChange={setMemberDirty}/></div>}</>;
+ function navigate(next:OperationsPage){if(next==='member')setMemberOpened(true);if(next==='redemptions')setRedemptionsOpened(true);setPage(next);}
+ return <CategoriesProvider><SidebarProvider style={{'--sidebar-width':'190px'} as CSSProperties}><OperationsSidebar page={page} userName={userName} onNavigate={navigate} onLogout={exit}/><div className="operations-content">
+  <div style={{display:page==='home'||page==='templates'?'block':'none'}}><HomeEditor online embedded userName={userName} view={page==='templates'?'templates':'home'} onHome={()=>navigate('home')} onDirtyChange={setHomeDirty}/></div>
+  {memberOpened&&<div style={{display:page==='member'?'block':'none'}}><MemberEditor onDirtyChange={setMemberDirty}/></div>}
+  {redemptionsOpened&&<div style={{display:page==='redemptions'?'block':'none'}}><MemberRedemptions onBack={()=>navigate('member')}/></div>}
+  {page==='categories'&&<CategoryManager onHome={()=>navigate('home')}/>}
+ </div></SidebarProvider></CategoriesProvider>;
 }

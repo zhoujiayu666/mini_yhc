@@ -8,13 +8,13 @@ module.exports=async function readMember(cloud){
  config.entries.items=config.entries.visible?config.entries.items:[];
  for(const e of config.entries.items)if(!e.enabled)e.content=[];
  config.products.items=config.products.visible?config.products.items.filter(p=>p.visible):[];
- const refs=[config.hero.image,config.banner.image,...config.entries.items.flatMap(e=>[e.image,...e.content.filter(b=>b.type==='image').map(b=>b.image)]),...config.products.items.map(p=>p.image)];
+ const refs=[config.hero.image,config.banner.image,...config.entries.items.flatMap(e=>[e.image,...e.content.filter(b=>b.type==='image').map(b=>b.image)]),...config.products.items.flatMap(p=>[p.image,...(p.detailImages||[]),...(p.detailBlocks||[]).filter(b=>b.type==='image').map(b=>b.image)])];
  const ids=[...new Set(refs.filter(v=>typeof v==='string'&&v.startsWith('cloud://')))];
  const urls={};
  for(let n=0;n<ids.length;n+=50){const batch=ids.slice(n,n+50),r=await cloud.getTempFileURL({fileList:batch});for(const file of r.fileList){if(file.tempFileURL)urls[file.fileID]=file.tempFileURL;}if(batch.some(id=>!urls[id]))throw Error('MEMBER_MEDIA_UNAVAILABLE');}
  const image=src=>urls[src]||src;
  config.hero.image=image(config.hero.image);config.banner.image=image(config.banner.image);
  for(const e of config.entries.items){e.image=image(e.image);for(const b of e.content)if(b.type==='image')b.image=image(b.image);}
- for(const p of config.products.items)p.image=image(p.image);
+ for(const p of config.products.items){p.image=image(p.image);p.detailImages=(p.detailImages||[]).map(image);p.detailBlocks=(p.detailBlocks||[]).map(b=>b.type==='image'?{...b,image:image(b.image)}:b);}
  return {ok:true,published:true,config,revision:doc.revision,updatedAt:doc.updatedAt};
 };

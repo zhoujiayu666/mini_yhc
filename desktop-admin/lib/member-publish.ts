@@ -24,6 +24,8 @@ export function memberPublishIssues(config:MemberConfig):MemberPublishIssue[]{
   if(!filled(product.image))missing.push('商品图片');
   if(!Number.isInteger(product.points)||product.points<=0||product.points>99999999)missing.push('有效积分（1–99999999 的整数）');
   if(missing.length)issues.push({section:'products',label:`积分商品 · 第 ${index+1} 个${product.title?'（'+product.title+'）':''}`,message:`缺少${missing.join('、')}。请补齐，或关闭该商品的“展示商品”开关；也可关闭整个积分商品区域。`});
+  const empty=(product.detailBlocks||[]).flatMap((block,i)=>(block.type==='text'?filled(block.text):filled(block.image))?[]:[i+1]);
+  if(empty.length)issues.push({section:'products',label:`积分商品 · ${product.title||'第 '+(index+1)+' 个商品'} · 详情页`,message:`第 ${empty.join('、')} 项详情图文尚未填写。请点击“编辑详情页”补充内容，或删除空白项后再发布。`});
  });
  if(!config.hero.visible&&!config.banner.visible&&!config.entries.visible&&(!config.products.visible||!config.products.items.some(p=>p.visible)))issues.push({section:'hero',label:'页面内容',message:'目前没有可展示的内容。请至少开启并完善一个区域后再发布。'});
  return issues;

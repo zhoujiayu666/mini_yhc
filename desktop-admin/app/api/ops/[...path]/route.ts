@@ -2,7 +2,7 @@ import {token,cookie,mutation,jsonBody,bytes,invoke,signin,response,failure,OpsE
 type Context={params:Promise<{path:string[]}>};
 export async function GET(request:Request,context:Context){try{const {path}=await context.params,action=path.join('/');
  if(action==='session')return response(await invoke(token(request),{action:'whoami'}));
- if(['load','status','catalog','publishStatus','memberLoad','memberStatus','memberInventory'].includes(action))return response(await invoke(token(request),{action}));
+ if(['categoriesLoad','load','status','catalog','publishStatus','memberLoad','memberStatus','memberInventory'].includes(action))return response(await invoke(token(request),{action}));
  if(path[0]==='media'&&path.length===2){const r=await invoke(token(request),{action:'media',id:path[1]});return new Response(null,{status:302,headers:{Location:r.url,'cache-control':'private, no-store','referrer-policy':'no-referrer'}});}
  throw new OpsError(404,'页面不存在。');
  }catch(e){return failure(e);}}
@@ -23,6 +23,6 @@ export async function POST(request:Request,context:Context){try{mutation(request
   if(!uploaded.ok)throw new OpsError(502,'素材上传失败，请重新上传。');
   return response(await invoke(access,{action:'completeUpload',id:prepared.id}));
  }
- if(!['save','templates','sync','publish','memberSave','memberPublish','memberSetStock','memberRedemptionOrders','memberRedemptionShip'].includes(action))throw new OpsError(404,'接口不存在。');
+ if(!['categoriesUpdate','save','templates','sync','publish','memberSave','memberPublish','memberSetStock','memberRedemptionOrders','memberRedemptionShip'].includes(action))throw new OpsError(404,'接口不存在。');
  const body=await jsonBody(request);return response(await invoke(token(request),{...body,action}));
  }catch(e){return failure(e);}}

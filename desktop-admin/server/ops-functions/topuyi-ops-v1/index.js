@@ -3,6 +3,7 @@ const crypto = require('node:crypto');
 const {normalizeProducts,writeProducts}=require('./owned-products');
 const storefront=require('./publish-storefront');
 const member=require('./member-content');
+const categories=require('./categories');
 const redemptions=require('./member-redemptions');
 async function normalizeOwned(config){const r=await db.collection(PRODUCTS).limit(1000).get();return normalizeProducts(config,r.data);}
 const ENV='cloud1-d4grfezxdaca540d6', CONTENT='topuyi_ops_content_v1', MEMBERS='topuyi_operators_v1', PREVIEW='topuyi_home_preview_v1', PRODUCTS='topuyi_home_products_dev_v1', PREFIX='topuyi/home-preview/v1/ops/';
@@ -18,7 +19,7 @@ function validate(c){
  for(const b of c.blocks){
   if(!b||!text(b.id,80)||ids.has(b.id)||!types.includes(b.type)||!text(b.title,60)||!text(b.subtitle,300)||typeof b.visible!=='boolean'||(b.showHeading!==undefined&&typeof b.showHeading!=='boolean')||!colors.includes(b.background)||!Number.isFinite(b.height)||b.height<(b.type==='links'?40:160)||b.height>900||!Number.isFinite(b.spacing)||b.spacing<0||b.spacing>40||![1,2,4].includes(b.columns)||!media(b.video)||!Array.isArray(b.items)||!b.items.length||b.items.length>(b.type==='products'?100:20))fail('INVALID','模块设置不正确。');
   ids.add(b.id);const items=new Set();
-  for(const i of b.items){const subtitleLimit=b.id==='default-community'?3000:200,detailOk=i.detailBlocks===undefined||(Array.isArray(i.detailBlocks)&&i.detailBlocks.length<=30&&i.detailBlocks.every(x=>x&&text(x.id,80)&&['text','image'].includes(x.type)&&(x.text===undefined||text(x.text,3000))&&(x.image===undefined||media(x.image))));if(!i||!text(i.id,80)||(i.sku!==undefined&&!text(i.sku,100))||(i.category!==undefined&&!text(i.category,20))||(i.detailImages!==undefined&&(!Array.isArray(i.detailImages)||i.detailImages.length>10||i.detailImages.some(v=>!media(v))))||!detailOk||(i.price!==undefined&&(!Number.isFinite(i.price)||i.price<0||i.price>9999999))||(i.originalPrice!==undefined&&(!Number.isFinite(i.originalPrice)||i.originalPrice<0||i.originalPrice>9999999))||items.has(i.id)||!text(i.title,80)||!text(i.subtitle,subtitleLimit)||!text(i.filename,255)||!media(i.image)||!Number.isInteger(i.target)||i.target<0||i.target>6)fail('INVALID','内容或图片格式不正确。');items.add(i.id);}
+  for(const i of b.items){const subtitleLimit=b.id==='default-community'?3000:200,detailOk=i.detailBlocks===undefined||(Array.isArray(i.detailBlocks)&&i.detailBlocks.length<=30&&i.detailBlocks.every(x=>x&&text(x.id,80)&&['text','image'].includes(x.type)&&(x.text===undefined||text(x.text,3000))&&(x.image===undefined||media(x.image))));if(!i||!text(i.id,80)||(i.sku!==undefined&&!text(i.sku,100))||(i.categoryId!==undefined&&!text(i.categoryId,80))||(i.category!==undefined&&!text(i.category,20))||(i.detailImages!==undefined&&(!Array.isArray(i.detailImages)||i.detailImages.length>10||i.detailImages.some(v=>!media(v))))||!detailOk||(i.price!==undefined&&(!Number.isFinite(i.price)||i.price<0||i.price>9999999))||(i.originalPrice!==undefined&&(!Number.isFinite(i.originalPrice)||i.originalPrice<0||i.originalPrice>9999999))||items.has(i.id)||!text(i.title,80)||!text(i.subtitle,subtitleLimit)||!text(i.filename,255)||!media(i.image)||!Number.isInteger(i.target)||i.target<0||i.target>6)fail('INVALID','内容或图片格式不正确。');items.add(i.id);}
  }
  return JSON.parse(JSON.stringify(c));
 }
@@ -28,7 +29,7 @@ async function resolveConfig(config){
  for(const b of c.blocks){b.video=await resolve(b.video,true);for(const i of b.items){i.image=await resolve(i.image,false);if(i.detailImages)i.detailImages=await Promise.all(i.detailImages.map(v=>resolve(v,false)));if(i.detailBlocks)for(const x of i.detailBlocks)if(x.type==='image')x.image=await resolve(x.image||'',false);}}return c;
 }
 async function saveRecord(id,value,expectedRevision,user){
- return await db.runTransaction(async tx=>{const before=await get(CONTENT,id,tx);if((before?.revision||null)!==(expectedRevision||null))fail('CONFLICT','同事已更新此内容，请刷新读取最新内容后再保存。');const record={...value,revision:crypto.randomBytes(12).toString('hex'),updatedAt:new Date().toISOString(),updatedBy:user.name};await tx.collection(CONTENT).doc(id).set(record);return record;});
+ return await db.runTransaction(async tx=>{const before=await get(CONTENT,id,tx);if(id==='draft')await categories.assertRevision(tx,value.config.categoryRevision);if((before?.revision||null)!==(expectedRevision||null))fail('CONFLICT','同事已更新此内容，请刷新读取最新内容后再保存。');const record={...value,revision:crypto.randomBytes(12).toString('hex'),updatedAt:new Date().toISOString(),updatedBy:user.name};await tx.collection(CONTENT).doc(id).set(record);return record;});
 }
 exports.main=async(event,context)=>{
  try{
@@ -37,12 +38,13 @@ exports.main=async(event,context)=>{
   if(!uid||identity.TCB_ISANONYMOUS_USER===true||identity.TCB_ISANONYMOUS_USER==='true')fail('UNAUTHENTICATED','请先登录运营账号。');
   const user=await get(MEMBERS,uid);if(!user||!user.active)fail('FORBIDDEN','此账号没有运营后台权限，请联系管理员。');
   const action=event?.action;
+  if(['categoriesLoad','categoriesUpdate'].includes(action))return await categories.handle(db,event,user);
   if(['memberInventory','memberSetStock','memberRedemptionOrders','memberRedemptionShip'].includes(action))return await redemptions.handle(db,event,user);
   if(['memberLoad','memberStatus','memberSave','memberPublish'].includes(action))return await member.handle(db,event,user);
   if(action==='catalog'){const r=await db.collection(PRODUCTS).where({active:true}).limit(1000).get();const products=r.data.map(p=>({sku:p.sku,name:p.name,price:Number(p.price)||0,originalPrice:Number(p.originalPrice)||0,stock:Number(p.stock)||0,image:p.image||''}));const ids=[...new Set(products.map(p=>p.image).filter(i=>i.startsWith('cloud://')))];if(ids.length){const urls=await app.getTempFileURL({fileList:ids.map(fileID=>({fileID,maxAge:1800}))});const map=new Map(urls.fileList.map(i=>[i.fileID,i.tempFileURL]));products.forEach(p=>{if(map.has(p.image))p.image=map.get(p.image)||'';});}return {ok:true,scope:'development-products',products};}
   if(action==='whoami')return {ok:true,user:{name:user.name,username:user.username,role:user.role}};
   if(action==='load')return {ok:true,draft:await get(CONTENT,'draft'),templates:await get(CONTENT,'templates'),link:await get(CONTENT,'preview_link')};
-  if(action==='save'){const config=normalizeOwned ? await normalizeOwned(validate(event.config)) : validate(event.config);await resolveConfig(config);return {ok:true,record:await saveRecord('draft',{config},event.expectedRevision,user)};}
+  if(action==='save'){const registry=await categories.getRegistry(db);if((event.config?.categoryRevision||null)!==(registry.revision||null))fail('CONFLICT','商品分类已更新，请刷新分类后重新保存。');const config=categories.normalize(await normalizeOwned(validate(event.config)),registry);await resolveConfig(config);return {ok:true,record:await saveRecord('draft',{config},event.expectedRevision,user)};}
   if(action==='templates'){
    if(!Array.isArray(event.templates)||event.templates.length>20||JSON.stringify(event.templates).length>750000)fail('INVALID','最多保存 20 个模板。');
    const list=[];for(const t of event.templates){if(typeof t.id!=='string'||t.id.length>80||typeof t.name!=='string'||t.name.length>50||typeof t.date!=='string'||t.date.length>80)fail('INVALID','模板信息不正确。');const config=validate(t.config);await resolveConfig(config);list.push({id:t.id,name:t.name,date:t.date,config});}
@@ -53,12 +55,14 @@ exports.main=async(event,context)=>{
   if(action==='publish'){
    const draft=await get(CONTENT,'draft');
    if(!draft?.config||draft.revision!==event.expectedDraftRevision)fail('CONFLICT','请先保存共享草稿，刷新后再发布。');
-   const config=await resolveConfig(await normalizeOwned(validate(draft.config)));
+   const registry=await categories.getRegistry(db);if((draft.config.categoryRevision||null)!==(registry.revision||null))fail('CONFLICT','商品分类已更新，请先重新保存共享草稿，再发布商城。');
+   const config=await resolveConfig(categories.normalize(await normalizeOwned(validate(draft.config)),registry));
    try{return await storefront.publish(db,config,event,user);}catch(e){if(e.message?.includes('更新'))fail('CONFLICT',e.message);if(e.message?.includes('商品'))fail('INVALID',e.message);throw e;}
   }
   if(action==='sync'){
-   const config=await resolveConfig(await normalizeOwned(validate(event.config)));
-   return await db.runTransaction(async tx=>{const before=await get(PREVIEW,'active',tx);if((before?.revision||null)!==(event.expectedRevision||null))fail('CONFLICT','开发版预览已被更新，请重新检查连接后再同步。');const link=await get(CONTENT,'preview_link',tx);const accessCode=link?.accessCode||crypto.randomBytes(16).toString('hex'),revision=crypto.randomBytes(12).toString('hex'),updatedAt=new Date().toISOString();await writeProducts(tx,PRODUCTS,config,before?.config,updatedAt);await tx.collection(PREVIEW).doc('active').set({config,revision,updatedAt,updatedBy:user.name,accessHash:sha(accessCode),scope:'development-preview',schemaVersion:1});await tx.collection(CONTENT).doc('preview_link').set({accessCode,revision,updatedAt,updatedBy:user.name});return {ok:true,accessCode,revision,updatedAt};});
+   const registry=await categories.getRegistry(db);if((event.config?.categoryRevision||null)!==(registry.revision||null))fail('CONFLICT','商品分类已更新，请刷新分类后再同步。');
+   const config=await resolveConfig(categories.normalize(await normalizeOwned(validate(event.config)),registry));
+   return await db.runTransaction(async tx=>{await categories.assertRevision(tx,config.categoryRevision);const before=await get(PREVIEW,'active',tx);if((before?.revision||null)!==(event.expectedRevision||null))fail('CONFLICT','开发版预览已被更新，请重新检查连接后再同步。');const link=await get(CONTENT,'preview_link',tx);const accessCode=link?.accessCode||crypto.randomBytes(16).toString('hex'),revision=crypto.randomBytes(12).toString('hex'),updatedAt=new Date().toISOString();await writeProducts(tx,PRODUCTS,config,before?.config,updatedAt);await tx.collection(PREVIEW).doc('active').set({config,revision,updatedAt,updatedBy:user.name,accessHash:sha(accessCode),scope:'development-preview',schemaVersion:1});await tx.collection(CONTENT).doc('preview_link').set({accessCode,revision,updatedAt,updatedBy:user.name});return {ok:true,accessCode,revision,updatedAt};});
   }
   if(action==='prepareUpload'){
    const mime=event.mime,ext={'image/png':'png','image/jpeg':'jpeg','image/webp':'webp','video/mp4':'mp4','video/webm':'webm'}[mime];

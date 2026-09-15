@@ -2,9 +2,17 @@
 <view wx:if="{{error || mediaError}}" class="load-error" bindtap="loadContent">{{error || '图片暂未加载，点击重试'}}</view>
 <view wx:if="{{loading && !content}}" class="state">正在加载…</view>
 <view wx:elif="{{content}}" class="content-page {{kind === 'product' ? 'with-redemption' : ''}}">
- <image wx:if="{{content.image}}" class="cover" src="{{content.image}}" mode="widthFix" data-src="{{content.image}}" bindtap="previewImage" binderror="onMediaError"/>
+ <view wx:if="{{kind === 'product' && content.mainImages.length}}" class="product-gallery">
+  <swiper class="product-swiper" current="{{imageIndex}}" bindchange="onImageChange" circular="{{content.mainImages.length > 1}}" duration="300">
+   <swiper-item wx:for="{{content.mainImages}}" wx:key="*this"><image class="product-main-image" src="{{item}}" mode="aspectFit" data-src="{{item}}" bindtap="previewImage" binderror="onMediaError"/></swiper-item>
+  </swiper>
+  <view wx:if="{{content.mainImages.length > 1}}" class="gallery-position"><text>左右滑动查看</text><text>{{imageIndex + 1}} / {{content.mainImages.length}}</text></view>
+ </view>
+ <image wx:elif="{{content.image}}" class="cover" src="{{content.image}}" mode="widthFix" data-src="{{content.image}}" bindtap="previewImage" binderror="onMediaError"/>
  <view class="article"><text class="title">{{content.title}}</text>
-  <block wx:if="{{kind === 'product'}}"><text class="points">{{content.points}} 积分</text><text wx:if="{{content.description}}" class="text">{{content.description}}</text><block wx:if="{{content.exchangeInstructions}}"><text class="section-title">兑换说明</text><text class="text" user-select="{{true}}">{{content.exchangeInstructions}}</text></block><text class="redemption-orders-link" bindtap="orders">我的兑换订单 ›</text></block>
+  <block wx:if="{{kind === 'product'}}"><text class="points">{{content.points}} 积分</text><text wx:if="{{content.description}}" class="text">{{content.description}}</text>
+   <block wx:if="{{content.detailBlocks.length}}"><text class="section-title">商品详情</text><block wx:for="{{content.detailBlocks}}" wx:key="id"><text wx:if="{{item.type === 'text'}}" class="text" user-select="{{true}}">{{item.text}}</text><image wx:elif="{{item.image}}" class="body-image" src="{{item.image}}" mode="widthFix" data-src="{{item.image}}" bindtap="previewImage" binderror="onMediaError"/></block></block>
+   <block wx:if="{{content.exchangeInstructions}}"><text class="section-title">兑换说明</text><text class="text" user-select="{{true}}">{{content.exchangeInstructions}}</text></block><text class="redemption-orders-link" bindtap="orders">我的兑换订单 ›</text></block>
   <block wx:else><block wx:for="{{content.content}}" wx:key="id"><text wx:if="{{item.type === 'text'}}" class="text">{{item.text}}</text><image wx:elif="{{item.image}}" class="body-image" src="{{item.image}}" mode="widthFix" data-src="{{item.image}}" bindtap="previewImage" binderror="onMediaError"/></block></block>
  </view>
 </view>

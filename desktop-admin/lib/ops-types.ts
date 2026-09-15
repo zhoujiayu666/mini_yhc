@@ -8,7 +8,7 @@ export type OpsResult=CloudLink & {
  products:Product[];ok:boolean;error?:string;code:string;user:Operator;
  draft:({config:Config;updatedBy:string}&CloudLink)|null;
  templates:{revision:string;items:Template[]}|null;
- link:CloudLink|null;record:{revision:string};
+ link:CloudLink|null;record:{revision:string;config?:Config};
  id:string;src:string;url:string;mime:string;
  upload:{url:string;token:string;authorization:string;cosFileId:string;cloudPath:string};
 };

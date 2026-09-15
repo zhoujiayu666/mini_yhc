@@ -1,4 +1,5 @@
 const {randomBytes}=require('node:crypto');
+const categories=require('./categories');
 const {productRecords,writeProducts}=require('./owned-products');
 const LIVE='topuyi_storefront_live_v1',PRODUCTS='topuyi_home_products_live_v1';
 async function read(db,collection,id){const r=await db.collection(collection).doc(id).get();return Array.isArray(r.data)?r.data[0]:r.data;}
@@ -15,6 +16,7 @@ async function publish(db,config,event,user){
   const published=publicationConfig(config);
   return db.runTransaction(async tx=>{
     const [draft,before]=await Promise.all([read(tx,'topuyi_ops_content_v1','draft'),read(tx,LIVE,'active')]);
+    await categories.assertRevision(tx,config.categoryRevision);
     if(draft?.revision!==event.expectedDraftRevision)throw Error('共享草稿已更新，请刷新后台后重新发布。');
     if((before?.revision||null)!==(event.expectedRevision||null))throw Error('正式内容已更新，请重新检查发布状态。');
     const revision=randomBytes(12).toString('hex'),updatedAt=new Date().toISOString();

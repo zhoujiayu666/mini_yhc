@@ -17,7 +17,14 @@ function validate(config){
   return {id:entryId,title:e.title.trim(),image:e.image,enabled:e.enabled,content};
  });
  if(!products||!flag(products.visible)||!text(products.title,60)||!Array.isArray(products.items)||products.items.length>50)fail('INVALID','最多配置 50 个积分商品。');
- const goods=products.items.map(p=>{if(!p||!text(p.title,80)||!media(p.image)||!Number.isInteger(p.points)||p.points<0||p.points>99999999||!flag(p.visible)||!text(p.description,3000)||!text(p.exchangeInstructions,3000))fail('INVALID','商品内容或积分设置不正确。');return {id:id(p.id),title:p.title.trim(),image:p.image,points:p.points,visible:p.visible,description:p.description.trim(),exchangeInstructions:p.exchangeInstructions.trim()};});
+ const goods=products.items.map(p=>{
+  if(!p||!text(p.title,80)||!media(p.image)||!Number.isInteger(p.points)||p.points<0||p.points>99999999||!flag(p.visible)||!text(p.description,3000)||!text(p.exchangeInstructions,3000))fail('INVALID','商品内容或积分设置不正确。');
+  const productId=id(p.id),detailImages=p.detailImages===undefined?[]:p.detailImages,blocks=p.detailBlocks===undefined?[]:p.detailBlocks;
+  if(!Array.isArray(detailImages)||detailImages.length>10||detailImages.some(src=>!src||!media(src)))fail('INVALID','每个积分商品最多添加 10 张已上传的补充主图。');
+  if(!Array.isArray(blocks)||blocks.length>30)fail('INVALID','每个积分商品最多添加 30 项详情图文。');
+  const detailBlocks=blocks.map(b=>{if(!b||!['text','image'].includes(b.type)||!text(b.text,3000)||!media(b.image))fail('INVALID','积分商品详情图文格式不正确。');return {id:id(b.id),type:b.type,text:b.type==='text'?b.text.trim():'',image:b.type==='image'?b.image:''};});
+  return {id:productId,title:p.title.trim(),image:p.image,points:p.points,visible:p.visible,description:p.description.trim(),exchangeInstructions:p.exchangeInstructions.trim(),detailImages:[...detailImages],detailBlocks};
+ });
  return {version:1,hero,entries:{visible:entries.visible,height:entries.height,items},banner,products:{visible:products.visible,title:products.title.trim(),items:goods}};
 }
 async function read(db,collection,id){const r=await db.collection(collection).doc(id).get();return Array.isArray(r.data)?r.data[0]||null:r.data||null;}
@@ -26,7 +33,7 @@ async function resolve(db,config){
  async function image(src){if(!src)return '';if(!memo.has(src)){const a=await read(db,CONTENT,'asset_'+src.split('/').pop());if(!a?.ready||!a.mime?.startsWith('image/')||!a.fileID?.startsWith('cloud://'))fail('INVALID','会员中心图片尚未上传完成，请重新上传。');memo.set(src,a.fileID);}return memo.get(src);}
  c.hero.image=await image(c.hero.image);c.banner.image=await image(c.banner.image);
  for(const e of c.entries.items){e.image=await image(e.image);for(const b of e.content)b.image=await image(b.image);}
- for(const p of c.products.items)p.image=await image(p.image);
+ for(const p of c.products.items){p.image=await image(p.image);p.detailImages=await Promise.all(p.detailImages.map(image));for(const b of p.detailBlocks)if(b.type==='image')b.image=await image(b.image);}
  return c;
 }
 function publication(config){
@@ -35,7 +42,11 @@ function publication(config){
  if(c.entries.visible){for(const e of c.entries.items){if(!e.image)fail('INVALID','请上传双列海报图片，或关闭双列海报模块。');if(e.enabled&&(!e.title||!e.content.some(b=>b.type==='text'?b.text.trim():b.image)))fail('INVALID','请填写海报二级页标题和内容，或关闭该入口的二级页。');e.content=e.enabled?e.content.filter(b=>b.type==='text'?b.text.trim():b.image):[];}}
  else c.entries.items=[];
  c.products.items=c.products.visible?c.products.items.filter(p=>p.visible):[];
- for(const p of c.products.items)if(!p.title||!p.image||p.points<=0)fail('INVALID','上架积分商品需填写标题、图片和正整数积分。');
+ for(const p of c.products.items){
+  if(!p.title||!p.image||p.points<=0)fail('INVALID','上架积分商品需填写标题、图片和正整数积分。');
+  const empty=(p.detailBlocks||[]).findIndex(b=>b.type==='text'?!b.text.trim():!b.image);
+  if(empty>=0)fail('INVALID',`积分商品“${p.title}”的第 ${empty+1} 项详情图文为空，请补充内容或删除该项。`);
+ }
  if(!c.hero.visible&&!c.banner.visible&&!c.entries.visible&&!c.products.items.length)fail('INVALID','请至少配置一个可展示的会员模块。');
  return c;
 }
