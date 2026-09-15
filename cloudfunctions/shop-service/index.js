@@ -19,6 +19,8 @@ const {
 const { SEED_PRODUCTS } = require('./seed-products');
 const { notifyPaidOrder } = require('./notify-wecom');
 const { markOrderPaid } = require('./order-paid');
+const { POLICY_VERSION, ensureMember } = require('./member-points');
+const { paymentEvent } = require('./payment-events');
 const { formatErrorMessage } = require('./format-error');
 
 /** 支付 SDK 仅在下单/查单时加载，避免 listProducts 因依赖未装而整体崩溃 */
@@ -500,6 +502,12 @@ async function previewOrder(openid, appId, event) {
 }
 
 async function createOrder(openid, appId, event) {
+  let registered = await db.collection('users').where({ openid, sourceAppId: appId }).limit(1).get();
+  if (!registered.data || !registered.data.length) {
+    registered = await db.collection('users').where({ _openid: openid, sourceAppId: appId }).limit(1).get();
+  }
+  if (!registered.data || !registered.data.length) return { success: false, message: '请先完成注册后购买' };
+  await ensureMember(db, appId, openid);
   const parsed = normalizeItemsInput(event.items);
   if (parsed.error) {
     return { success: false, message: parsed.error };
@@ -552,6 +560,7 @@ async function createOrder(openid, appId, event) {
     catalogSource: isHomeCatalog(event.catalogSource) ? event.catalogSource : 'standard',
     openid,
     status: 'pending_pay',
+    pointsPolicyVersion: POLICY_VERSION,
     items: built.lines,
     totalAmount: built.totalAmount,
     freightAmount,
@@ -675,7 +684,7 @@ async function syncPayment(openid, appId, event) {
   }
 
   try {
-    const { queryOrderByOutTradeNo } = getPayWxV3();
+    const { queryOrderByOutTradeNo, getPayCredentials } = getPayWxV3();
     const wxOrder = await queryOrderByOutTradeNo(doc.orderNo);
     const tradeState = wxOrder.trade_state || '';
     if (tradeState !== 'SUCCESS') {
@@ -689,7 +698,7 @@ async function syncPayment(openid, appId, event) {
 
     const transactionId = wxOrder.transaction_id || '';
     const totalFen = wxOrder.amount && wxOrder.amount.total;
-    const marked = await markOrderPaid(db, doc, { transactionId, totalFen });
+    const marked = await markOrderPaid(db, doc, paymentEvent(wxOrder, getPayCredentials()));
     if (!marked.ok) {
       return { success: false, message: marked.error || '同步失败' };
     }
@@ -749,14 +758,10 @@ async function cancelOrder(openid, appId, event) {
   }
 
   const now = Date.now();
-  await db.collection('orders').doc(orderId).update({
-    data: {
-      status: 'cancelled',
-      cancelledAt: now,
-      updatedAt: now,
-      cancelReason: '用户取消'
-    }
+  const cancelled = await db.collection('orders').where({ _id: orderId, openid, sourceAppId: appId, status: 'pending_pay' }).update({
+    data: { status: 'cancelled', cancelledAt: now, updatedAt: now, cancelReason: '用户取消' }
   });
+  if (!cancelled.stats || !cancelled.stats.updated) return { success: false, message: '订单状态已更新，请刷新后重试' };
 
   for (const line of doc.items || []) {
     if (line.productId && line.qty && !(isHomeCatalog(doc.catalogSource) && line.manageStock === false)) {

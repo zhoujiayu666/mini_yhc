@@ -2,6 +2,8 @@ const cloudbase = require('@cloudbase/node-sdk');
 const crypto = require('node:crypto');
 const {normalizeProducts,writeProducts}=require('./owned-products');
 const storefront=require('./publish-storefront');
+const member=require('./member-content');
+const redemptions=require('./member-redemptions');
 async function normalizeOwned(config){const r=await db.collection(PRODUCTS).limit(1000).get();return normalizeProducts(config,r.data);}
 const ENV='cloud1-d4grfezxdaca540d6', CONTENT='topuyi_ops_content_v1', MEMBERS='topuyi_operators_v1', PREVIEW='topuyi_home_preview_v1', PRODUCTS='topuyi_home_products_dev_v1', PREFIX='topuyi/home-preview/v1/ops/';
 const app=cloudbase.init({env:ENV}), db=app.database();
@@ -14,7 +16,7 @@ function validate(c){
  if(!c||c.version!==1||!Array.isArray(c.blocks)||c.blocks.length>30||JSON.stringify(c).length>250000)fail('INVALID','页面格式或大小不正确。');
  const text=(v,n)=>typeof v==='string'&&v.length<=n, media=v=>v===''||mediaId(v), ids=new Set();
  for(const b of c.blocks){
-  if(!b||!text(b.id,80)||ids.has(b.id)||!types.includes(b.type)||!text(b.title,60)||!text(b.subtitle,300)||typeof b.visible!=='boolean'||(b.showHeading!==undefined&&typeof b.showHeading!=='boolean')||!colors.includes(b.background)||!Number.isFinite(b.height)||b.height<160||b.height>900||!Number.isFinite(b.spacing)||b.spacing<0||b.spacing>40||![1,2,4].includes(b.columns)||!media(b.video)||!Array.isArray(b.items)||!b.items.length||b.items.length>20)fail('INVALID','模块设置不正确。');
+  if(!b||!text(b.id,80)||ids.has(b.id)||!types.includes(b.type)||!text(b.title,60)||!text(b.subtitle,300)||typeof b.visible!=='boolean'||(b.showHeading!==undefined&&typeof b.showHeading!=='boolean')||!colors.includes(b.background)||!Number.isFinite(b.height)||b.height<(b.type==='links'?40:160)||b.height>900||!Number.isFinite(b.spacing)||b.spacing<0||b.spacing>40||![1,2,4].includes(b.columns)||!media(b.video)||!Array.isArray(b.items)||!b.items.length||b.items.length>(b.type==='products'?100:20))fail('INVALID','模块设置不正确。');
   ids.add(b.id);const items=new Set();
   for(const i of b.items){const subtitleLimit=b.id==='default-community'?3000:200,detailOk=i.detailBlocks===undefined||(Array.isArray(i.detailBlocks)&&i.detailBlocks.length<=30&&i.detailBlocks.every(x=>x&&text(x.id,80)&&['text','image'].includes(x.type)&&(x.text===undefined||text(x.text,3000))&&(x.image===undefined||media(x.image))));if(!i||!text(i.id,80)||(i.sku!==undefined&&!text(i.sku,100))||(i.category!==undefined&&!text(i.category,20))||(i.detailImages!==undefined&&(!Array.isArray(i.detailImages)||i.detailImages.length>10||i.detailImages.some(v=>!media(v))))||!detailOk||(i.price!==undefined&&(!Number.isFinite(i.price)||i.price<0||i.price>9999999))||(i.originalPrice!==undefined&&(!Number.isFinite(i.originalPrice)||i.originalPrice<0||i.originalPrice>9999999))||items.has(i.id)||!text(i.title,80)||!text(i.subtitle,subtitleLimit)||!text(i.filename,255)||!media(i.image)||!Number.isInteger(i.target)||i.target<0||i.target>6)fail('INVALID','内容或图片格式不正确。');items.add(i.id);}
  }
@@ -35,6 +37,8 @@ exports.main=async(event,context)=>{
   if(!uid||identity.TCB_ISANONYMOUS_USER===true||identity.TCB_ISANONYMOUS_USER==='true')fail('UNAUTHENTICATED','请先登录运营账号。');
   const user=await get(MEMBERS,uid);if(!user||!user.active)fail('FORBIDDEN','此账号没有运营后台权限，请联系管理员。');
   const action=event?.action;
+  if(['memberInventory','memberSetStock','memberRedemptionOrders','memberRedemptionShip'].includes(action))return await redemptions.handle(db,event,user);
+  if(['memberLoad','memberStatus','memberSave','memberPublish'].includes(action))return await member.handle(db,event,user);
   if(action==='catalog'){const r=await db.collection(PRODUCTS).where({active:true}).limit(1000).get();const products=r.data.map(p=>({sku:p.sku,name:p.name,price:Number(p.price)||0,originalPrice:Number(p.originalPrice)||0,stock:Number(p.stock)||0,image:p.image||''}));const ids=[...new Set(products.map(p=>p.image).filter(i=>i.startsWith('cloud://')))];if(ids.length){const urls=await app.getTempFileURL({fileList:ids.map(fileID=>({fileID,maxAge:1800}))});const map=new Map(urls.fileList.map(i=>[i.fileID,i.tempFileURL]));products.forEach(p=>{if(map.has(p.image))p.image=map.get(p.image)||'';});}return {ok:true,scope:'development-products',products};}
   if(action==='whoami')return {ok:true,user:{name:user.name,username:user.username,role:user.role}};
   if(action==='load')return {ok:true,draft:await get(CONTENT,'draft'),templates:await get(CONTENT,'templates'),link:await get(CONTENT,'preview_link')};

@@ -162,3 +162,15 @@ page {
 .logout-btn::after {
   border: none;
 }
+
+.points-card { padding: 30rpx; border-radius: 24rpx; background: #fff8da; margin-bottom: 32rpx; }
+.points-heading { display: flex; align-items: center; justify-content: space-between; font-size: 28rpx; font-weight: 600; }
+.points-link { color: #786016; font-size: 24rpx; padding: 12rpx 0 12rpx 20rpx; font-weight: 400; }
+.points-balance { display: block; font-size: 58rpx; font-weight: 700; margin: 10rpx 0 20rpx; }
+.points-rule { display: block; font-size: 23rpx; color: #736b50; line-height: 1.7; }
+.points-error { font-size: 24rpx; color: #aa382c; margin-bottom: 16rpx; }
+.points-history { border: 1rpx solid #eee; border-radius: 24rpx; padding: 28rpx; margin-bottom: 32rpx; }
+.points-row { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 0; border-top: 1rpx solid #eee; font-size: 24rpx; }
+.points-row-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.points-order { color: #999; font-size: 21rpx; margin-top: 8rpx; word-break: break-all; }
+.points-delta { font-size: 30rpx; font-weight: 600; margin-left: 20rpx; }

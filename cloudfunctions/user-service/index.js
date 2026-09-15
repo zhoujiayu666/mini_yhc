@@ -4,6 +4,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const { docInScope } = require('./app-scope');
+const { ensureMember, LEDGER } = require('./member-points');
+const redemption = require('./redemption');
 
 function normalizePhone(phone) {
   return String(phone || '').replace(/\s/g, '').trim();
@@ -29,7 +31,7 @@ async function resolvePhoneFromCode(code) {
 
 async function upsertUserByPhone({ openid, appId, phone }) {
   const users = db.collection('users');
-  const existing = await users.where({ openid }).limit(1).get();
+  const existing = await users.where({ openid, sourceAppId: appId }).limit(1).get();
   const now = Date.now();
 
   if (existing.data && existing.data.length > 0) {
@@ -80,6 +82,11 @@ exports.main = async (event) => {
       return { success: false, message: '无法识别小程序身份' };
     }
 
+    if (['redemptionQuote','redemptionCreate','redemptionOrders','redemptionOrder','redemptionReceive'].includes(action)) {
+      try { return await redemption.handle(db, cloud, {openid, appId}, event); }
+      catch(error) { if(!error.publicCode) console.error('[redemption]', error.code || error.name); return {success:false, code:error.publicCode || 'UNAVAILABLE', message:error.publicCode ? error.message : '兑换服务暂时不可用，请稍后重试'}; }
+    }
+
     if (action === 'loginByCode') {
       const code = String(event.code || '').trim();
       if (!code) {
@@ -102,6 +109,7 @@ exports.main = async (event) => {
       }
 
       const user = await upsertUserByPhone({ openid, appId, phone });
+      Object.assign(user, await ensureMember(db, appId, openid));
       return { success: true, user: { ...user, loginType: 'wechat' } };
     }
 
@@ -112,11 +120,16 @@ exports.main = async (event) => {
       }
 
       const user = await upsertUserByPhone({ openid, appId, phone });
+      Object.assign(user, await ensureMember(db, appId, openid));
       return { success: true, user: { ...user, loginType: 'manual' } };
     }
 
-    if (action === 'profile') {
-      const res = await db.collection('users').where({ openid }).limit(1).get();
+    if (action === 'profile' || action === 'pointsHistory') {
+      let res = await db.collection('users').where({ openid, sourceAppId: appId }).limit(1).get();
+      if (!res.data || !res.data.length) {
+        // Older direct-database registrations use the platform-owned _openid.
+        res = await db.collection('users').where({ _openid: openid, sourceAppId: appId }).limit(1).get();
+      }
       if (!res.data || !res.data.length) {
         return { success: false, message: '用户未注册' };
       }
@@ -124,10 +137,15 @@ exports.main = async (event) => {
       if (!docInScope(u, appId)) {
         return { success: false, message: '用户未注册' };
       }
-      return {
-        success: true,
-        user: { openid, phone: u.phone, sourceAppId: u.sourceAppId || appId }
-      };
+      const membership = await ensureMember(db, appId, openid);
+      if (action === 'pointsHistory') {
+        const result = await db.collection(LEDGER).where({ openid, sourceAppId: appId })
+          .orderBy('createdAt', 'desc').limit(30).get();
+        return { success: true, ...membership, entries: (result.data || []).map(row => ({
+          id: row._id, type: row.type, delta: row.delta, orderNo: row.orderNo, createdAt: row.createdAt
+        })) };
+      }
+      return { success: true, user: { openid, phone: u.phone, sourceAppId: appId, ...membership } };
     }
 
     return { success: false, message: '未知操作' };

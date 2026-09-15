@@ -18,3 +18,10 @@
 .community-entries .preview-item{min-height:64px;text-align:center;display:flex;flex-direction:column;justify-content:center;border:1px solid #dfe4ed}.community-entries .preview-item strong{font-size:13px}
 
 .product-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 10px}.product-card{min-width:0;color:#253047;background:#fff}.product-card>img,.product-card>.empty-media{width:100%;height:150px;object-fit:cover}.product-card>strong{display:block;font-size:12px;margin:10px 0;line-height:1.5}.product-purchase{display:flex;justify-content:space-between;align-items:center;gap:3px}.product-purchase b{font-size:14px;color:#c64129}.product-purchase del{display:block;font-size:10px;color:#8e97a6}.product-purchase button{font-size:10px;background:#fff3e8;color:#b95322;border-radius:4px;padding:7px 4px}
+
+/* Short poster entries keep their configured image height without a fixed card minimum. */
+.height-value{display:flex;align-items:center;gap:8px}.height-value input{max-width:110px}.height-help{font-size:12px;color:#8994a7;line-height:1.6}
+.preview-block.compact-links{padding:10px 14px}.compact-links .preview-item{min-height:0;padding:6px}.compact-links .four-entries .preview-item{padding:0}.compact-links .preview-item>img,.compact-links .preview-item>.empty-media{min-height:0;flex-shrink:0;margin-bottom:6px}.compact-links .preview-item>img:last-child,.compact-links .preview-item>.empty-media:last-child{margin-bottom:0}.compact-links .empty-media{overflow:hidden}.compact-links .empty-media span{display:none}
+
+/* Neighboring entry rows use the operator's module spacing, with a small visual gutter. */
+.preview-block.adjacent-links-top{padding-top:2px}.preview-block.adjacent-links-bottom{padding-bottom:2px}

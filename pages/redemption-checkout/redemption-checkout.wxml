@@ -1,0 +1,17 @@
+<page-nav-bar back="{{true}}"></page-nav-bar>
+<view class="redeem-page">
+ <text class="page-title">确认兑换</text>
+ <view wx:if="{{!loggedIn}}" class="empty"><text>登录后使用积分兑换商品</text><button class="primary" bindtap="onLogin">登录后兑换</button></view>
+ <view wx:elif="{{loading}}" class="empty">正在确认商品与积分…</view>
+ <block wx:else>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <block wx:if="{{quote}}">
+   <view class="card product"><image wx:if="{{quote.product.image}}" src="{{quote.product.image}}" mode="aspectFill"/><view><text class="product-title">{{quote.product.title}}</text><text class="gold">{{quote.product.points}} 积分 / 件</text></view></view>
+   <view class="card"><view class="row"><text>兑换数量</text><view class="stepper"><button disabled="{{quantity <= 1 || pending || submitting}}" data-step="-1" bindtap="changeQuantity">−</button><text>{{quantity}}</text><button disabled="{{quantity >= 99 || (quote.stock !== null && quantity >= quote.stock) || pending || submitting}}" data-step="1" bindtap="changeQuantity">＋</button></view></view><text class="muted">{{pending ? '正在确认上次兑换结果' : (quote.stock === null ? '不限量兑换' : ('剩余 ' + quote.stock + ' 件'))}}</text></view>
+   <view class="card address" bindtap="chooseAddress"><view class="row"><text class="strong">收货地址</text><text wx:if="{{!pending}}">选择 ›</text></view><block wx:if="{{address}}"><text class="address-name">{{address.name}}　{{address.phone}}</text><text class="muted">{{address.province}}{{address.city}}{{address.district}}{{address.detail}}</text></block><text wx:else class="muted">{{addressError || '请选择收货地址'}}</text></view>
+   <view class="card"><view class="row"><text>本次消耗</text><text class="gold">{{totalPoints}} 积分</text></view><view class="row"><text class="muted">当前可用积分</text><text>{{quote.points}}</text></view><text class="muted">确认兑换成功后扣除积分，商品将寄往所选地址。</text></view>
+  </block>
+  <button wx:if="{{!pending}}" class="secondary" bindtap="refresh" disabled="{{submitting}}">刷新商品、积分和地址</button>
+ </block>
+</view>
+<view wx:if="{{loggedIn && quote && !loading}}" class="fixed-action"><view><text class="muted">合计</text><text class="total">{{totalPoints}} 积分</text></view><button class="primary" bindtap="submit" disabled="{{submitting || !canSubmit}}" loading="{{submitting}}">{{submitting ? '正在确认…' : buttonText}}</button></view>

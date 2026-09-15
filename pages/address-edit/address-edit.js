@@ -81,6 +81,7 @@ Page({
       return;
     }
 
+    if (this.data.from === 'redemption' && result.addressId) wx.setStorageSync('redemptionSelectedAddressId', result.addressId);
     if (this.data.from === 'checkout' && result.addressId) {
       wx.setStorageSync('checkoutSelectedAddressId', result.addressId);
     }

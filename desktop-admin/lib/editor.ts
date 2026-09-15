@@ -6,6 +6,8 @@ export type Config = {version:1; blocks:Block[]};
 export const kinds:Record<Kind,string>={banner:'轮播海报',video:'品牌视频',links:'海报入口',poster:'活动海报',products:'商品展示',about:'公司介绍'};
 export const targets=['不跳转','所有商品','演出','设备管理','连接指南','APP控制','房间'];
 export const colors=['#f4f4f1','#ffffff','#eee9db','#171b26','#202733'];
+export function maxContentItems(type:Kind):number{return type==='products'?100:20;}
+export function minMediaHeight(type:Kind):number{return type==='links'?40:160;}
 export function newItem(title:string,target=0):Item{return {id:crypto.randomUUID(),title,subtitle:'',image:'',filename:'',target};}
 export function newBlock(type:Kind):Block{return {id:crypto.randomUUID(),type,title:kinds[type],subtitle:'',visible:true,showHeading:false,background:'#ffffff',height:type==='banner'?540:340,spacing:12,columns:2,video:'',items:[newItem('编辑标题')]};}
 export function defaults():Config{
@@ -26,7 +28,7 @@ export function validateConfig(input:unknown):Config{
  if(!c||c.version!==1||!Array.isArray(c.blocks)||c.blocks.length>30)fail();
  const ids=new Set<string>();
  for(const b of c.blocks){
- if(!b||typeof b.id!=='string'||ids.has(b.id)||!Object.hasOwn(kinds,b.type)||typeof b.title!=='string'||b.title.length>60||typeof b.subtitle!=='string'||b.subtitle.length>300||typeof b.visible!=='boolean'||(b.showHeading!==undefined&&typeof b.showHeading!=='boolean')||!colors.includes(b.background)||!Number.isFinite(b.height)||b.height<160||b.height>900||!Number.isFinite(b.spacing)||b.spacing<0||b.spacing>40||![1,2,4].includes(b.columns)||!media(b.video,true)||!Array.isArray(b.items)||!b.items.length||b.items.length>20)fail();
+ if(!b||typeof b.id!=='string'||ids.has(b.id)||!Object.hasOwn(kinds,b.type)||typeof b.title!=='string'||b.title.length>60||typeof b.subtitle!=='string'||b.subtitle.length>300||typeof b.visible!=='boolean'||(b.showHeading!==undefined&&typeof b.showHeading!=='boolean')||!colors.includes(b.background)||!Number.isFinite(b.height)||b.height<minMediaHeight(b.type)||b.height>900||!Number.isFinite(b.spacing)||b.spacing<0||b.spacing>40||![1,2,4].includes(b.columns)||!media(b.video,true)||!Array.isArray(b.items)||!b.items.length||b.items.length>maxContentItems(b.type))fail();
  ids.add(b.id);const itemIds=new Set<string>();
  for(const i of b.items){const subtitleLimit=b.id==='default-community'?3000:200,detailOk=i.detailBlocks===undefined||(Array.isArray(i.detailBlocks)&&i.detailBlocks.length<=30&&i.detailBlocks.every(x=>x&&typeof x.id==='string'&&x.id.length<=80&&['text','image'].includes(x.type)&&(x.text===undefined||(typeof x.text==='string'&&x.text.length<=3000))&&(x.image===undefined||media(x.image))));if(!i||typeof i.id!=='string'||(i.sku!==undefined&&(typeof i.sku!=='string'||i.sku.length>100))||(i.category!==undefined&&(typeof i.category!=='string'||i.category.length>20))||(i.detailImages!==undefined&&(!Array.isArray(i.detailImages)||i.detailImages.length>10||i.detailImages.some(v=>!media(v))))||!detailOk||(i.price!==undefined&&(!Number.isFinite(i.price)||i.price<0||i.price>9999999))||(i.originalPrice!==undefined&&(!Number.isFinite(i.originalPrice)||i.originalPrice<0||i.originalPrice>9999999))||itemIds.has(i.id)||typeof i.title!=='string'||i.title.length>80||typeof i.subtitle!=='string'||i.subtitle.length>subtitleLimit||typeof i.filename!=='string'||!media(i.image)||!Number.isInteger(i.target)||i.target<0||i.target>=targets.length)fail();itemIds.add(i.id);}
  }return structuredClone(c);

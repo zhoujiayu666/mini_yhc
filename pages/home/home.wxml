@@ -2,7 +2,7 @@
   <view class="preview" wx:if="{{editable}}"><text>{{preview ? '本机草稿预览' : (syncing ? '正在同步…' : cloudStatus)}}</text><text bindtap="connectDesktop">连接电脑后台 ›</text></view>
   <view class="preview-actions" wx:if="{{editable}}"><text bindtap="refreshHome">刷新云端预览</text></view>
   <block wx:for="{{blocks}}" wx:key="id" wx:for-item="block">
-    <view class="module {{block.id === 'default-community' ? 'community-entries' : ''}} {{block.type}} {{block.background === '#171b26' || block.background === '#202733' ? 'dark' : ''}}" style="background: {{block.background}}; margin-bottom: {{block.spacing !== undefined ? block.spacing * 2 : 24}}rpx;">
+    <view class="module {{block.type === 'links' && index > 0 && blocks[index - 1].type === 'links' ? 'adjacent-links-top' : ''}} {{block.type === 'links' && index + 1 < blocks.length && blocks[index + 1].type === 'links' ? 'adjacent-links-bottom' : ''}} {{block.type === 'links' && block.height < 160 ? 'compact-links' : ''}} {{block.id === 'default-community' ? 'community-entries' : ''}} {{block.type}} {{block.background === '#171b26' || block.background === '#202733' ? 'dark' : ''}}" style="background: {{block.background}}; margin-bottom: {{block.spacing !== undefined ? block.spacing * 2 : 24}}rpx;">
       <view class="heading" wx:if="{{block.showHeading !== false && (block.title || block.subtitle)}}"><text class="title">{{block.title}}</text><text class="subtitle" wx:if="{{block.subtitle}}">{{block.subtitle}}</text></view>
       <swiper wx:if="{{block.type === 'banner'}}" style="height: {{block.height}}rpx" indicator-dots autoplay circular interval="5000" indicator-active-color="#ffd100">
         <swiper-item wx:for="{{block.items}}" wx:key="index"><view class="hero" data-target="{{item.target}}" bindtap="open"><image wx:if="{{item.image}}" class="cover" src="{{item.image}}" mode="aspectFill"/><view class="orb" wx:else></view></view></swiper-item>
@@ -15,7 +15,7 @@
             <image wx:if="{{item.image}}" class="tile-image" style="height: {{block.height}}rpx;" src="{{item.image}}" mode="aspectFill"/>
             <view wx:elif="{{block.columns === 4}}" class="entry-placeholder" style="height: {{block.height}}rpx">海报</view>
             <view wx:elif="{{block.type === 'products'}}" class="product-art"><view class="light-stick"></view><text>TOPUYI</text></view>
-            <text class="tile-title">{{item.title}}<text wx:if="{{item.target && block.columns !== 4}}">↗</text></text><text class="subtitle" wx:if="{{item.subtitle && block.id !== 'default-community'}}">{{item.subtitle}}</text>
+            <text wx:if="{{block.height >= 160 || item.title || (item.target && block.columns !== 4)}}" class="tile-title">{{item.title}}<text wx:if="{{item.target && block.columns !== 4}}">↗</text></text><text class="subtitle" wx:if="{{item.subtitle && block.id !== 'default-community'}}">{{item.subtitle}}</text>
           </view>
         </view>
         <block wx:else><view wx:for="{{block.items}}" wx:key="index" data-target="{{item.target}}" bindtap="open"><image wx:if="{{item.image}}" src="{{item.image}}" class="poster-image" style="height: {{block.height}}rpx" mode="aspectFill"/><text class="poster-link" wx:if="{{item.title}}">{{item.title}} <text wx:if="{{item.target}}">↗</text></text><text class="subtitle" wx:if="{{item.subtitle}}">{{item.subtitle}}</text></view></block>

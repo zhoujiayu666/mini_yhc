@@ -31,6 +31,7 @@ Page({
 
   onSelect(e) {
     const id = e.currentTarget.dataset.id;
+    if (this.data.from === 'redemption') { wx.setStorageSync('redemptionSelectedAddressId', id); wx.navigateBack(); return; }
     if (this.data.from === 'checkout') {
       wx.setStorageSync('checkoutSelectedAddressId', id);
       wx.navigateBack();

@@ -10,6 +10,7 @@ Component({
     tabs: [
       { id: 'home', label: '首页', icon: '◇', path: '/pages/home/home' },
       { id: 'products', label: '全部商品', icon: '▣', path: '/pages/all-products/all-products' },
+      { id: 'member', label: '会员中心', icon: '♔', path: '/pages/member/member' },
       { id: 'mine', label: '个人中心', icon: '○', path: '/pages/mine/mine' }
     ]
   },

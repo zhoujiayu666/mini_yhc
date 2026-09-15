@@ -1,0 +1,17 @@
+<page-nav-bar back="{{true}}"></page-nav-bar>
+<view class="redeem-page">
+ <view wx:if="{{!loggedIn}}" class="empty"><text>登录后查看兑换订单</text><button class="primary" bindtap="login">登录</button></view>
+ <block wx:else>
+  <view wx:if="{{error}}" class="error" bindtap="load">{{error}} · 点击重新加载</view>
+  <view wx:if="{{loading && !order}}" class="empty">正在读取兑换订单…</view>
+  <block wx:if="{{order}}">
+   <view class="card success-card"><text class="success-icon">✓</text><text class="success-title">{{success && order.status === 'processing' ? '兑换成功' : order.statusLabel}}</text><text class="muted">{{order.status === 'processing' ? '已扣除 ' + order.totalPoints + ' 积分，等待商家发货' : (order.status === 'shipped' ? '商品已寄出，请留意查收' : '感谢您的兑换')}}</text></view>
+   <view class="card product"><image wx:if="{{order.product.image}}" src="{{order.product.image}}" mode="aspectFill"/><view><text class="product-title">{{order.product.title}}</text><text class="muted">数量 {{order.quantity}} 件</text><text class="gold">{{order.totalPoints}} 积分</text></view></view>
+   <view wx:if="{{order.shipping}}" class="card"><view class="row"><text class="strong">物流信息</text><button class="copy" bindtap="copyTracking">复制单号</button></view><text class="logistics">{{order.shipping.carrier}}　{{order.shipping.trackingNo}}</text><text class="muted">可使用运单号查询快递进度</text></view>
+   <view class="card"><text class="strong">收货信息</text><text class="address-name">{{order.address.name}}　{{order.address.phone}}</text><text class="muted">{{order.address.province}}{{order.address.city}}{{order.address.district}}{{order.address.detail}}</text></view>
+   <view class="card"><text class="record-info">兑换单号：{{order.orderNo}}</text><text class="record-info">兑换时间：{{order.dateText}}</text></view>
+   <button wx:if="{{order.status === 'shipped'}}" class="primary" bindtap="receive" disabled="{{receiving}}" loading="{{receiving}}">确认收货</button>
+   <button class="secondary" bindtap="orders">查看全部兑换订单</button><button class="secondary" bindtap="browse">返回会员中心</button>
+  </block>
+ </block>
+</view>

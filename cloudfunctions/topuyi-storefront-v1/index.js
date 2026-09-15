@@ -3,9 +3,10 @@ cloud.init({env:cloud.DYNAMIC_CURRENT_ENV});
 const LIVE='topuyi_storefront_live_v1',PRODUCTS='topuyi_home_products_live_v1';
 exports.main=async(event={})=>{
   try{
-    if(event.action!=='getPublished')return {ok:false,error:'INVALID_ACTION'};
+    if(!['getPublished','getMember'].includes(event.action))return {ok:false,error:'INVALID_ACTION'};
     const context=cloud.getWXContext();
     if(context.APPID&&context.APPID!=='wx3610c3ef05d1131e')return {ok:false,error:'APP_NOT_ALLOWED'};
+    if(event.action==='getMember')return await require('./member-read')(cloud);
     const db=cloud.database();
     const found=await db.collection(LIVE).where({_id:'active'}).limit(1).get(),doc=found.data[0];
     if(!doc||doc.scope!=='published-storefront')return {ok:false,error:'STOREFRONT_NOT_READY'};

@@ -1,104 +1,59 @@
 const cloud = require('wx-server-sdk');
-const { verifyNotifySignature, decryptNotifyResource } = require('./pay-wx-v3');
-const { markOrderPaid } = require('./order-paid');
-
+const { verifyNotifySignature, decryptNotifyResource, getPayCredentials, queryRefund } = require('./pay-wx-v3');
+const { markOrderPaid, markOrderRefunded } = require('./member-points');
+const { paymentEvent, refundEvent } = require('./payment-events');
+const { decodeRefundV2 } = require('./refund-v2');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-
 const db = cloud.database();
-
-function isHttpEvent(event) {
-  return !!(event && (event.httpMethod || event.headers));
+function response(xml, success, statusCode = success ? 200 : 500) {
+  return { statusCode, headers: { 'Content-Type': xml ? 'application/xml; charset=utf-8' : 'application/json' },
+    body: xml ? `<xml><return_code>${success ? 'SUCCESS' : 'FAIL'}</return_code><return_msg>${success ? 'OK' : 'RETRY'}</return_msg></xml>` :
+      JSON.stringify({ code: success ? 'SUCCESS' : 'FAIL', message: success ? 'OK' : 'notification not processed' }) };
 }
-
-function v3HttpResponse(event, code, message, statusCode) {
-  const payload = { code, message };
-  if (isHttpEvent(event)) {
-    return {
-      statusCode: statusCode || (code === 'SUCCESS' ? 200 : 500),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    };
-  }
-  return payload;
+async function findOrder(orderNo, appId) {
+  if (!orderNo) throw Error('missing order number');
+  const result = await db.collection('orders').where({ orderNo, sourceAppId: appId }).limit(1).get();
+  if (!result.data || !result.data[0]) throw Error('order not found');
+  return result.data[0];
 }
-
-async function handlePaidOrder(outTradeNo, transactionId, totalFen) {
-  if (!outTradeNo) {
-    return { ok: false, error: 'missing out_trade_no' };
-  }
-
-  const found = await db.collection('orders').where({ orderNo: outTradeNo }).limit(1).get();
-  const doc = found.data && found.data[0];
-  if (!doc) {
-    console.error('[pay-notify] order not found', outTradeNo);
-    return { ok: false, error: 'order not found' };
-  }
-
-  const marked = await markOrderPaid(db, doc, { transactionId, totalFen });
-  if (!marked.ok) {
-    console.error('[pay-notify] mark failed', outTradeNo, marked.error);
-    return { ok: false, error: marked.error };
-  }
-
-  console.log('[pay-notify] order paid', outTradeNo, transactionId);
-  return { ok: true };
-}
-
-async function handleApiV3HttpNotify(event) {
-  if (event.httpMethod && event.httpMethod !== 'POST') {
-    return v3HttpResponse(event, 'FAIL', 'method not allowed', 405);
-  }
-
-  const headers = event.headers || {};
+exports.main = async event => {
+  if (!event || (!event.httpMethod && !event.headers)) return { code: 'FAIL', message: 'HTTP notification required' };
   let body = event.body || '';
-  if (event.isBase64Encoded && body) {
-    body = Buffer.from(body, 'base64').toString('utf8');
-  }
-
+  if (event.isBase64Encoded) body = Buffer.from(body, 'base64').toString('utf8');
+  const xml = typeof body === 'string' && body.trim().startsWith('<');
+  if (event.httpMethod && event.httpMethod !== 'POST') return response(xml, false, 405);
+  if (typeof body !== 'string' || Buffer.byteLength(body) > 1024 * 1024) return response(xml, false, 400);
   try {
-    const verified = await verifyNotifySignature(headers, body);
-    if (!verified) {
-      console.error('[pay-notify] signature verify failed');
-      return v3HttpResponse(event, 'FAIL', 'signature verify failed', 401);
+    const creds = getPayCredentials();
+    if (xml) {
+      const decoded = await decodeRefundV2(body, creds);
+      if (decoded.refund_status !== 'SUCCESS') return response(true, true);
+      // Confirm with WeChat before ledger writes; encrypted XML alone never changes points.
+      const verified = await queryRefund(decoded.out_refund_no);
+      if (verified.status !== 'SUCCESS' || verified.refund_id !== decoded.refund_id ||
+        verified.transaction_id !== decoded.transaction_id || verified.out_trade_no !== decoded.out_trade_no ||
+        verified.out_refund_no !== decoded.out_refund_no) throw Error('refund query mismatch');
+      const refund = refundEvent({ ...verified, refund_status: verified.status, mchid: creds.mchid }, creds);
+      await markOrderRefunded(db, await findOrder(refund.outTradeNo, refund.appId), refund);
+      return response(true, true);
     }
-
-    const payload = JSON.parse(body || '{}');
-    const resource = payload.resource;
-    if (!resource) {
-      return v3HttpResponse(event, 'FAIL', 'missing resource', 400);
+    if (!await verifyNotifySignature(event.headers || {}, body)) return response(false, false, 401);
+    const payload = JSON.parse(body);
+    if (!payload.resource || payload.resource.algorithm !== 'AEAD_AES_256_GCM') throw Error('invalid resource');
+    const data = decryptNotifyResource(payload.resource);
+    if (payload.event_type === 'TRANSACTION.SUCCESS') {
+      const payment = paymentEvent(data, creds);
+      await markOrderPaid(db, await findOrder(payment.outTradeNo, payment.appId), payment);
+    } else if (payload.event_type === 'REFUND.SUCCESS') {
+      const refund = refundEvent(data, creds);
+      await markOrderRefunded(db, await findOrder(refund.outTradeNo, refund.appId), refund);
+    } else if (!['REFUND.CLOSED', 'REFUND.ABNORMAL'].includes(payload.event_type)) {
+      throw Error('unsupported notification');
     }
-
-    const decrypted = decryptNotifyResource(resource);
-    const tradeState = decrypted.trade_state || '';
-    const outTradeNo = decrypted.out_trade_no || '';
-    const transactionId = decrypted.transaction_id || '';
-    const totalFen = decrypted.amount && decrypted.amount.total;
-
-    if (tradeState !== 'SUCCESS') {
-      return v3HttpResponse(event, 'SUCCESS', 'ignored non-success');
-    }
-
-    const result = await handlePaidOrder(outTradeNo, transactionId, totalFen);
-    if (!result.ok) {
-      return v3HttpResponse(event, 'FAIL', result.error || 'handle failed', 500);
-    }
-
-    return v3HttpResponse(event, 'SUCCESS', '成功');
-  } catch (err) {
-    console.error('[pay-notify] v3 http error', err);
-    return v3HttpResponse(event, 'FAIL', (err && err.message) || 'error', 500);
+    return response(false, true);
+  } catch (error) {
+    // Do not log decrypted payloads, payer identifiers, or key material.
+    console.error('[pay-notify] processing failed', error.code || 'NOTIFY_RETRY');
+    return response(xml, false);
   }
-}
-
-/**
- * 微信支付 APIv3 结果通知（HTTP 访问服务触发）
- */
-exports.main = async (event) => {
-  console.log('[pay-notify] event keys', event && Object.keys(event));
-
-  if (isHttpEvent(event)) {
-    return handleApiV3HttpNotify(event);
-  }
-
-  return { code: 'FAIL', message: '请通过 HTTP 访问服务配置支付回调 URL' };
 };

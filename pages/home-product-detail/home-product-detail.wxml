@@ -1,6 +1,15 @@
 <page-nav-bar></page-nav-bar>
 <view class="detail-page" wx:if="{{product}}">
-  <swiper wx:if="{{product.detailImages.length}}" class="main-swiper" indicator-dots="{{product.detailImages.length > 1}}" circular="{{product.detailImages.length > 1}}"><swiper-item wx:for="{{product.detailImages}}" wx:key="index"><image class="main-image" src="{{item}}" mode="aspectFit" data-index="{{index}}" bindtap="previewImage"/></swiper-item></swiper>
+  <view wx:if="{{product.detailImages.length}}" class="main-gallery">
+    <swiper class="main-swiper" current="{{imageIndex}}" bindchange="onImageChange" vertical="{{false}}" circular="{{product.detailImages.length > 1}}" duration="300">
+      <swiper-item wx:for="{{product.detailImages}}" wx:key="*this"><image class="main-image" src="{{item}}" mode="aspectFit" data-index="{{index}}" bindtap="previewImage"/></swiper-item>
+    </swiper>
+    <block wx:if="{{product.detailImages.length > 1}}">
+      <button class="gallery-arrow gallery-prev" data-step="-1" catchtap="changeImage" aria-label="上一张商品图片">‹</button>
+      <button class="gallery-arrow gallery-next" data-step="1" catchtap="changeImage" aria-label="下一张商品图片">›</button>
+      <view class="gallery-position"><text>左右滑动查看</text><text>{{imageIndex + 1}} / {{product.detailImages.length}}</text></view>
+    </block>
+  </view>
   <view wx:else class="image-placeholder">商品主图</view>
   <view class="title-card">
     <text class="product-title">{{product.name}}</text>

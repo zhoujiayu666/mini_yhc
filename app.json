@@ -12,6 +12,8 @@
     "pages/home-product-detail/home-product-detail",
     "pages/home-content-detail/home-content-detail",
     "pages/all-products/all-products",
+    "pages/member/member",
+    "pages/member-content/member-content",
     "pages/mine/mine",
     "pages/checkout/checkout",
     "pages/orders/orders",
@@ -25,7 +27,10 @@
     "pages/group-mode/group-mode",
     "pages/color-control/color-control",
     "pages/music-rhythm/music-rhythm",
-    "pages/settings/settings"
+    "pages/settings/settings",
+    "pages/redemption-checkout/redemption-checkout",
+    "pages/redemption-orders/redemption-orders",
+    "pages/redemption-order/redemption-order"
   ],
   "window": {
     "navigationBarTextStyle": "black",

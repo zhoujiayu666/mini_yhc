@@ -91,26 +91,8 @@ function attachFallbackError(local, lastError) {
 }
 
 async function loginWithPhone(phone) {
-  if (!wx.cloud) {
-    return loginViaLocal(phone);
-  }
-
-  let lastError = null;
-  try {
-    return await loginViaCloudFunction(phone);
-  } catch (err) {
-    lastError = err;
-    console.warn('[login] 云函数登录失败，尝试云数据库', err);
-  }
-
-  try {
-    return await loginViaDatabase(phone);
-  } catch (err) {
-    lastError = err;
-    console.warn('[login] 云数据库登录失败，使用本地登录', err);
-  }
-
-  return attachFallbackError(loginViaLocal(phone), lastError);
+  if (!wx.cloud) throw new Error('当前无法连接账号服务，请更新微信后重试');
+  return loginViaCloudFunction(phone);
 }
 
 async function loginWithPhoneCode(code) {

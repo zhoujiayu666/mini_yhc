@@ -1,0 +1,11 @@
+<page-nav-bar back="{{true}}"></page-nav-bar>
+<view class="redeem-page"><text class="page-title">我的兑换订单</text>
+ <view wx:if="{{!loggedIn}}" class="empty"><text>登录后查看兑换记录</text><button class="primary" bindtap="login">登录</button></view>
+ <block wx:else>
+  <view wx:if="{{error}}" class="error" bindtap="retry">{{error}} · 点击重试</view>
+  <view wx:for="{{orders}}" wx:key="id" class="order-list-card" data-id="{{item.id}}" bindtap="open"><view class="row"><text class="order-no">{{item.orderNo}}</text><text class="status">{{item.statusLabel}}</text></view><view class="product"><image wx:if="{{item.product.image}}" src="{{item.product.image}}" mode="aspectFill"/><view><text class="product-title">{{item.product.title}}</text><text class="muted">数量 {{item.quantity}} 件</text></view></view><view class="row"><text class="muted">{{item.dateText}}</text><text class="gold">{{item.totalPoints}} 积分</text></view><view class="link-row"><text class="link">查看详情 ›</text></view></view>
+  <view wx:if="{{loading}}" class="empty">正在加载…</view>
+  <view wx:elif="{{!orders.length && !error}}" class="empty"><text>还没有兑换记录</text><button class="primary" bindtap="browse">去会员中心看看</button></view>
+  <button wx:if="{{hasMore && !loading}}" class="secondary" bindtap="more">加载更多</button>
+ </block>
+</view>

@@ -57,15 +57,17 @@ function getNotifyHeaders(headers) {
 }
 
 async function verifyNotifySignature(headers, body) {
+  const creds = getPayCredentials();
+  const normalized = Object.fromEntries(Object.entries(headers || {}).map(([key, value]) => [key.toLowerCase(), value]));
+  const sig = getNotifyHeaders(normalized);
+  if (!sig.timestamp || !sig.nonce || !sig.serial || !sig.signature) return false;
+  if (sig.serial.startsWith('PUB_KEY_ID_')) {
+    if (sig.serial !== creds.platformPublicKeyId || !creds.platformPublicKey) return false;
+    return require('crypto').verify('RSA-SHA256', Buffer.from(sig.timestamp + '\n' + sig.nonce + '\n' + body + '\n'),
+      creds.platformPublicKey, Buffer.from(sig.signature, 'base64'));
+  }
   const { pay } = createPayClient();
-  const sig = getNotifyHeaders(headers);
-  return pay.verifySign({
-    timestamp: sig.timestamp,
-    nonce: sig.nonce,
-    body,
-    serial: sig.serial,
-    signature: sig.signature
-  });
+  return pay.verifySign({ ...sig, body });
 }
 
 function decryptNotifyResource(resource) {
@@ -79,7 +81,15 @@ function decryptNotifyResource(resource) {
   return typeof plaintext === 'string' ? JSON.parse(plaintext) : plaintext;
 }
 
+async function queryRefund(outRefundNo) {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(outRefundNo || '')) throw Error('invalid refund number');
+  const { pay } = createPayClient();
+  const raw = await pay.find_refunds(outRefundNo);
+  return raw && raw.data && typeof raw.data === 'object' ? raw.data : raw;
+}
 module.exports = {
+  getPayCredentials,
+  queryRefund,
   verifyNotifySignature,
   decryptNotifyResource
 };
