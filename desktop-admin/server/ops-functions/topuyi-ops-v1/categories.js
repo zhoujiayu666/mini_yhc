@@ -20,7 +20,26 @@ function change(s,event,user){const before=registry(s);if((before.revision||null
  else fail('INVALID','分类操作不正确。');
  return {items,revision:randomBytes(12).toString('hex'),updatedAt:new Date().toISOString(),updatedBy:user.name};
 }
-async function handle(db,event,user){if(event.action==='categoriesLoad'){const s=await sources(db);return result(s,registry(s));}return db.runTransaction(async tx=>{const s=await sources(tx),record=change(s,event,user);await tx.collection(CONTENT).doc(ID).set(record);return result(s,record);});}
+/**
+ * 分类写入：先普通读 draft/live/templates（算占用与改名），事务内只读写 product_categories。
+ * 避免事务内跨集合 Promise.all 读触发 DATABASE_TRANSACTION_FAIL。
+ */
+async function handle(db, event, user) {
+  if (event.action === 'categoriesLoad') {
+    const s = await sources(db);
+    return result(s, registry(s));
+  }
+  const s = await sources(db);
+  const record = change(s, event, user);
+  await db.runTransaction(async (tx) => {
+    const current = await read(tx, CONTENT, ID);
+    if ((current?.revision || null) !== (event.expectedRevision || null)) {
+      fail('CONFLICT', '同事已更新商品分类，请刷新分类后重试。');
+    }
+    await tx.collection(CONTENT).doc(ID).set(record);
+  });
+  return result(s, record);
+}
 async function getRegistry(db){return registry(await sources(db));}
 async function assertRevision(db,revision){const r=await read(db,CONTENT,ID);if((r?.revision||null)!==(revision||null))fail('CONFLICT','商品分类已更新，请刷新分类并重新保存共享草稿后再操作。');}
 module.exports={handle,getRegistry,assertRevision,normalize,migrate,find,change,usage};
