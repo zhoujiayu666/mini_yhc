@@ -705,6 +705,17 @@ async function syncPayment(openid, appId, event) {
     }
 
     const updated = await db.collection('orders').doc(doc._id).get();
+    // 首次标为已支付时通知运营；失败不影响订单状态
+    if (!marked.alreadyPaid && updated.data) {
+      try {
+        const notify = await notifyPaidOrder(updated.data);
+        if (!notify.ok && !notify.skipped) {
+          console.error('[shop-service] wecom notify failed', notify.error);
+        }
+      } catch (notifyErr) {
+        console.error('[shop-service] wecom notify exception', notifyErr);
+      }
+    }
     return {
       success: true,
       synced: !marked.alreadyPaid,
