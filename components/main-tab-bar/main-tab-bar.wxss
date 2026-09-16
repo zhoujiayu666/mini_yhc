@@ -1,9 +1,4 @@
 .main-tab-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 100;
   display: flex;
   align-items: stretch;
   box-sizing: border-box;
@@ -13,6 +8,18 @@
   background: #FFFFFF;
   border-top: 1rpx solid #EBEBEB;
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.04);
+}
+
+.main-tab-bar.docked {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.main-tab-bar.in-host {
+  position: relative;
 }
 
 .tab-item {

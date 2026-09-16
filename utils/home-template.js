@@ -33,5 +33,5 @@ function canEdit() {
   try { return wx.getAccountInfoSync().miniProgram.envVersion === 'develop'; }
   catch (_) { return false; }
 }
-function navigate(target) { const url = PATHS[Number(target)]; if (url) wx.navigateTo({ url }); }
+function navigate(target) { const url = PATHS[Number(target)]; if (url) require('./tabs').open(url); }
 module.exports = { KEY, PREVIEW, TYPES, KINDS, TARGETS, clone, item, block, defaults, read, canEdit, navigate };

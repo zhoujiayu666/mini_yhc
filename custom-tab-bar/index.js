@@ -1,0 +1,5 @@
+Component({
+  data: {
+    current: 'home'
+  }
+});

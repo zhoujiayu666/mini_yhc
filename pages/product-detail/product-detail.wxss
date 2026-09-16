@@ -183,12 +183,16 @@ page {
 .bar-buy {
   flex: 1;
   height: 88rpx;
-  line-height: 88rpx;
   margin: 0;
   padding: 0;
   font-size: 30rpx;
   font-weight: 600;
   border-radius: 16rpx;
+  line-height: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .bar-cart {

@@ -3,6 +3,7 @@ const { CLOUD_ENV_ID } = require('../../utils/cloud-config.js');
 const { isLoggedIn, getUserInfo, formatPhone, logout, goLoginPage } = require('../../utils/auth.js');
 const { SOFTWARE_LIST } = require('../../utils/software-center.js');
 const { showShareMenu, getShareMessage, getTimelineShare } = require('../../utils/share.js');
+const tabs = require('../../utils/tabs');
 
 Page({
   data: {
@@ -22,6 +23,7 @@ Page({
   },
 
   onShow() {
+    tabs.sync('mine');
     showShareMenu();
     if (isLoggedIn()) {
       this.loadProfile();
@@ -57,7 +59,9 @@ Page({
       loggedIn: true,
       phoneDisplay: formatPhone(phone),
       avatarLetter,
-      localOnly: !!user.localOnly, pointsLoading: true, pointsError: '', points: null, memberReady: false
+      localOnly: !!user.localOnly,
+      pointsLoading: !this.data.memberReady,
+      pointsError: ''
     });
     const request = this._profileRequest = (this._profileRequest || 0) + 1;
     try {

@@ -44,6 +44,10 @@ function parseShopError(error) {
     return '请先在云开发控制台创建 products、orders、addresses 集合';
   }
 
+  if (errMsg.includes('未知操作') || errMsg.includes('UNKNOWN_ACTION')) {
+    return '云函数尚未更新，请右键 shop-service 上传并部署后再试';
+  }
+
   if (errMsg.includes('-504002') || errMsg.includes('functions execute fail')) {
     const detailMatch = errMsg.match(/errMsg:\s*([^|]+)/);
     const detail = detailMatch ? detailMatch[1].trim() : '';

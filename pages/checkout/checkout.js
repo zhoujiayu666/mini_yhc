@@ -71,7 +71,7 @@ Page({
   },
 
   onContinueShopping() {
-    wx.reLaunch({ url: this._catalogSource ? '/pages/all-products/all-products' : '/pages/home/home' });
+    require('../../utils/tabs').open(this._catalogSource ? '/pages/all-products/all-products' : '/pages/home/home');
   },
 
   pickAddress(addresses) {

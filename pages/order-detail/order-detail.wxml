@@ -44,4 +44,5 @@
   <button class="btn-outline" wx:if="{{order.status === 'pending_pay'}}" bindtap="onCancel">取消订单</button>
   <button class="btn-primary" wx:if="{{order.status === 'pending_pay'}}" loading="{{acting}}" disabled="{{acting}}" bindtap="onPayTap">去支付</button>
   <button class="btn-primary" wx:if="{{order.status === 'shipped'}}" bindtap="onConfirmReceive">确认收货</button>
+  <button class="btn-outline danger" wx:if="{{order.status === 'completed' || order.status === 'cancelled'}}" bindtap="onDelete">删除订单</button>
 </view>

@@ -11,5 +11,5 @@ Page({
  copyTracking(){if(this.data.order?.shipping?.trackingNo)wx.setClipboardData({data:this.data.order.shipping.trackingNo});},
  async receive(){if(this.data.receiving||this.data.order?.status!=='shipped')return;const answer=await wx.showModal({title:'确认收货',content:'请确认已收到兑换商品。',confirmText:'已收到'});if(!answer.confirm||this.data.receiving)return;this.setData({receiving:true});try{const r=await redemption.call('redemptionReceive',{orderId:this._id});this.setData({order:redemption.orderView(r.order)});}catch(e){this.setData({error:e.message});}finally{this.setData({receiving:false});}},
  orders(){wx.redirectTo({url:'/pages/redemption-orders/redemption-orders'});},
- browse(){wx.reLaunch({url:'/pages/member/member'});}
+ browse(){require('../../utils/tabs').open('/pages/member/member');}
 });

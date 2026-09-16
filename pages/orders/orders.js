@@ -1,6 +1,7 @@
 const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
 const { getOrderStatusLabel, formatFenYuan } = require('../../utils/shop.js');
+const hiddenOrders = require('../../utils/hidden-orders.js');
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -53,11 +54,28 @@ Page({
       createdText: formatTime(o.createdAt),
       itemSummary: (o.items || []).map((it) => `${it.name}×${it.qty}`).join('、')
     }));
-    this.setData({ orders, loading: false });
+    this.setData({ orders: hiddenOrders.visible(orders), loading: false });
   },
 
   onOrderTap(e) {
     const id = e.currentTarget.dataset.id;
     wx.navigateTo({ url: `/pages/order-detail/order-detail?orderId=${id}` });
+  },
+
+  async onDelete(e) {
+    const id = e.currentTarget.dataset.orderId || e.currentTarget.dataset.id;
+    if (!id || this._deleting) return;
+    const res = await wx.showModal({ title: '删除订单', content: '删除后列表中不再显示，确定删除吗？' });
+    if (!res.confirm) return;
+    this._deleting = true;
+    const result = await callShopService({ action: 'deleteOrder', orderId: id });
+    this._deleting = false;
+    if (!result.success && !hiddenOrders.isUnsupported(result.message)) {
+      showShopError('删除失败', result.message || '请稍后重试');
+      return;
+    }
+    hiddenOrders.hide(id);
+    wx.showToast({ title: '已删除', icon: 'success' });
+    this.setData({ orders: this.data.orders.filter((o) => o.id !== id) });
   }
 });

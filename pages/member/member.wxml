@@ -4,17 +4,20 @@
  <view wx:if="{{error || mediaError}}" class="load-error" bindtap="loadContent">{{error || '部分图片加载失败，点击重试'}}</view>
  <view wx:if="{{loading && !config}}" class="state">正在加载会员活动…</view>
  <block wx:elif="{{config && hasContent}}">
-  <image wx:if="{{config.hero.visible}}" class="poster section" src="{{config.hero.image}}" mode="aspectFill" style="height:{{config.hero.height}}rpx" binderror="onMediaError"/>
-  <view wx:if="{{config.entries.visible}}" class="entry-grid section">
-   <view wx:for="{{config.entries.items}}" wx:key="id" class="entry" data-id="{{item.id}}" bindtap="openEntry" aria-label="{{item.title}}"><image src="{{item.image}}" mode="aspectFill" style="height:{{config.entries.height}}rpx" binderror="onMediaError"/></view>
-  </view>
-  <image wx:if="{{config.banner.visible}}" class="poster section" src="{{config.banner.image}}" mode="aspectFill" style="height:{{config.banner.height}}rpx" binderror="onMediaError"/>
+   <image wx:if="{{config.hero.visible}}" class="poster section" src="{{config.hero.image}}" mode="aspectFill" style="height:{{config.hero.height}}rpx" binderror="onMediaError"/>
+   <view wx:if="{{config.entries.visible}}" class="entry-grid section">
+    <view wx:for="{{config.entries.items}}" wx:key="id" class="entry" data-id="{{item.id}}" bindtap="openEntry" aria-label="{{item.title}}"><image src="{{item.image}}" mode="aspectFill" style="height:{{config.entries.height}}rpx" lazy-load binderror="onMediaError"/></view>
+   </view>
+   <image wx:if="{{config.banner.visible}}" class="poster section" src="{{config.banner.image}}" mode="aspectFill" style="height:{{config.banner.height}}rpx" lazy-load binderror="onMediaError"/>
   <view wx:if="{{config.products.visible && config.products.items.length}}" class="section">
    <text wx:if="{{config.products.title}}" class="products-heading">{{config.products.title}}</text>
    <view class="product-grid"><view wx:for="{{config.products.items}}" wx:key="id" class="product" data-id="{{item.id}}" bindtap="openProduct">
-    <image class="product-image" src="{{item.image}}" mode="aspectFill" binderror="onMediaError"/>
+    <image class="product-image" src="{{item.image}}" mode="aspectFill" lazy-load binderror="onMediaError"/>
     <text class="product-title">{{item.title}}</text>
-    <view class="product-bottom"><text class="points">{{item.points}}<text class="points-unit"> 积分</text></text><button class="exchange" data-id="{{item.id}}" catchtap="openProduct">兑换</button></view>
+    <view class="product-bottom">
+     <text class="points"><text class="points-num">{{item.points}}</text><text class="points-unit">积分</text></text>
+     <button class="exchange" data-id="{{item.id}}" catchtap="openProduct">兑换</button>
+    </view>
    </view></view>
   </view>
  </block>

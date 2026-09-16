@@ -602,6 +602,7 @@ async function listOrders(openid, appId, event) {
     .limit(50)
     .get();
   const orders = (res.data || [])
+    .filter((o) => !o.userHidden)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
     .map(formatOrder);
   return { success: true, orders };
@@ -737,7 +738,7 @@ async function getOrder(openid, appId, event) {
       .get();
     doc = res.data && res.data[0];
   }
-  if (!doc || doc.openid !== openid || !docInScope(doc, appId)) {
+  if (!doc || doc.openid !== openid || !docInScope(doc, appId) || doc.userHidden) {
     return { success: false, message: '订单不存在' };
   }
   return { success: true, order: formatOrder(doc) };
@@ -778,6 +779,37 @@ async function cancelOrder(openid, appId, event) {
     }
   }
 
+  return { success: true };
+}
+
+async function deleteOrder(openid, appId, event) {
+  const orderId = event.orderId;
+  if (!orderId) {
+    return { success: false, message: '缺少订单 ID' };
+  }
+  const loaded = await loadOrderDoc(openid, appId, orderId);
+  if (loaded.error) {
+    return { success: false, message: loaded.error };
+  }
+  const doc = loaded.doc;
+  if (doc.userHidden) {
+    return { success: true };
+  }
+  if (doc.status === 'pending_pay') {
+    const cancelled = await cancelOrder(openid, appId, event);
+    if (!cancelled.success && cancelled.message !== '当前订单不可取消') {
+      return cancelled;
+    }
+  }
+  const now = Date.now();
+  try {
+    await db.collection('orders').doc(orderId).update({
+      data: { userHidden: true, hiddenAt: now, updatedAt: now }
+    });
+  } catch (err) {
+    console.error('[shop-service] deleteOrder', err);
+    return { success: false, message: formatErrorMessage(err, '删除失败，请稍后重试') };
+  }
   return { success: true };
 }
 
@@ -854,6 +886,8 @@ exports.main = async (event) => {
         return await getOrder(openid, appId, event);
       case 'cancelOrder':
         return await cancelOrder(openid, appId, event);
+      case 'deleteOrder':
+        return await deleteOrder(openid, appId, event);
       case 'confirmReceive':
         return await confirmReceive(openid, appId, event);
       case 'testWecomNotify': {
@@ -877,7 +911,7 @@ exports.main = async (event) => {
         };
       }
       default:
-        return { success: false, message: `未知操作: ${action}` };
+        return { success: false, message: `未知操作: ${action}`, code: 'UNKNOWN_ACTION' };
     }
   } catch (err) {
     console.error('[shop-service]', err);

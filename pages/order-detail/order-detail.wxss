@@ -59,6 +59,16 @@
   box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
 }
 
-.shop-page {
-  padding-bottom: 160rpx;
+.btn-outline.danger {
+  color: #F44336;
+  border-color: #FFCDD2;
+  background: #FFF5F5;
+}
+
+.bottom-bar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: normal;
+  padding: 0 28rpx;
 }

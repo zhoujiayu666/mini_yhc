@@ -32,8 +32,11 @@ App({
     this.initCloud();
     this.getDeviceHistory();
     this._wrapBleDisconnectForHistory();
-    // 初始化蓝牙适配器
-    this.initBluetooth();
+    setTimeout(() => this.initBluetooth(), 1200);
+    setTimeout(() => {
+      try { require('./utils/home-cloud').load(); } catch (_) {}
+      try { require('./utils/member-cloud').load(); } catch (_) {}
+    }, 400);
   },
 
   /** 任意路径断开蓝牙前，确保当前设备写入连接历史 */

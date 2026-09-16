@@ -27,8 +27,11 @@
       </view>
       <text class="order-item-line">{{item.itemSummary}}</text>
       <view class="order-foot">
-        <text class="order-amount">¥{{item.payYuan}}</text>
-        <text class="order-time">{{item.createdText}}</text>
+        <view class="order-foot-meta">
+          <text class="order-amount">¥{{item.payYuan}}</text>
+          <text class="order-time">{{item.createdText}}</text>
+        </view>
+        <button class="order-delete" data-order-id="{{item.id}}" catchtap="onDelete">删除</button>
       </view>
     </view>
   </view>

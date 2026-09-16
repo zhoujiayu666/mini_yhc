@@ -1,18 +1,19 @@
+const tabs = require('../../utils/tabs');
+
 Component({
   properties: {
     current: {
       type: String,
-      value: 'control'
+      value: 'home'
+    },
+    docked: {
+      type: Boolean,
+      value: true
     }
   },
 
   data: {
-    tabs: [
-      { id: 'home', label: '首页', icon: '◇', path: '/pages/home/home' },
-      { id: 'products', label: '全部商品', icon: '▣', path: '/pages/all-products/all-products' },
-      { id: 'member', label: '会员中心', icon: '♔', path: '/pages/member/member' },
-      { id: 'mine', label: '个人中心', icon: '○', path: '/pages/mine/mine' }
-    ]
+    tabs: tabs.LIST
   },
 
   methods: {
@@ -20,8 +21,7 @@ Component({
       const id = e.currentTarget.dataset.id;
       if (!id || id === this.properties.current) return;
       const tab = this.data.tabs.find((t) => t.id === id);
-      if (!tab) return;
-      wx.reLaunch({ url: tab.path });
+      if (tab) tabs.open(tab.path);
     }
   }
 });

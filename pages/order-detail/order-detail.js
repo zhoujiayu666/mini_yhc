@@ -2,6 +2,7 @@ const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
 const { getOrderStatusLabel, formatFenYuan } = require('../../utils/shop.js');
 const { payOrderOnDetail } = require('../../utils/shop-pay-flow.js');
+const hiddenOrders = require('../../utils/hidden-orders.js');
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -110,5 +111,24 @@ Page({
     }
     wx.showToast({ title: '已完成', icon: 'success' });
     this.loadOrder();
+  },
+
+  async onDelete() {
+    if (this.data.acting || !this._orderId) return;
+    const res = await wx.showModal({ title: '删除订单', content: '删除后列表中不再显示，确定删除吗？' });
+    if (!res.confirm) return;
+    this.setData({ acting: true });
+    const result = await callShopService({
+      action: 'deleteOrder',
+      orderId: this._orderId
+    });
+    this.setData({ acting: false });
+    if (!result.success && !hiddenOrders.isUnsupported(result.message)) {
+      showShopError('删除失败', result.message || '请稍后重试');
+      return;
+    }
+    hiddenOrders.hide(this._orderId);
+    wx.showToast({ title: '已删除', icon: 'success' });
+    setTimeout(() => wx.navigateBack(), 400);
   }
 });

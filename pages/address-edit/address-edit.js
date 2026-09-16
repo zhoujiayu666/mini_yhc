@@ -1,5 +1,6 @@
 const { requireLogin, getUserInfo } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
+const { parseAddress } = require('../../utils/parse-address.js');
 
 Page({
   data: {
@@ -12,7 +13,8 @@ Page({
     detail: '',
     isDefault: true,
     saving: false,
-    from: ''
+    from: '',
+    pasteText: ''
   },
 
   onLoad(options) {
@@ -26,6 +28,10 @@ Page({
         this.setData({ phone: user.phone });
       }
     }
+  },
+
+  onUnload() {
+    if (this._parseTimer) clearTimeout(this._parseTimer);
   },
 
   onShow() {
@@ -55,6 +61,46 @@ Page({
     const field = e.currentTarget.dataset.field;
     if (!field) return;
     this.setData({ [field]: e.detail.value || '' });
+  },
+
+  onPasteInput(e) {
+    const pasteText = e.detail.value || '';
+    this.setData({ pasteText });
+    this.scheduleParse(pasteText);
+  },
+
+  onPasteClipboard() {
+    wx.getClipboardData({
+      success: (res) => {
+        const pasteText = (res.data || '').trim();
+        if (!pasteText) {
+          wx.showToast({ title: '剪贴板是空的', icon: 'none' });
+          return;
+        }
+        this.setData({ pasteText });
+        this.applyParsed(pasteText, true);
+      },
+      fail: () => wx.showToast({ title: '无法读取剪贴板', icon: 'none' })
+    });
+  },
+
+  scheduleParse(text) {
+    if (this._parseTimer) clearTimeout(this._parseTimer);
+    this._parseTimer = setTimeout(() => this.applyParsed(text, false), 280);
+  },
+
+  applyParsed(text, toast) {
+    const parsed = parseAddress(text);
+    const patch = {};
+    ['name', 'phone', 'province', 'city', 'district', 'detail'].forEach((key) => {
+      if (parsed[key]) patch[key] = parsed[key];
+    });
+    if (!Object.keys(patch).length) {
+      if (toast) wx.showToast({ title: '未能识别地址', icon: 'none' });
+      return;
+    }
+    this.setData(patch);
+    if (toast) wx.showToast({ title: '已识别填写', icon: 'success' });
   },
 
   onDefaultChange(e) {

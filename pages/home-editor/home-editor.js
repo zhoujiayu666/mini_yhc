@@ -1,7 +1,7 @@
 const t = require('../../utils/home-template');
 Page({
   data: { config: { blocks: [] }, types: t.TYPES, targets: t.TARGETS, selected: 0, colors: ['#f4f4f1','#ffffff','#eee9db','#171b26','#202733'], dirty: false },
-  onLoad() { if (!t.canEdit()) { wx.reLaunch({ url: '/pages/home/home' }); return; } this.setData({ config: t.read(t.KEY) }); },
+  onLoad() { if (!t.canEdit()) { require('../../utils/tabs').open('/pages/home/home'); return; } this.setData({ config: t.read(t.KEY) }); },
   select(e) { this.setData({ selected: Number(e.currentTarget.dataset.index) }); },
   update(blocks, selected = this.data.selected) { this.setData({ 'config.blocks': blocks, selected, dirty: true }); },
   field(e) {
@@ -27,6 +27,6 @@ Page({
   addItem() { const blocks = t.clone(this.data.config.blocks), block = blocks[this.data.selected]; if (!block) return; const limit = block.type === 'products' ? 100 : 20; if (block.items.length >= limit) return wx.showToast({ title: `最多 ${limit} ${block.type === 'products' ? '个商品' : '项内容'}`, icon: 'none' }); block.items.push(t.item('新内容')); this.update(blocks); },
   removeItem(e) { const blocks = t.clone(this.data.config.blocks); const items = blocks[this.data.selected].items; if (items.length <= 1) return wx.showToast({ title: '至少保留一项', icon: 'none' }); items.splice(Number(e.currentTarget.dataset.index), 1); this.update(blocks); },
   save() { if (!t.canEdit()) return false; try { wx.setStorageSync(t.KEY, this.data.config); this.setData({ dirty: false }); wx.showToast({ title: '本机草稿已保存' }); return true; } catch (_) { wx.showToast({ title: '保存失败，请检查存储空间', icon: 'none' }); return false; } },
-  preview() { if (!this.save()) return; try { wx.setStorageSync(t.PREVIEW, this.data.config); wx.navigateTo({ url: '/pages/home/home?preview=1' }); } catch (_) { wx.showToast({ title: '预览保存失败', icon: 'none' }); } },
+  preview() { if (!this.save()) return; try { wx.setStorageSync(t.PREVIEW, this.data.config); wx.setStorageSync('topuyi_home_open_preview_v1', 1); require('../../utils/tabs').open('/pages/home/home'); } catch (_) { wx.showToast({ title: '预览保存失败', icon: 'none' }); } },
   reset() { wx.showModal({ title: '恢复默认模板', content: '替换当前编辑内容，保存后覆盖本机草稿。', success: r => { if (r.confirm) this.update(t.defaults().blocks, 0); } }); }
 });

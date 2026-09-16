@@ -1,6 +1,21 @@
 <page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="shop-page">
+    <view class="form-card paste-card">
+      <view class="paste-head">
+        <text class="paste-title">一键粘贴</text>
+        <text class="paste-action" bindtap="onPasteClipboard">粘贴识别</text>
+      </view>
+      <textarea
+        class="paste-input"
+        auto-height
+        maxlength="200"
+        placeholder="粘贴或输入姓名、手机号、地址，自动识别填入下方"
+        value="{{pasteText}}"
+        bindinput="onPasteInput"
+      />
+    </view>
+
     <view class="form-card">
       <view class="form-row">
         <text class="form-label">收货人</text>

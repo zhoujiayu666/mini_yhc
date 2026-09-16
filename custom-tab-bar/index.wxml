@@ -1,0 +1,3 @@
+<view class="tab-host">
+  <main-tab-bar current="{{current}}" docked="{{false}}"></main-tab-bar>
+</view>

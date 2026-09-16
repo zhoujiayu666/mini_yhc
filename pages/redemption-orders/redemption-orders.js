@@ -16,5 +16,5 @@ Page({
  },
  retry(){this.load(true);},more(){this.load(false);},
  open(e){wx.navigateTo({url:'/pages/redemption-order/redemption-order?id='+encodeURIComponent(e.currentTarget.dataset.id)});},
- browse(){wx.reLaunch({url:'/pages/member/member'});}
+ browse(){require('../../utils/tabs').open('/pages/member/member');}
 });

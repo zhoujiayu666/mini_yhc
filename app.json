@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/all-products/all-products",
+    "pages/member/member",
+    "pages/mine/mine",
     "pages/home-editor/home-editor",
     "pages/control/control",
     "pages/login/login",
@@ -11,10 +14,7 @@
     "pages/product-detail/product-detail",
     "pages/home-product-detail/home-product-detail",
     "pages/home-content-detail/home-content-detail",
-    "pages/all-products/all-products",
-    "pages/member/member",
     "pages/member-content/member-content",
-    "pages/mine/mine",
     "pages/checkout/checkout",
     "pages/orders/orders",
     "pages/order-detail/order-detail",
@@ -54,6 +54,18 @@
   "componentFramework": "glass-easel",
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents",
+  "tabBar": {
+    "custom": true,
+    "color": "#9E9E9E",
+    "selectedColor": "#1A1A1A",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      { "pagePath": "pages/home/home", "text": "首页" },
+      { "pagePath": "pages/all-products/all-products", "text": "全部商品" },
+      { "pagePath": "pages/member/member", "text": "会员中心" },
+      { "pagePath": "pages/mine/mine", "text": "个人中心" }
+    ]
+  },
   "usingComponents": {
     "main-tab-bar": "/components/main-tab-bar/main-tab-bar",
     "page-nav-bar": "/components/page-nav-bar/page-nav-bar"

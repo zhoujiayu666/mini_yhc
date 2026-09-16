@@ -1,6 +1,5 @@
 {
-  "renderer": "webview",
-  "disableScroll": true,
+  "component": true,
   "usingComponents": {
     "main-tab-bar": "/components/main-tab-bar/main-tab-bar"
   }
