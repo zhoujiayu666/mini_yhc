@@ -3,6 +3,7 @@ const { verifyNotifySignature, decryptNotifyResource, getPayCredentials, queryRe
 const { markOrderPaid, markOrderRefunded } = require('./member-points');
 const { paymentEvent, refundEvent } = require('./payment-events');
 const { decodeRefundV2 } = require('./refund-v2');
+const { notifyPaidOrder } = require('./notify-wecom');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 function response(xml, success, statusCode = success ? 200 : 500) {
@@ -15,6 +16,18 @@ async function findOrder(orderNo, appId) {
   const result = await db.collection('orders').where({ orderNo, sourceAppId: appId }).limit(1).get();
   if (!result.data || !result.data[0]) throw Error('order not found');
   return result.data[0];
+}
+async function notifyOpsAfterPaid(orderDoc, marked) {
+  if (!marked || !marked.ok || marked.alreadyPaid || !orderDoc || !orderDoc._id) return;
+  try {
+    const updated = await db.collection('orders').doc(orderDoc._id).get();
+    const notify = await notifyPaidOrder(updated.data || orderDoc);
+    if (!notify.ok && !notify.skipped) {
+      console.error('[pay-notify] wecom notify failed', notify.error);
+    }
+  } catch (err) {
+    console.error('[pay-notify] wecom notify exception', err && err.message);
+  }
 }
 exports.main = async event => {
   if (!event || (!event.httpMethod && !event.headers)) return { code: 'FAIL', message: 'HTTP notification required' };
@@ -43,7 +56,9 @@ exports.main = async event => {
     const data = decryptNotifyResource(payload.resource);
     if (payload.event_type === 'TRANSACTION.SUCCESS') {
       const payment = paymentEvent(data, creds);
-      await markOrderPaid(db, await findOrder(payment.outTradeNo, payment.appId), payment);
+      const orderDoc = await findOrder(payment.outTradeNo, payment.appId);
+      const marked = await markOrderPaid(db, orderDoc, payment);
+      await notifyOpsAfterPaid(orderDoc, marked);
     } else if (payload.event_type === 'REFUND.SUCCESS') {
       const refund = refundEvent(data, creds);
       await markOrderRefunded(db, await findOrder(refund.outTradeNo, refund.appId), refund);
