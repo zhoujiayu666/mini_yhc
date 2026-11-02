@@ -24,6 +24,8 @@ function productRecords(config, scope = 'development-only') {
     price: Number.isFinite(item.price) ? Math.round(item.price * 100) / 100 : 0,
     originalPrice: Number.isFinite(item.originalPrice) ? Math.round(item.originalPrice * 100) / 100 : 0,
     category: item.category || '荧光棒',
+    categories: Array.isArray(item.categories) && item.categories.length ? item.categories.slice(0, 2) : [item.category || '荧光棒'],
+    categoryIds: Array.isArray(item.categoryIds) && item.categoryIds.length ? item.categoryIds.slice(0, 2) : (item.categoryId ? [item.categoryId] : []),
     color: '',
     image: item.image || '',
     subtitle: item.subtitle || '',

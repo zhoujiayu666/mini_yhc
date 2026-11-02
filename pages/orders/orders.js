@@ -1,6 +1,6 @@
 const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
-const { getOrderStatusLabel, formatFenYuan } = require('../../utils/shop.js');
+const { getOrderStatusLabel, getOrderLogistics, formatFenYuan } = require('../../utils/shop.js');
 const hiddenOrders = require('../../utils/hidden-orders.js');
 
 function formatTime(ts) {
@@ -47,13 +47,17 @@ Page({
       this.setData({ loading: false, orders: [] });
       return;
     }
-    const orders = (result.orders || []).map((o) => ({
-      ...o,
-      statusLabel: getOrderStatusLabel(o.status),
-      payYuan: o.payYuan || formatFenYuan(o.payAmount),
-      createdText: formatTime(o.createdAt),
-      itemSummary: (o.items || []).map((it) => `${it.name}×${it.qty}`).join('、')
-    }));
+    const orders = (result.orders || []).map((o) => {
+      const logistics = getOrderLogistics(o);
+      return {
+        ...o,
+        ...logistics,
+        statusLabel: getOrderStatusLabel(o.status),
+        payYuan: o.payYuan || formatFenYuan(o.payAmount),
+        createdText: formatTime(o.createdAt),
+        itemSummary: (o.items || []).map((it) => `${it.name}×${it.qty}`).join('、')
+      };
+    });
     this.setData({ orders: hiddenOrders.visible(orders), loading: false });
   },
 

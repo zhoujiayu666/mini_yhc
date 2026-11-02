@@ -6,11 +6,11 @@ module.exports = {
   TOPUYI_APP_ID: 'wx3610c3ef05d1131e',
   CLOUD_ENV_ID: 'cloud1-d4grfezxdaca540d6',
   /**
-   * 支付测试：true 时把 TEST_PAY_SKU 同步为 0.01 元；测完改 false 并重新部署可恢复原价
+   * 支付测试：true 时首页任意商品结算都是一毛；测完改 false 并重新上传 shop-service
    */
   TEST_PAY_ENABLED: true,
-  TEST_PAY_SKU: 'stick-01',
-  TEST_PAY_PRICE_FEN: 1,
+  TEST_PAY_SKU: '*',
+  TEST_PAY_PRICE_FEN: 10,
   TEST_PAY_NORMAL_PRICE_FEN: 1290,
   /**
    * 微信支付商户号（10 位数字），APIv3 直连 JSAPI 下单使用。

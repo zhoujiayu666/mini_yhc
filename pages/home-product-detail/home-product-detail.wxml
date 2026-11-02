@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <view class="detail-page" wx:if="{{product}}">
   <view wx:if="{{product.detailImages.length}}" class="main-gallery">
     <swiper class="main-swiper" current="{{imageIndex}}" bindchange="onImageChange" vertical="{{false}}" circular="{{product.detailImages.length > 1}}" duration="300">

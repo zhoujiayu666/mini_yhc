@@ -26,6 +26,10 @@
         <text class="order-status {{item.status === 'completed' ? 'done' : ''}} {{item.status === 'cancelled' ? 'cancel' : ''}}">{{item.statusLabel}}</text>
       </view>
       <text class="order-item-line">{{item.itemSummary}}</text>
+      <view class="order-logistics {{item.logisticsStatus}}">
+        <text class="order-logistics-label">物流</text>
+        <text class="order-logistics-text">{{item.logisticsLabel}}</text>
+      </view>
       <view class="order-foot">
         <view class="order-foot-meta">
           <text class="order-amount">¥{{item.payYuan}}</text>

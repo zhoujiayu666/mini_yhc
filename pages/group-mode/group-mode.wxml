@@ -1,4 +1,4 @@
-<navigation-bar title="群组模式" back="{{true}}" color="#212121" background="#FFFFFF"></navigation-bar>
+<nav-bar title="群组模式" back="{{true}}" color="#212121" background="#FFFFFF"></nav-bar>
 
 <scroll-view class="scrollarea" scroll-y>
   <view class="container page-ambient">

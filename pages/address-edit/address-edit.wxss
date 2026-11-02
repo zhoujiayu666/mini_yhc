@@ -38,18 +38,90 @@
   color: #1A1A1A;
 }
 
-.wx-addr-btn {
-  margin-top: 8rpx;
+.locate-btn {
+  margin: 0 0 20rpx;
+  padding: 0 28rpx;
+  height: 96rpx;
   background: #FFFFFF;
-  color: #424242;
-  font-size: 28rpx;
+  color: #1A1A1A;
   border-radius: 20rpx;
-  height: 88rpx;
-  line-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16rpx;
+  line-height: normal;
 }
 
-.wx-addr-btn::after {
-  border: none;
+.locate-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+}
+
+.locate-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.locate-sub {
+  font-size: 22rpx;
+  color: #8A8A8A;
+}
+
+.locate-btn.is-loading {
+  opacity: 0.55;
+}
+
+.locate-icon {
+  position: relative;
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+}
+
+.locate-ring {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 3rpx solid #1A1A1A;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.locate-cross {
+  position: absolute;
+  background: #1A1A1A;
+}
+
+.locate-h {
+  left: -4rpx;
+  right: -4rpx;
+  top: 50%;
+  height: 3rpx;
+  margin-top: -1.5rpx;
+}
+
+.locate-v {
+  top: -4rpx;
+  bottom: -4rpx;
+  left: 50%;
+  width: 3rpx;
+  margin-left: -1.5rpx;
+}
+
+.locate-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8rpx;
+  height: 8rpx;
+  margin: -4rpx 0 0 -4rpx;
+  border-radius: 50%;
+  background: #1A1A1A;
 }
 
 .shop-page {

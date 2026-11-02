@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const https = require('https');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -22,6 +23,7 @@ const { markOrderPaid } = require('./order-paid');
 const { POLICY_VERSION, ensureMember } = require('./member-points');
 const { paymentEvent } = require('./payment-events');
 const { formatErrorMessage } = require('./format-error');
+const { syncOrderShipping, syncOrdersShipping } = require('./wx-shipping');
 
 /** 支付 SDK 仅在下单/查单时加载，避免 listProducts 因依赖未装而整体崩溃 */
 let payWxV3Module = null;
@@ -163,6 +165,7 @@ function formatAddress(doc) {
 
 function formatOrder(doc) {
   if (!doc) return null;
+  const ship = doc.shipping || {};
   return {
     id: doc._id,
     orderNo: doc.orderNo,
@@ -175,8 +178,10 @@ function formatOrder(doc) {
     payYuan: fenToYuan(doc.payAmount),
     addressSnapshot: doc.addressSnapshot,
     remark: doc.remark || '',
-    trackingNo: doc.trackingNo || '',
-    expressCompany: doc.expressCompany || '',
+    trackingNo: doc.trackingNo || ship.trackingNo || '',
+    expressCompany: doc.expressCompany || ship.carrier || ship.expressCompany || '',
+    logisticsDesc: doc.logisticsDesc || '',
+    logisticsTraces: doc.logisticsTraces || [],
     createdAt: doc.createdAt,
     paidAt: doc.paidAt || 0,
     shippedAt: doc.shippedAt || 0,
@@ -233,6 +238,9 @@ async function loadProductsBySkus(appId, skus, catalogSource) {
         status: 'on_sale',
         sourceAppId: appId
       } : {...raw, manageStock: true};
+      if (TEST_PAY_ENABLED && isTestPaySku(doc.sku)) {
+        doc.price = TEST_PAY_PRICE_FEN;
+      }
       map[doc.sku] = doc;
     }
   });
@@ -303,28 +311,28 @@ async function seedProducts(appId, force) {
   return ensureSeedProducts(appId);
 }
 
-async function applyTestPayPrice(appId) {
-  if (!TEST_PAY_SKU) {
-    return;
-  }
-  const price = TEST_PAY_ENABLED ? TEST_PAY_PRICE_FEN : TEST_PAY_NORMAL_PRICE_FEN;
-  if (!Number.isFinite(price) || price < 1) {
-    return;
-  }
-  try {
-    await db
-      .collection('products')
-      .where(withScope(appId, { sku: TEST_PAY_SKU }))
-      .update({
-        data: {
-          price,
-          updatedAt: Date.now()
-        }
-      });
-  } catch (err) {
-    console.warn('[shop-service] applyTestPayPrice', err);
-  }
+function isTestPaySku(sku) {
+  if (!TEST_PAY_ENABLED) return false;
+  if (!TEST_PAY_SKU || TEST_PAY_SKU === '*') return true;
+  return sku === TEST_PAY_SKU;
 }
+
+function forceTestPayBuilt(built) {
+  if (!TEST_PAY_ENABLED || !built || built.error || !Array.isArray(built.lines)) {
+    return built;
+  }
+  let totalAmount = 0;
+  const lines = built.lines.map((line) => {
+    const qty = Math.max(1, Number(line.qty) || 1);
+    const unitPrice = TEST_PAY_PRICE_FEN;
+    const lineAmount = unitPrice * qty;
+    totalAmount += lineAmount;
+    return Object.assign({}, line, { qty, unitPrice, lineAmount });
+  });
+  return { lines, totalAmount };
+}
+
+async function applyTestPayPrice() {}
 
 async function listProducts(appId, event) {
   const category = event.category;
@@ -332,6 +340,7 @@ async function listProducts(appId, event) {
   if (autoSeed) {
     await ensureSeedProducts(appId);
   }
+  await applyTestPayPrice(appId);
   let query = withScope(appId, { status: 'on_sale' });
   if (category && category !== 'all') {
     query = withScope(appId, { status: 'on_sale', category });
@@ -475,6 +484,7 @@ async function getAddressForOrder(openid, appId, addressId) {
 }
 
 async function previewOrder(openid, appId, event) {
+  await applyTestPayPrice(appId);
   const parsed = normalizeItemsInput(event.items);
   if (parsed.error) {
     return { success: false, message: parsed.error };
@@ -484,7 +494,7 @@ async function previewOrder(openid, appId, event) {
     parsed.items.map((i) => i.sku),
     event.catalogSource
   );
-  const built = buildOrderLines(parsed.items, productMap);
+  const built = forceTestPayBuilt(buildOrderLines(parsed.items, productMap));
   if (built.error) {
     return { success: false, message: built.error };
   }
@@ -492,6 +502,7 @@ async function previewOrder(openid, appId, event) {
   const payAmount = built.totalAmount + freightAmount;
   return {
     success: true,
+    testPay: true,
     items: built.lines,
     totalAmount: built.totalAmount,
     freightAmount,
@@ -502,6 +513,7 @@ async function previewOrder(openid, appId, event) {
 }
 
 async function createOrder(openid, appId, event) {
+  await applyTestPayPrice(appId);
   let registered = await db.collection('users').where({ openid, sourceAppId: appId }).limit(1).get();
   if (!registered.data || !registered.data.length) {
     registered = await db.collection('users').where({ _openid: openid, sourceAppId: appId }).limit(1).get();
@@ -526,7 +538,7 @@ async function createOrder(openid, appId, event) {
     parsed.items.map((i) => i.sku),
     event.catalogSource
   );
-  const built = buildOrderLines(parsed.items, productMap);
+  const built = forceTestPayBuilt(buildOrderLines(parsed.items, productMap));
   if (built.error) {
     return { success: false, message: built.error };
   }
@@ -601,7 +613,8 @@ async function listOrders(openid, appId, event) {
     .where(query)
     .limit(50)
     .get();
-  const orders = (res.data || [])
+  const synced = await syncOrdersShipping(db, res.data || []);
+  const orders = synced
     .filter((o) => !o.userHidden)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
     .map(formatOrder);
@@ -632,7 +645,11 @@ async function createPayment(openid, appId, event) {
     return { success: false, message: '订单状态不可支付' };
   }
 
-  const payAmount = Math.round(Number(doc.payAmount));
+  let payAmount = Math.round(Number(doc.payAmount));
+  if (TEST_PAY_ENABLED) {
+    const qty = (doc.items || []).reduce((n, it) => n + Math.max(1, Number(it.qty) || 1), 0) || 1;
+    payAmount = TEST_PAY_PRICE_FEN * qty;
+  }
   if (!Number.isFinite(payAmount) || payAmount < 1) {
     return { success: false, message: '订单金额无效' };
   }
@@ -752,6 +769,7 @@ async function getOrder(openid, appId, event) {
   if (!doc || doc.openid !== openid || !docInScope(doc, appId) || doc.userHidden) {
     return { success: false, message: '订单不存在' };
   }
+  doc = await syncOrderShipping(db, doc);
   return { success: true, order: formatOrder(doc) };
 }
 
@@ -848,6 +866,102 @@ async function confirmReceive(openid, appId, event) {
   return { success: true };
 }
 
+function httpJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      { headers: { 'User-Agent': 'TOPUYI-MiniProgram/1.0', Accept: 'application/json' }, timeout: 8000 },
+      (res) => {
+        let buf = '';
+        res.on('data', (c) => { buf += c; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(buf)); } catch (e) { reject(new Error('定位解析失败')); }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('定位服务超时')); });
+  });
+}
+
+function districtFrom(parts) {
+  const list = [parts.city_district, parts.district, parts.county, parts.suburb, parts.town].filter(Boolean);
+  return list.find((v) => /(?:区|县)$/.test(v)) || '';
+}
+
+function cnRegion(name) {
+  const text = String(name || '').trim();
+  if (!text) return '';
+  if (/(?:省|市|自治区|特别行政区)$/.test(text)) return text;
+  const map = {
+    Beijing: '北京市', Tianjin: '天津市', Shanghai: '上海市', Chongqing: '重庆市',
+    Guangdong: '广东省', Guangxi: '广西壮族自治区', Hainan: '海南省',
+    Fujian: '福建省', Zhejiang: '浙江省', Jiangsu: '江苏省', Shandong: '山东省',
+    Anhui: '安徽省', Jiangxi: '江西省', Henan: '河南省', Hubei: '湖北省', Hunan: '湖南省',
+    Hebei: '河北省', Shanxi: '山西省', Shaanxi: '陕西省', Sichuan: '四川省',
+    Yunnan: '云南省', Guizhou: '贵州省', Gansu: '甘肃省', Qinghai: '青海省',
+    Liaoning: '辽宁省', Jilin: '吉林省', Heilongjiang: '黑龙江省',
+    Inner: '内蒙古自治区', Tibet: '西藏自治区', Xinjiang: '新疆维吾尔自治区',
+    Ningxia: '宁夏回族自治区', Taiwan: '台湾省', Hong: '香港特别行政区', Macao: '澳门特别行政区', Macau: '澳门特别行政区'
+  };
+  const hit = Object.keys(map).find((k) => text.indexOf(k) === 0 || text.includes(k));
+  return hit ? map[hit] : text;
+}
+
+function cnCity(name, province) {
+  const text = String(name || '').trim();
+  if (!text) return '';
+  if (/市$/.test(text) || text === province) return text;
+  return `${text}市`;
+}
+
+async function reverseGeocode(event, wxContext) {
+  let latitude = Number(event.latitude);
+  let longitude = Number(event.longitude);
+  let ipGuess = null;
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    const ip = String((wxContext && (wxContext.CLIENTIP || wxContext.CLIENTIPV6)) || '').replace(/^::ffff:/, '');
+    if (!ip) {
+      return { success: false, message: '无法获取大致位置' };
+    }
+    const geo = await httpJson(`https://ipwho.is/${encodeURIComponent(ip)}?lang=zh-CN`);
+    if (!geo || geo.success === false) {
+      return { success: false, message: '无法获取大致位置' };
+    }
+    latitude = Number(geo.latitude);
+    longitude = Number(geo.longitude);
+    ipGuess = {
+      province: cnRegion(geo.region || geo.region_name || geo.regionName),
+      city: cnCity(geo.city, cnRegion(geo.region || geo.region_name || geo.regionName)),
+      district: /(?:区|县)$/.test(geo.district || '') ? geo.district : '',
+      detail: ''
+    };
+  }
+
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}&zoom=16&addressdetails=1&accept-language=zh-CN`;
+      const data = await httpJson(url);
+      const parts = data && data.address ? data.address : {};
+      const province = parts.state || parts.province || (ipGuess && ipGuess.province) || '';
+      const city = parts.city || parts.town || (province && /市$/.test(province) ? province : '') || (ipGuess && ipGuess.city) || '';
+      const district = districtFrom(parts) || (ipGuess && ipGuess.district) || '';
+      const detail = [parts.suburb, parts.road, parts.neighbourhood, parts.village]
+        .filter((v) => v && v !== district && v !== city)
+        .join('');
+      if (province || city || district || detail) {
+        return { success: true, address: { province, city, district, detail } };
+      }
+    } catch (_) { /* fall through to IP fields */ }
+  }
+
+  if (ipGuess && (ipGuess.province || ipGuess.city)) {
+    return { success: true, address: ipGuess };
+  }
+  return { success: false, message: '未能识别当前位置' };
+}
+
 exports.main = async (event) => {
   try {
     const wxContext = cloud.getWXContext();
@@ -883,6 +997,8 @@ exports.main = async (event) => {
         return await saveAddress(openid, appId, event);
       case 'deleteAddress':
         return await deleteAddress(openid, appId, event);
+      case 'reverseGeocode':
+        return await reverseGeocode(event, wxContext);
       case 'previewOrder':
         return await previewOrder(openid, appId, event);
       case 'createOrder':

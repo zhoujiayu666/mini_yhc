@@ -38,47 +38,22 @@
     "backgroundColor": "#FFFFFF",
     "backgroundTextStyle": "dark"
   },
-  "cloud": true,
   "style": "v2",
-  "renderer": "skyline",
-  "rendererOptions": {
-    "skyline": {
-      "defaultDisplayBlock": true,
-      "defaultContentBox": true,
-      "tagNameStyleIsolation": "legacy",
-      "disableABTest": true,
-      "sdkVersionBegin": "3.0.0",
-      "sdkVersionEnd": "15.255.255"
-    }
-  },
-  "componentFramework": "glass-easel",
+  "renderer": "webview",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents",
-  "tabBar": {
-    "custom": true,
-    "color": "#9E9E9E",
-    "selectedColor": "#1A1A1A",
-    "backgroundColor": "#FFFFFF",
-    "list": [
-      { "pagePath": "pages/home/home", "text": "首页" },
-      { "pagePath": "pages/all-products/all-products", "text": "全部商品" },
-      { "pagePath": "pages/member/member", "text": "会员中心" },
-      { "pagePath": "pages/mine/mine", "text": "个人中心" }
-    ]
-  },
   "usingComponents": {
     "main-tab-bar": "/components/main-tab-bar/main-tab-bar",
     "page-nav-bar": "/components/page-nav-bar/page-nav-bar"
   },
   "permission": {
     "scope.bluetooth": {
-      "desc": "用于连接和控制灯光设备"
+      "desc": "用于连接灯光设备"
     },
     "scope.userLocation": {
-      "desc": "用于在部分安卓手机上搜索附近蓝牙灯光设备"
+      "desc": "用于搜索附近蓝牙设备"
     },
     "scope.record": {
-      "desc": "用于音乐律动功能，分析环境音频"
+      "desc": "用于音乐律动"
     }
   }
 }

@@ -16,6 +16,19 @@
       />
     </view>
 
+    <view class="locate-btn {{locating ? 'is-loading' : ''}}" bindtap="onLocate">
+      <view class="locate-icon">
+        <view class="locate-ring"></view>
+        <view class="locate-cross locate-h"></view>
+        <view class="locate-cross locate-v"></view>
+        <view class="locate-dot"></view>
+      </view>
+      <view class="locate-copy">
+        <text class="locate-title">{{locating ? '打开地图…' : '地图选点'}}</text>
+        <text class="locate-sub">打开地图，自己选附近的地点</text>
+      </view>
+    </view>
+
     <view class="form-card">
       <view class="form-row">
         <text class="form-label">收货人</text>

@@ -56,6 +56,60 @@ function getOrderStatusLabel(status) {
   return ORDER_STATUS_LABEL[status] || status || '未知';
 }
 
+function getOrderLogistics(order) {
+  if (!order) {
+    return {
+      trackingNo: '',
+      expressCompany: '',
+      logisticsStatus: 'none',
+      logisticsLabel: '',
+      steps: []
+    };
+  }
+  const ship = order.shipping || {};
+  const trackingNo = String(order.trackingNo || ship.trackingNo || '').trim();
+  const expressCompany = String(order.expressCompany || ship.carrier || ship.expressCompany || '').trim();
+  const status = order.status;
+  let logisticsStatus = 'pending_ship';
+  let logisticsLabel = '待发货';
+  if (status === 'pending_pay') {
+    logisticsStatus = 'unpaid';
+    logisticsLabel = '暂无物流';
+  } else if (status === 'cancelled') {
+    logisticsStatus = 'cancelled';
+    logisticsLabel = '已取消';
+  } else if (status === 'completed') {
+    logisticsStatus = 'signed';
+    logisticsLabel = trackingNo
+      ? `已签收 · ${[expressCompany, trackingNo].filter(Boolean).join(' ')}`
+      : '已签收';
+  } else if (status === 'shipped' || trackingNo) {
+    logisticsStatus = 'in_transit';
+    logisticsLabel = trackingNo
+      ? `运输中 · ${[expressCompany, trackingNo].filter(Boolean).join(' ')}`
+      : '已发货，运输中';
+  }
+  const traces = Array.isArray(order.logisticsTraces) ? order.logisticsTraces : [];
+  const paid = status !== 'pending_pay' && status !== 'cancelled';
+  const shipped = status === 'shipped' || status === 'completed' || !!trackingNo;
+  const signed = status === 'completed';
+  return {
+    trackingNo,
+    expressCompany,
+    logisticsStatus,
+    logisticsLabel,
+    logisticsDesc: order.logisticsDesc || '',
+    traces,
+    steps: [
+      { id: 'created', label: '已下单', done: true },
+      { id: 'paid', label: '已付款', done: paid },
+      { id: 'shipped', label: '已发货', done: shipped },
+      { id: 'transit', label: '运输中', done: shipped },
+      { id: 'signed', label: '已签收', done: signed }
+    ]
+  };
+}
+
 function formatYuan(price) {
   const n = Number(price);
   if (!Number.isFinite(n)) return '0.00';
@@ -141,6 +195,7 @@ module.exports = {
   FALLBACK_PRODUCTS,
   CART_STORAGE_KEY,
   getOrderStatusLabel,
+  getOrderLogistics,
   formatYuan,
   formatFenYuan,
   getCart,

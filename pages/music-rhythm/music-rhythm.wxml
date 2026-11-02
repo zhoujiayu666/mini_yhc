@@ -1,6 +1,6 @@
 <!--pages/music-rhythm/music-rhythm.wxml-->
 
-<navigation-bar title="" back="{{true}}" color="#212121" background="#FFFFFF">
+<nav-bar title="" back="{{true}}" color="#212121" background="#FFFFFF">
 
   <view slot="left" class="logo-container">
 
@@ -20,7 +20,7 @@
 
   </view>
 
-</navigation-bar>
+</nav-bar>
 
 
 

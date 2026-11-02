@@ -12,7 +12,21 @@ Page({
  applyResult(result,fromCache){
   if(!result||!result.config)return false;
   const config=result.config||{blocks:[]},productBlocks=config.blocks.filter(b=>b.visible&&b.type==='products'),poster=config.blocks.find(b=>b.visible&&b.type==='poster'&&b.items&&b.items[0]&&b.items[0].image),items=homeProducts.hydrate(productBlocks,result.products||[],result.catalogSource);
-  const products=items.flatMap(b=>b.items).map((p,index)=>({...p,category:(p.category||'荧光棒').trim()||'荧光棒',sort:index})),categories=categoryNames(config,products);
+  const merged=[],seen={};
+  items.flatMap(b=>b.items).forEach((p,index)=>{
+   const names=(Array.isArray(p.categories)&&p.categories.length?p.categories:[p.category]).map(n=>String(n||'').trim()).filter(Boolean);
+   const list=names.length?names:['荧光棒'];
+   const sku=p.sku||p.id||('item'+index);
+   if(seen[sku]){
+    const extra=list.filter(n=>seen[sku].categories.indexOf(n)<0);
+    if(extra.length)seen[sku].categories=seen[sku].categories.concat(extra);
+    return;
+   }
+   const row={...p,sku,category:list[0],categories:list,sort:index};
+   seen[sku]=row;
+   merged.push(row);
+  });
+  const products=merged,categories=categoryNames(config,products);
   const banner=poster?.items[0]?.image||'';
   const fp=[banner,categories.join(','),products.map(p=>[p.sku,p.title,homeProducts.imageKey(p.image),p.priceText,p.available].join(':')).join('|')].join('#');
   if(fp===this._fp){if(this.data.loading)this.setData({loading:false});if(!fromCache&&result.error)wx.showToast({title:result.error,icon:'none'});return true;}
@@ -26,7 +40,7 @@ Page({
  async load(){if(!this.data.products.length)this.setData({loading:true});this.applyResult(await cloudPreview.load(),false);},
  onSearch(e){this.setData({keyword:e.detail.value});this.apply();},
  chooseCategory(e){this.setData({active:e.currentTarget.dataset.name});this.apply();},
- apply(){const key=(this.data.keyword||'').trim().toLowerCase(),active=this.data.active,shown=this.data.products.filter(p=>(active==='全部商品'||p.category===active)&&(!key||(p.title||'').toLowerCase().includes(key))),fp=active+'|'+key+'|'+shown.map(p=>p.sku).join(',');if(fp===this._shownFp)return;this._shownFp=fp;this.setData({shown});},
+ apply(){const key=(this.data.keyword||'').trim().toLowerCase(),active=this.data.active,shown=this.data.products.filter(p=>{const names=Array.isArray(p.categories)&&p.categories.length?p.categories:[p.category];return (active==='全部商品'||names.indexOf(active)>=0)&&(!key||(p.title||'').toLowerCase().includes(key));}),fp=active+'|'+key+'|'+shown.map(p=>p.sku).join(',');if(fp===this._shownFp)return;this._shownFp=fp;this.setData({shown});},
  openProduct(e){const snapshot=homeProducts.snapshotFrom(e.currentTarget.dataset.sku);if(!snapshot)return;wx.setStorageSync('topuyi_home_dev_product_detail_v1',snapshot);wx.navigateTo({url:'/pages/home-product-detail/home-product-detail?sku='+encodeURIComponent(snapshot.sku)});},
  async addCart(e){try{await homeProducts.add(e.currentTarget.dataset.sku);this.updateCartCount();wx.showToast({title:'已加入购物车',icon:'success'});}catch(error){wx.showToast({title:error.message,icon:'none'});}}
 });

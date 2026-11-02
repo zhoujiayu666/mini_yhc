@@ -14,7 +14,8 @@ Page({
     isDefault: true,
     saving: false,
     from: '',
-    pasteText: ''
+    pasteText: '',
+    locating: false
   },
 
   onLoad(options) {
@@ -97,14 +98,47 @@ Page({
     });
     if (!Object.keys(patch).length) {
       if (toast) wx.showToast({ title: '未能识别地址', icon: 'none' });
-      return;
+      return false;
     }
     this.setData(patch);
     if (toast) wx.showToast({ title: '已识别填写', icon: 'success' });
+    return true;
   },
 
   onDefaultChange(e) {
     this.setData({ isDefault: !!e.detail.value });
+  },
+
+  onLocate() {
+    if (this.data.locating) return;
+    this.setData({ locating: true });
+    wx.chooseLocation({
+      success: (res) => {
+        const parsed = parseAddress(res.address || '');
+        const patch = {};
+        if (parsed.province) patch.province = parsed.province;
+        if (parsed.city) patch.city = parsed.city;
+        if (parsed.district) patch.district = parsed.district;
+        const poi = String(res.name || '').trim();
+        let detail = parsed.detail || '';
+        if (poi && poi !== '我的位置' && detail.indexOf(poi) < 0) {
+          detail = detail ? detail + ' ' + poi : poi;
+        }
+        if (detail) patch.detail = detail;
+        if (!Object.keys(patch).length) {
+          wx.showToast({ title: '未识别到地址，请手动填写', icon: 'none' });
+          return;
+        }
+        this.setData(patch);
+        wx.showToast({ title: '已填入选中位置', icon: 'success' });
+      },
+      fail: (err) => {
+        const msg = String((err && err.errMsg) || '');
+        if (msg.indexOf('cancel') >= 0 || msg.indexOf('canceled') >= 0) return;
+        wx.showToast({ title: '请允许定位后在地图上选择', icon: 'none' });
+      },
+      complete: () => this.setData({ locating: false })
+    });
   },
 
   async onSave() {

@@ -30,3 +30,36 @@
 .order-delete::after {
   border: none;
 }
+
+.order-logistics {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin: 4rpx 0 16rpx;
+  padding: 12rpx 16rpx;
+  background: #F7F7F8;
+  border-radius: 12rpx;
+}
+
+.order-logistics-label {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #9E9E9E;
+  line-height: 1.5;
+}
+
+.order-logistics-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: #424242;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.order-logistics.in_transit .order-logistics-text {
+  color: #C89600;
+}
+
+.order-logistics.signed .order-logistics-text {
+  color: #4CAF50;
+}

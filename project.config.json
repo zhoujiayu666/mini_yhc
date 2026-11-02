@@ -38,6 +38,26 @@
       {
         "value": "desktop-admin",
         "type": "folder"
+      },
+      {
+        "value": "database-schemas",
+        "type": "folder"
+      },
+      {
+        "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "package.json",
+        "type": "file"
+      },
+      {
+        "value": "cloudbaserc.json",
+        "type": "file"
+      },
+      {
+        "value": ".txt",
+        "type": "suffix"
       }
     ],
     "include": []

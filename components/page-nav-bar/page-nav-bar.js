@@ -6,6 +6,10 @@ Component({
     back: {
       type: Boolean,
       value: false
+    },
+    title: {
+      type: String,
+      value: ''
     }
   },
 
