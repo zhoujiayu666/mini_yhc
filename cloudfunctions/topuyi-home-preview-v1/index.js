@@ -14,13 +14,10 @@ exports.main=async(event={})=>{
   const config=JSON.parse(JSON.stringify(doc.config));
   const productResult=await cloud.database().collection(PRODUCTS).where({active:true}).limit(1000).get();
   const products=productResult.data.map(p=>({sku:p.sku,name:p.name,price:Number(p.price)||0,originalPrice:Number(p.originalPrice)||0,manageStock:p.manageStock===false?false:true,stock:Number(p.stock)||0,coverImage:p.image||''}));
-  const ids=[...new Set([...config.blocks.flatMap(b=>[b.video,...b.items.flatMap(i=>[i.image])]) ,...products.map(p=>p.coverImage)].filter(v=>v&&v.startsWith('cloud://')))];
+  const ids=[...new Set([...config.blocks.flatMap(b=>[b.video,...b.items.flatMap(i=>[i.image,...(i.detailImages||[]),...(i.detailBlocks||[]).map(x=>x.image)])]),...products.map(p=>p.coverImage)].filter(v=>v&&v.startsWith('cloud://')))];
   const urls={};
-  for(let n=0;n<ids.length;n+=50){
-    const result=await cloud.getTempFileURL({fileList:ids.slice(n,n+50).map(fileID=>({fileID,maxAge:604800}))});
-    for(const f of result.fileList){if(f.tempFileURL)urls[f.fileID]=f.tempFileURL;}
-  }
-  for(const b of config.blocks){if(b.video)b.video=urls[b.video]||b.video;for(const i of b.items){if(i.image)i.image=urls[i.image]||i.image;}}
+  for(let n=0;n<ids.length;n+=50){const result=await cloud.getTempFileURL({fileList:ids.slice(n,n+50)});for(const f of result.fileList){if(!f.tempFileURL)return {ok:false,error:'MEDIA_UNAVAILABLE'};urls[f.fileID]=f.tempFileURL;}}
+  for(const b of config.blocks){if(b.video)b.video=urls[b.video]||b.video;for(const i of b.items){if(i.image)i.image=urls[i.image]||i.image;if(i.detailImages)i.detailImages=i.detailImages.map(v=>urls[v]||v);if(i.detailBlocks)for(const x of i.detailBlocks)if(x.image)x.image=urls[x.image]||x.image;}}
   for(const p of products)if(p.coverImage)p.coverImage=urls[p.coverImage]||p.coverImage;
   return {ok:true,config,products,revision:doc.revision,updatedAt:doc.updatedAt};
 };

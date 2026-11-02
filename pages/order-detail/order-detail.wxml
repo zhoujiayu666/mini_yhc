@@ -3,36 +3,9 @@
   <view class="shop-page" wx:if="{{order}}">
     <view class="section-card status-card">
       <text class="status-title">{{order.statusLabel}}</text>
-      <text class="status-sub">{{order.logisticsLabel}}</text>
-    </view>
-
-    <view class="section-card" wx:if="{{order.status !== 'pending_pay' && order.status !== 'cancelled'}}">
-      <view class="logistics-head">
-        <text class="section-title">物流状态</text>
-        <text class="copy-track" wx:if="{{order.trackingNo}}" catchtap="onCopyTracking">复制单号</text>
-      </view>
-      <view class="logistics-track" wx:if="{{order.trackingNo}}">
-        <text>{{order.expressCompany || '快递'}}</text>
-        <text>{{order.trackingNo}}</text>
-      </view>
-      <text class="logistics-empty" wx:else>商家发货后将在此显示快递公司和运单号</text>
-      <view class="trace-list" wx:if="{{order.traces.length}}">
-        <view class="trace-item" wx:for="{{order.traces}}" wx:key="index">
-          <text class="trace-time" wx:if="{{item.time}}">{{item.time}}</text>
-          <text class="trace-desc">{{item.desc}}</text>
-        </view>
-      </view>
-      <text class="trace-desc latest" wx:elif="{{order.logisticsDesc}}">{{order.logisticsDesc}}</text>
-      <view class="logistics-steps">
-        <view
-          class="logistics-step {{item.done ? 'done' : ''}}"
-          wx:for="{{order.steps}}"
-          wx:key="id"
-        >
-          <view class="step-dot"></view>
-          <text>{{item.label}}</text>
-        </view>
-      </view>
+      <text class="status-sub" wx:if="{{order.status === 'pending_pay'}}">请尽快完成支付</text>
+      <text class="status-sub" wx:elif="{{order.status === 'paid'}}">商家备货中，请耐心等待发货</text>
+      <text class="status-sub" wx:elif="{{order.status === 'shipped'}}">商品已发出，请注意查收</text>
     </view>
 
     <view class="section-card" wx:if="{{order.addressText}}">
@@ -61,7 +34,7 @@
       <view class="info-row"><text>订单号</text><text>{{order.orderNo}}</text></view>
       <view class="info-row"><text>下单时间</text><text>{{order.createdText}}</text></view>
       <view class="info-row" wx:if="{{order.paidText}}"><text>支付时间</text><text>{{order.paidText}}</text></view>
-      <view class="info-row" wx:if="{{order.shippedText}}"><text>发货时间</text><text>{{order.shippedText}}</text></view>
+      <view class="info-row" wx:if="{{order.trackingNo}}"><text>快递</text><text>{{order.expressCompany}} {{order.trackingNo}}</text></view>
       <view class="info-row" wx:if="{{order.remark}}"><text>备注</text><text>{{order.remark}}</text></view>
     </view>
   </view>

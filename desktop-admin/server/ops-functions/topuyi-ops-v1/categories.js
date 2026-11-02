@@ -10,23 +10,8 @@ async function sources(db){const [record,draft,live,templates]=await Promise.all
 function migrate(configs){const items=[],seen=new Set();for(const config of configs)for(const item of products(config)){const name=legacyName(item),k=key(name);if(seen.has(k))continue;seen.add(k);items.push({id:'cat_'+createHash('sha256').update(k).digest('hex').slice(0,24),name,aliases:[]});}return {items,revision:null};}
 function registry(s){return s.record||migrate([s.draft?.config,s.live?.config,...(s.templates?.items||[]).map(t=>t.config)]);}
 function find(items,item){return item.categoryId?items.find(c=>c.id===item.categoryId):items.find(c=>[c.name,...(c.aliases||[])].some(n=>key(n)===key(legacyName(item))));}
-function itemCategories(registry,item){
-  const ids=Array.isArray(item.categoryIds)?item.categoryIds.filter(Boolean).slice(0,2):[];
-  const out=[],seen=new Set();
-  const push=c=>{if(c&&!seen.has(c.id)){seen.add(c.id);out.push(c);}};
-  if(ids.length){for(const id of ids)push(registry.find(c=>c.id===id));}
-  else push(find(registry,item));
-  return out;
-}
-function applyCategories(item,cats){
-  item.categoryIds=cats.map(c=>c.id);
-  item.categories=cats.map(c=>c.name);
-  item.categoryId=cats[0].id;
-  item.category=cats[0].name;
-}
-function normalize(config,record){const result=JSON.parse(JSON.stringify(config));for(const item of products(result)){const cats=itemCategories(record.items,item);if(!cats.length||(Array.isArray(item.categoryIds)&&item.categoryIds.some(id=>id&&!record.items.some(c=>c.id===id))))fail('INVALID',`商品“${item.title||'未填写标题'}”的分类不存在，请在商品分类中新增，或重新选择分类。`);if(cats.length>2)fail('INVALID',`商品“${item.title||'未填写标题'}”最多选择两个分类。`);applyCategories(item,cats);}result.categories=record.items.map(({id,name})=>({id,name}));result.categoryRevision=record.revision||null;return result;}
-function usesCategory(registry,item,id){return itemCategories(registry,item).some(c=>c.id===id);}
-function usage(s,r){return Object.fromEntries(r.items.map(c=>[c.id,{draft:products(s.draft?.config).filter(i=>usesCategory(r.items,i,c.id)).length,published:products(s.live?.config).filter(i=>usesCategory(r.items,i,c.id)).length,templates:(s.templates?.items||[]).reduce((n,t)=>n+products(t.config).filter(i=>usesCategory(r.items,i,c.id)).length,0)}]));}
+function normalize(config,record){const result=JSON.parse(JSON.stringify(config));for(const item of products(result)){const category=find(record.items,item);if(!category)fail('INVALID',`商品“${item.title||'未填写标题'}”的分类不存在，请在商品分类中新增，或重新选择分类。`);item.categoryId=category.id;item.category=category.name;}result.categories=record.items.map(({id,name})=>({id,name}));result.categoryRevision=record.revision||null;return result;}
+function usage(s,r){return Object.fromEntries(r.items.map(c=>[c.id,{draft:products(s.draft?.config).filter(i=>find(r.items,i)?.id===c.id).length,published:products(s.live?.config).filter(i=>find(r.items,i)?.id===c.id).length,templates:(s.templates?.items||[]).reduce((n,t)=>n+products(t.config).filter(i=>find(r.items,i)?.id===c.id).length,0)}]));}
 function result(s,r){return {ok:true,items:r.items,revision:r.revision||null,usage:usage(s,r)};}
 function change(s,event,user){const before=registry(s);if((before.revision||null)!==(event.expectedRevision||null))fail('CONFLICT','同事已更新商品分类，请刷新分类后重试。');const items=JSON.parse(JSON.stringify(before.items));
  if(event.operation==='add'||event.operation==='rename'){const name=nameOf(event.name);if(!name||name.length>20)fail('INVALID','分类名称请填写 1–20 个字。');if(key(name)===key('全部商品'))fail('INVALID','“全部商品”是系统入口，请使用其他分类名称。');const target=event.operation==='rename'?items.find(c=>c.id===event.id):null;if(event.operation==='rename'&&!target)fail('CONFLICT','该分类已被删除，请刷新分类。');if(items.some(c=>c.id!==target?.id&&[c.name,...(c.aliases||[])].some(n=>key(n)===key(name))))fail('INVALID','分类名称已存在或被旧名称占用，请使用其他名称。');if(target){target.aliases=[...new Set([...(target.aliases||[]),target.name])].filter(n=>n!==name);if(target.aliases.length>100)fail('INVALID','该分类改名次数过多，请联系管理员。');target.name=name;}else {if(items.length>=100)fail('INVALID','最多添加 100 个商品分类。');items.push({id:'cat_'+randomBytes(12).toString('hex'),name,aliases:[]});}}
@@ -57,4 +42,4 @@ async function handle(db, event, user) {
 }
 async function getRegistry(db){return registry(await sources(db));}
 async function assertRevision(db,revision){const r=await read(db,CONTENT,ID);if((r?.revision||null)!==(revision||null))fail('CONFLICT','商品分类已更新，请刷新分类并重新保存共享草稿后再操作。');}
-module.exports={handle,getRegistry,assertRevision,normalize,migrate,find,itemCategories,change,usage};
+module.exports={handle,getRegistry,assertRevision,normalize,migrate,find,change,usage};

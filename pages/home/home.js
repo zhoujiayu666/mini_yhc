@@ -6,24 +6,16 @@ const FRESH_MS=60000;
 Page({
  data:{blocks:[],preview:false,editable:false,cloudStatus:'',syncing:false,cartCount:0},
  onLoad(options){
-  try{
-   const preview=options.preview==='1'&&template.canEdit();
-   this.setData({preview,editable:template.canEdit()});
-   this.applyCache();
-  }catch(e){
-   this.setData({cloudStatus:(e&&e.message)||'首页加载失败',syncing:false});
-  }
+  const preview=options.preview==='1'&&template.canEdit();
+  this.setData({preview,editable:template.canEdit()});
+  this.applyCache();
  },
  onShow(){
-  try{tabs.sync('home');}catch(_){}
-  try{
-   if(this.consumePreviewFlag()){this.updateCartCount();return;}
-   this.updateCartCount();
-   if(!this.data.preview&&this.data.blocks.length&&Date.now()-(this._freshAt||0)<FRESH_MS)return;
-   this.refreshHome();
-  }catch(e){
-   this.setData({cloudStatus:(e&&e.message)||'首页加载失败',syncing:false});
-  }
+  tabs.sync('home');
+  if(this.consumePreviewFlag()){this.updateCartCount();return;}
+  this.updateCartCount();
+  if(!this.data.preview&&this.data.blocks.length&&Date.now()-(this._freshAt||0)<FRESH_MS)return;
+  this.refreshHome();
  },
  consumePreviewFlag(){
   if(!template.canEdit())return false;
@@ -38,7 +30,7 @@ Page({
  updateCartCount(){const cart=wx.getStorageSync('shopCart')||[];const cartCount=cart.filter(i=>i.catalogSource===homeProducts.source()).reduce((n,i)=>n+(Number(i.qty)||1),0);if(cartCount!==this.data.cartCount)this.setData({cartCount});},
  openCart(){wx.navigateTo({url:'/pages/checkout/checkout?mode=cart&source='+homeProducts.source()});},
  paintBlocks(blocks,extra){
-  const next=Array.isArray(blocks)?blocks:[];
+  const next=homeProducts.reuseBlockImages(this.data.blocks,blocks);
   const fp=homeProducts.blocksFingerprint(next);
   if(fp===this._fp){if(extra)this.setData(extra);return false;}
   this._fp=fp;
@@ -55,20 +47,14 @@ Page({
  async onPullDownRefresh(){this._freshAt=0;try{await this.refreshHome();}finally{wx.stopPullDownRefresh();}},
  async refreshHome(){
    const sequence=(this._sequence||0)+1;this._sequence=sequence;
-   try{
-    if(this.data.preview){const draft=template.read(template.PREVIEW);const blocks=homeProducts.hydrate((draft.blocks||[]).filter(b=>b.visible));if(this._sequence===sequence)this.paintBlocks(blocks);return;}
-    if(!this.data.blocks.length)this.setData({syncing:true});
-    const result=await cloudPreview.load();if(this._sequence!==sequence)return;
-    const raw=(result.config&&result.config.blocks)||[];
-    const blocks=homeProducts.hydrate(raw.filter(b=>b&&b.visible),result.products||[],result.catalogSource);if(this._sequence!==sequence)return;
-    this._freshAt=result.error?0:Date.now();
-    this.paintBlocks(blocks,{cloudStatus:result.status,syncing:false});
-    this.updateCartCount();
-    if(result.error)wx.showToast({title:result.error,icon:'none'});
-   }catch(e){
-    if(this._sequence!==sequence)return;
-    this.setData({syncing:false,cloudStatus:(e&&e.message)||'首页加载失败'});
-   }
+   if(this.data.preview){const blocks=homeProducts.hydrate(template.read(template.PREVIEW).blocks.filter(b=>b.visible));if(this._sequence===sequence)this.paintBlocks(blocks);return;}
+   if(!this.data.blocks.length)this.setData({syncing:true});
+   const result=await cloudPreview.load();if(this._sequence!==sequence)return;
+   const blocks=homeProducts.hydrate(result.config.blocks.filter(b=>b.visible),result.products||[],result.catalogSource);if(this._sequence!==sequence)return;
+   this._freshAt=result.error?0:Date.now();
+   this.paintBlocks(blocks,{cloudStatus:result.status,syncing:false});
+   this.updateCartCount();
+   if(result.error)wx.showToast({title:result.error,icon:'none'});
  },
  connectDesktop(){
    if(!this.data.editable)return;

@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "openapi": [
-      "wxa/sec/order/get_order",
-      "wxa.sec.order.getOrder",
-      "auth.getAccessToken"
-    ]
-  }
-}

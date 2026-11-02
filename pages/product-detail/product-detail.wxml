@@ -1,4 +1,4 @@
-<page-nav-bar back="{{true}}"></page-nav-bar>
+<page-nav-bar></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y wx:if="{{!loading && product}}">
   <view class="detail-page">
     <view class="hero-section">

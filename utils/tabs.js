@@ -4,19 +4,12 @@ const LIST = [
   { id: 'member', label: '会员中心', icon: '♔', path: '/pages/member/member' },
   { id: 'mine', label: '个人中心', icon: '○', path: '/pages/mine/mine' }
 ];
-const PATH_ID = {};
-LIST.forEach((t) => {
-  PATH_ID[t.path] = t.id;
-});
+const PATH_ID = Object.fromEntries(LIST.map((t) => [t.path, t.id]));
 
 function open(url) {
   const path = String(url || '').split('?')[0];
   if (PATH_ID[path]) {
-    const pages = getCurrentPages();
-    const cur = pages[pages.length - 1];
-    const curPath = cur ? '/' + String(cur.route || '') : '';
-    if (curPath === path) return;
-    wx.reLaunch({ url: path });
+    wx.switchTab({ url: path });
     return;
   }
   wx.navigateTo({
@@ -29,10 +22,8 @@ function sync(id) {
   const pages = getCurrentPages();
   const page = pages[pages.length - 1];
   if (!page || typeof page.getTabBar !== 'function') return;
-  try {
-    const bar = page.getTabBar();
-    if (bar && bar.data.current !== id) bar.setData({ current: id });
-  } catch (_) {}
+  const bar = page.getTabBar();
+  if (bar && bar.data.current !== id) bar.setData({ current: id });
 }
 
 module.exports = { LIST, PATH_ID, open, sync };

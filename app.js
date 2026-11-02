@@ -32,13 +32,11 @@ App({
     this.initCloud();
     this.getDeviceHistory();
     this._wrapBleDisconnectForHistory();
-    setTimeout(() => this.initBluetooth(), 4000);
+    setTimeout(() => this.initBluetooth(), 1200);
     setTimeout(() => {
       try { require('./utils/home-cloud').load(); } catch (_) {}
-    }, 50);
-    setTimeout(() => {
       try { require('./utils/member-cloud').load(); } catch (_) {}
-    }, 3500);
+    }, 400);
   },
 
   /** 任意路径断开蓝牙前，确保当前设备写入连接历史 */

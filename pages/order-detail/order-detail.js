@@ -1,6 +1,6 @@
 const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
-const { getOrderStatusLabel, getOrderLogistics, formatFenYuan } = require('../../utils/shop.js');
+const { getOrderStatusLabel, formatFenYuan } = require('../../utils/shop.js');
 const { payOrderOnDetail } = require('../../utils/shop-pay-flow.js');
 const hiddenOrders = require('../../utils/hidden-orders.js');
 
@@ -49,12 +49,10 @@ Page({
     }
     const o = result.order;
     const addr = o.addressSnapshot || {};
-    const logistics = getOrderLogistics(o);
     this.setData({
       loading: false,
       order: {
         ...o,
-        ...logistics,
         statusLabel: getOrderStatusLabel(o.status),
         payYuan: o.payYuan || formatFenYuan(o.payAmount),
         createdText: formatTime(o.createdAt),
@@ -77,15 +75,6 @@ Page({
 
   onPayTap() {
     payOrderOnDetail(this, this._orderId);
-  },
-
-  onCopyTracking() {
-    const no = this.data.order && this.data.order.trackingNo;
-    if (!no) return;
-    wx.setClipboardData({
-      data: no,
-      success: () => wx.showToast({ title: '单号已复制', icon: 'success' })
-    });
   },
 
   async onCancel() {

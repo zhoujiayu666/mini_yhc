@@ -74,8 +74,7 @@ async function callShopService(payload) {
     const res = await wx.cloud.callFunction({
       name: SHOP_SERVICE_NAME,
       config: { env: CLOUD_ENV_ID },
-      data: payload,
-      timeout: 20000
+      data: payload
     });
     const result = res.result || { success: false, message: '云函数无返回数据' };
     if (result.message != null) {

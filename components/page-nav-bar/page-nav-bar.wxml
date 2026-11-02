@@ -1,6 +1,6 @@
-<nav-bar title="{{title}}" back="{{back}}" color="#212121" background="#FFFFFF">
+<navigation-bar title="" back="{{back}}" color="#212121" background="#FFFFFF">
   <view slot="right" class="nav-right">
     <slot name="right"></slot>
   </view>
-</nav-bar>
+</navigation-bar>
 <login-sheet id="login-sheet"></login-sheet>

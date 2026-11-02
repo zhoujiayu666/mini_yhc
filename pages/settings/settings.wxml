@@ -1,6 +1,6 @@
 <!--pages/settings/settings.wxml-->
 
-<nav-bar title="" back="{{true}}" color="#212121" background="#FFFFFF">
+<navigation-bar title="" back="{{true}}" color="#212121" background="#FFFFFF">
 
   <view slot="left" class="logo-container">
 
@@ -20,7 +20,7 @@
 
   </view>
 
-</nav-bar>
+</navigation-bar>
 
 
 

@@ -13,12 +13,9 @@ function peek(){
   const {accessCode,key,catalogSource}=context();
   try{
     const cached=wx.getStorageSync(key);
-    if(!cached||cached.code!==accessCode||!cached.config||cached.config.version!==1||!Array.isArray(cached.config.blocks)||!Array.isArray(cached.products))return null;
-    const blob=JSON.stringify(cached.config);
-    const hasCloud=blob.indexOf('cloud://')>=0;
-    const age=Date.now()-(Number(cached.time)||0);
-    if(!hasCloud&&age>10*60*1000)return null;
-    return {config:cached.config,products:cached.products,catalogSource,status:'已读取本地内容',fromCache:true};
+    if(cached&&cached.code===accessCode&&cached.config?.version===1&&Array.isArray(cached.config.blocks)&&Array.isArray(cached.products)){
+      return {config:cached.config,products:cached.products,catalogSource,status:'已读取本地内容',fromCache:true};
+    }
   }catch(_){}
   return null;
 }
@@ -30,8 +27,8 @@ async function load(){
     try{
       const r=await wx.cloud.callFunction({name:preview?'topuyi-home-preview-v1':'topuyi-storefront-v1',data:preview?{action:'getPreview',accessCode}:{action:'getPublished'}});
       const value=r.result;
-      if(!value||!value.ok)throw Error(value&&value.error==='PREVIEW_CODE_INVALID'?'预览码已失效，请重新连接':value&&value.error==='STOREFRONT_NOT_READY'?'商城内容尚未发布，请稍后再试':'商品加载失败，请下拉刷新重试');
-      if(!value.config||value.config.version!==1||!Array.isArray(value.config.blocks)||!Array.isArray(value.products))throw Error('商品数据格式不正确，请刷新重试');
+      if(!value?.ok)throw Error(value?.error==='PREVIEW_CODE_INVALID'?'预览码已失效，请重新连接':value?.error==='STOREFRONT_NOT_READY'?'商城内容尚未发布，请稍后再试':'商品加载失败，请下拉刷新重试');
+      if(value.config?.version!==1||!Array.isArray(value.config.blocks)||!Array.isArray(value.products))throw Error('商品数据格式不正确，请刷新重试');
       try{wx.setStorageSync(key,{code:accessCode,time:Date.now(),config:value.config,products:value.products});}catch(_){}
       return {config:value.config,products:value.products,catalogSource,status:preview?'已同步电脑后台':'已加载已发布商城',revision:value.revision};
     }catch(error){

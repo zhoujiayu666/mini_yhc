@@ -1,6 +1,5 @@
 const { requireLogin } = require('../../utils/auth.js');
 const { callShopService, showShopError } = require('../../utils/shop-cloud.js');
-const { applyTestPayPreview } = require('../../utils/test-pay.js');
 const {
   getCart,
   setCart,
@@ -153,7 +152,6 @@ Page({
   },
 
   applyPreview(preview) {
-    preview = applyTestPayPreview(preview);
     const previewItems = (preview.items || []).map((item) => ({
       ...item,
       lineYuan: formatFenYuan(item.lineAmount)
@@ -193,7 +191,7 @@ Page({
         return sameSource && (item.sku || item.id) === sku ? { ...item, qty: confirmed.qty } : item;
       });
       setCart(cart);
-      this.applyPreview(applyTestPayPreview(preview));
+      this.applyPreview(preview);
     } catch (error) {
       showShopError('数量修改失败', error.message || '请稍后重试');
     } finally {
