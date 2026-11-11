@@ -20,7 +20,9 @@ App({
     openDeviceSearchOnControlShow: false,
     /** 调光页：切页后保留亮度、预设、色轮 */
     colorControlState: null,
-    userInfo: null
+    userInfo: null,
+    /** 本会话是否已展示首页社群弹窗 */
+    communityPopupShown: false
   },
 
   onLaunch() {

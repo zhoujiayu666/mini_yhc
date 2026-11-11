@@ -1,8 +1,9 @@
 {
   "renderer": "webview",
-  "navigationStyle": "default",
-  "navigationBarTitleText": "TOPUYI 拓普依",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black",
-  "enablePullDownRefresh": true
+  "navigationBarTitleText": "拓普依",
+  "navigationBarBackgroundColor": "#05070f",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#05070f",
+  "backgroundTextStyle": "light",
+  "enablePullDownRefresh": false
 }
