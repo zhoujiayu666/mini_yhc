@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <view class="member-page">
  <view class="member-heading">会员中心</view>
  <view wx:if="{{error || mediaError}}" class="load-error" bindtap="loadContent">{{error || '部分图片加载失败，点击重试'}}</view>
@@ -24,4 +24,3 @@
  <view wx:elif="{{!error}}" class="state"><text class="state-title">会员活动即将上线</text><text>精彩权益，敬请期待</text></view>
  <button wx:if="{{error && !config}}" class="retry" bindtap="loadContent">重新加载</button>
 </view>
-<main-tab-bar current="member"></main-tab-bar>

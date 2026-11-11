@@ -1,5 +1,5 @@
 <view class="around-shell {{showCartPanel ? 'around-shell--panel-open' : ''}}">
-  <page-nav-bar></page-nav-bar>
+  <page-nav-bar back="{{true}}"></page-nav-bar>
   <scroll-view
     class="scrollarea"
     scroll-y
@@ -120,7 +120,6 @@
     >去结算</view>
 </view>
 
-<main-tab-bar current="around"></main-tab-bar>
 
 <view class="cart-panel-root" wx:if="{{showCartPanel}}" catchtouchmove="noop">
   <view class="cart-panel-mask" bindtap="onCloseCartPanel"></view>

@@ -40,16 +40,16 @@ function calcPageLayout() {
   const navBarHeight = menu.bottom + (menu.top - statusBar);
   const rpx = info.windowWidth / 750;
   const safeBottom = info.screenHeight - (info.safeArea ? info.safeArea.bottom : info.screenHeight);
-  const tabBarHeightPx = Math.round(100 * rpx + safeBottom);
+  const bottomInsetPx = Math.max(0, Math.round(safeBottom));
   // 购物车栏实际高度（含内边距），略留余量避免挡住商品「+」
   const cartBarHeightPx = Math.round(140 * rpx);
   const scrollHeight = Math.max(
     200,
-    Math.floor(info.windowHeight - navBarHeight - cartBarHeightPx - tabBarHeightPx)
+    Math.floor(info.windowHeight - navBarHeight - cartBarHeightPx - bottomInsetPx)
   );
   return {
     scrollHeight,
-    panelBottomPx: tabBarHeightPx,
+    panelBottomPx: bottomInsetPx,
     shopPaddingBottomPx: Math.round(32 * rpx)
   };
 }

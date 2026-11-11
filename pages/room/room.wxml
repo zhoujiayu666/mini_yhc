@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="container page-ambient">
     <!-- 列表模式 -->
@@ -253,4 +253,3 @@
   </view>
 </view>
 
-<main-tab-bar current="room"></main-tab-bar>

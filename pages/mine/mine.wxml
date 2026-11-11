@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="mine-page">
     <view class="profile-card {{loggedIn ? '' : 'profile-card-tap'}}" bindtap="{{loggedIn ? '' : 'onGoLogin'}}">
@@ -77,4 +77,3 @@
     </view>
   </view>
 </scroll-view>
-<main-tab-bar current="mine"></main-tab-bar>

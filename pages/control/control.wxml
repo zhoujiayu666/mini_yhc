@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view
   class="scrollarea"
   scroll-y
@@ -199,4 +199,3 @@
   </view>
 </view>
 
-<main-tab-bar current="control"></main-tab-bar>

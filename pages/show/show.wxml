@@ -1,4 +1,4 @@
-<page-nav-bar></page-nav-bar>
+<page-nav-bar back="{{true}}"></page-nav-bar>
 <scroll-view class="scrollarea" scroll-y>
   <view class="show-page">
     <view class="section-card">
@@ -72,4 +72,3 @@
   </view>
 </scroll-view>
 
-<main-tab-bar current="show"></main-tab-bar>

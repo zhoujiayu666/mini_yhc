@@ -29,5 +29,3 @@
     </view>
   </view>
 </view>
-
-<main-tab-bar current="home" />

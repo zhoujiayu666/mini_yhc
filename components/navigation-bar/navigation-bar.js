@@ -93,7 +93,11 @@ Component({
       const data = this.data
       if (data.delta) {
         wx.navigateBack({
-          delta: data.delta
+          delta: data.delta,
+          fail: () => {
+            // 无页面栈时回到主页（例如 reLaunch 进子页）
+            wx.reLaunch({ url: '/pages/home/home' })
+          }
         })
       }
       this.triggerEvent('back', { delta: data.delta }, {})

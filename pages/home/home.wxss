@@ -6,7 +6,7 @@ page {
 .landing {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   background:
     radial-gradient(ellipse 80% 50% at 50% 70%, rgba(255, 120, 40, 0.18), transparent 55%),
     radial-gradient(ellipse 70% 45% at 50% 20%, rgba(40, 70, 120, 0.35), transparent 60%),
